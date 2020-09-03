@@ -4,7 +4,7 @@ Contains miscellaneous commands to work with Tanium servers in Visual Studio Cod
 
 ## Features
 
-* Tanium: Compare Content Set allows you to download a content set xml file from Tanium support and compare it to the sensors on your server.
+* **Tanium: Compare Content Set** command - allows you to download a content set xml file from Tanium support and compare it to the sensors on your server.
 
 ## Extension Settings
 
@@ -12,7 +12,7 @@ Contains miscellaneous commands to work with Tanium servers in Visual Studio Cod
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+* none
 
 ## Release Notes
 
@@ -20,15 +20,7 @@ Users appreciate release notes as you update your extension.
 
 ### 1.0.0
 
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+Initial release of 'Tanium: Compare Content Set' command
 
 -----------------------------------------------------------------------------------------------------------
 

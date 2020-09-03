@@ -1,4 +1,4 @@
-# hoganslendertanium README
+# HoganSlender Tanium Tools
 
 Contains miscellaneous commands to work with Tanium servers in Visual Studio Code.
 

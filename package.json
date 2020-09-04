@@ -37,9 +37,9 @@
 		"pretest": "npm run compile && npm run lint",
 		"test": "node ./out/test/runTest.js",
 		"vscode:prepublish": "webpack --mode production",
-    "webpack": "webpack --mode development",
-    "webpack-dev": "webpack --mode development --watch",
-		"test-compile": "tsc -p ./"	
+		"webpack": "webpack --mode development",
+		"webpack-dev": "webpack --mode development --watch",
+		"test-compile": "tsc -p ./"
 	},
 	"devDependencies": {
 		"@types/glob": "^7.1.3",

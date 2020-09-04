@@ -3,6 +3,15 @@
 	"displayName": "hoganslender.tanium",
 	"description": "",
 	"version": "0.0.1",
+	"publisher": "HoganSlender",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/HoganSlender/vscode-tanium-tools.git"
+	},
+	"bugs": {
+		"url": "https://github.com/HoganSlender/vscode-tanium-tools/issues",
+		"email": "hoganslender@gmail.com"
+	},
 	"engines": {
 		"vscode": "^1.46.0"
 	},

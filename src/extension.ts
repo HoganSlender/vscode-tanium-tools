@@ -6,7 +6,8 @@ import * as parser from 'fast-xml-parser';
 import { sanitize } from "sanitize-filename-ts";
 import { TransformSensor } from './transform-sensor';
 import { MultiStepInput, MyButton, State } from './multi-step-input';
-import { OutputChannel, window, ExtensionContext, commands, QuickInputButton, Uri, workspace, QuickPickItem, QuickInput, Disposable, QuickInputButtons, ConfigurationTarget } from 'vscode';
+import { OutputChannel, window, ExtensionContext, commands, QuickInputButton, Uri, workspace, QuickPickItem, QuickInput, Disposable, QuickInputButtons, ConfigurationTarget, SelectionRange } from 'vscode';
+import { pickContentSetUrl, collectInputs } from './content-set-parameters';
 
 const got = require('got');
 const { promisify } = require('util');
@@ -39,12 +40,6 @@ export function activate(context: ExtensionContext) {
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "hoganslendertanium" is now active!');
 
-	const addButton = new MyButton({
-		dark: Uri.file(context.asAbsolutePath('resources/dark/add.svg')),
-		light: Uri.file(context.asAbsolutePath('resources/light/add.svg')),
-	}, '');
-
-
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
@@ -60,183 +55,13 @@ export function activate(context: ExtensionContext) {
 		// get configurations
 		const config = workspace.getConfiguration('hoganslender.tanium');
 
-		// get urls
-		const urls: string[] = config.get('contentSetUrls', []);
-		const contentSetUrlQuickPickItemss: QuickPickItem[] = urls.map(label => ({ label }));
-
-		// get fqdns
-		const fqdns: string[] = config.get('fqdns', []);
-		const fqdnQuickPickItems: QuickPickItem[] = fqdns.map(label => ({ label }));
-
-		// get usernames
-		const usernames: string[] = config.get('usernames', []);
-		const usernameQuickPickItems: QuickPickItem[] = usernames.map(label => ({ label }));
-
-		async function collectInputs() {
-			const state = {} as Partial<State>;
-			await MultiStepInput.run(input => pickContentSetUrl(input, state));
-			return state as State;
-		}
-
-		const title = 'Compare Content Set';
-
-		async function pickContentSetUrl(input: MultiStepInput, state: Partial<State>) {
-			if (contentSetUrlQuickPickItemss.length === 0) {
-				return (input: MultiStepInput) => inputContentSetUrl(input, state, 0);
-			} else {
-				addButton.tooltip = 'Add New Content Url';
-				const pick = await input.showQuickPick({
-					title,
-					step: 1,
-					totalSteps: 4,
-					placeholder: 'Please choose the url for the content set.',
-					items: contentSetUrlQuickPickItemss,
-					activeItem: typeof state.contentSetUrl !== 'string' ? state.contentSetUrl : undefined,
-					buttons: [addButton],
-					shouldResume: shouldResume
-				});
-				if (pick instanceof MyButton) {
-					return (input: MultiStepInput) => inputContentSetUrl(input, state, 1);
-				}
-				state.contentSetUrl = pick;
-				return (input: MultiStepInput) => pickFqdn(input, state, 0);
-			}
-		}
-
-		async function inputContentSetUrl(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
-			state.contentSetUrl = await input.showInputBox({
-				title,
-				step: 1 + stepModifier,
-				totalSteps: 4 + stepModifier,
-				value: typeof state.contentSetUrl === 'string' ? state.contentSetUrl : '',
-				prompt: 'Please enter the url for the content set.',
-				shouldResume: shouldResume
-			});
-			return (input: MultiStepInput) => pickFqdn(input, state, stepModifier);
-		}
-
-		async function pickFqdn(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
-			if (fqdnQuickPickItems.length === 0) {
-				return (input: MultiStepInput) => inputFqdn(input, state, stepModifier);
-			} else {
-				addButton.tooltip = 'Add New FQDN';
-				const pick = await input.showQuickPick({
-					title,
-					step: 2 + stepModifier,
-					totalSteps: 4 + stepModifier,
-					placeholder: 'Please choose the Tanium server fqdn',
-					items: fqdnQuickPickItems,
-					activeItem: typeof state.fqdn !== 'string' ? state.fqdn : undefined,
-					buttons: [addButton],
-					shouldResume: shouldResume
-				});
-				if (pick instanceof MyButton) {
-					return (input: MultiStepInput) => inputFqdn(input, state, stepModifier + 1);
-				}
-				state.fqdn = pick;
-				return (input: MultiStepInput) => pickUsername(input, state, stepModifier);
-			}
-		}
-
-		async function inputFqdn(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
-			state.fqdn = await input.showInputBox({
-				title,
-				step: 2 + stepModifier,
-				totalSteps: 4 + stepModifier,
-				value: typeof state.fqdn === 'string' ? state.fqdn : '',
-				prompt: 'Please enter the Tanium server fqdn',
-				shouldResume: shouldResume
-			});
-			return (input: MultiStepInput) => pickUsername(input, state, stepModifier);
-		}
-
-		async function pickUsername(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
-			if (usernameQuickPickItems.length === 0) {
-				return (input: MultiStepInput) => inputUsername(input, state, stepModifier);
-			} else {
-				addButton.tooltip = 'Add New Username';
-				const pick = await input.showQuickPick({
-					title,
-					step: 3 + stepModifier,
-					totalSteps: 4 + stepModifier,
-					placeholder: 'Please choose the Tanium server username',
-					items: usernameQuickPickItems,
-					activeItem: typeof state.username !== 'string' ? state.username : undefined,
-					buttons: [addButton],
-					shouldResume: shouldResume
-				});
-				if (pick instanceof MyButton) {
-					return (input: MultiStepInput) => inputUsername(input, state, stepModifier + 1);
-				}
-				state.username = pick;
-				return (input: MultiStepInput) => inputPassword(input, state, stepModifier);
-			}
-		}
-
-		async function inputUsername(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
-			state.username = await input.showInputBox({
-				title,
-				step: 2 + stepModifier,
-				totalSteps: 4 + stepModifier,
-				value: typeof state.username === 'string' ? state.username : '',
-				prompt: 'Please enter the Tanium server username',
-				shouldResume: shouldResume
-			});
-			return (input: MultiStepInput) => inputPassword(input, state, stepModifier);
-		}
-
-		async function inputPassword(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
-			state.password = await input.showInputBox({
-				title,
-				step: 2 + stepModifier,
-				totalSteps: 4 + stepModifier,
-				value: typeof state.password === 'string' ? state.password : '',
-				prompt: 'Please enter the Tanium server password',
-				password: true,
-				shouldResume: shouldResume
-			});
-		}
-
-		function shouldResume() {
-			// Could show a notification with the option to resume.
-			return new Promise<boolean>((resolve, reject) => {
-				// noop
-			});
-		}
-
-		const state = await collectInputs();
+		const state = await collectInputs(config, context);
 
 		// store values
-		var contentSet: string;
-		var fqdn: string;
-		var username: string;
-		var password: string;
-
-		if (typeof state.contentSetUrl === 'string'){
-			urls.push(state.contentSetUrl);
-			config.update('contentSetUrls', urls, ConfigurationTarget.Global);
-			contentSet = state.contentSetUrl;
-		} else {
-			contentSet = state.contentSetUrl.label;
-		}
-
-		if (typeof state.fqdn === 'string'){
-			fqdns.push(state.fqdn);
-			config.update('fqdns', fqdns, ConfigurationTarget.Global);
-			fqdn = state.fqdn;
-		} else {
-			fqdn = state.fqdn.label;
-		}
-
-		if (typeof state.username === 'string'){
-			usernames.push(state.username);
-			config.update('usernames', usernames, ConfigurationTarget.Global);
-			username = state.username;
-		} else {
-			username = state.username.label;
-		}
-
-		password = state.password;
+		const contentSet: string = state.contentSetString;
+		const fqdn: string = state.fqdnString;
+		const username: string = state.usernameString;
+		const password: string = state.password;
 
 		log(`contentSet: ${contentSet}`);
 		log(`fqdn: ${fqdn}`);

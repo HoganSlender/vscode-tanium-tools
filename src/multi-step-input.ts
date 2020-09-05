@@ -8,6 +8,9 @@ export interface State {
 	fqdn: QuickPickItem | string;
 	username: QuickPickItem | string;
 	password: string;
+	contentSetString: string;
+	fqdnString: string;
+	usernameString: string;
 }
 
 export class MyButton implements QuickInputButton {

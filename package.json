@@ -1,5 +1,5 @@
 {
-	"name": "hoganslendertanium",
+	"name": "hoganslender-tanium",
 	"displayName": "Tanium Tools",
 	"description": "",
 	"version": "0.0.1",
@@ -28,7 +28,28 @@
 				"command": "hoganslendertanium.compareContentSet",
 				"title": "Tanium: Compare Content Set"
 			}
-		]
+		],
+		"configuration": {
+			"type": "object",
+			"title": "Tanium Tools",
+			"properties": {
+				"hoganslender.tanium.contentSetUrls": {
+					"type": "array",
+					"default": [],
+					"description": "content set urls that have been used"
+				},
+				"hoganslender.tanium.fqdns": {
+					"type": "array",
+					"default": [],
+					"description": "Tanium server fqdns/ip addresses that have been used"
+				},
+				"hoganslender.tanium.usernames": {
+					"type": "array",
+					"default": [],
+					"description": "usernames that have been used"
+				}
+			}
+		}
 	},
 	"scripts": {
 		"compile": "tsc -p ./",

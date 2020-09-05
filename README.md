@@ -1,14 +1,16 @@
-# HoganSlender Tanium Tools
+# HoganSlender's Tanium Tools
 
 Contains miscellaneous commands to work with Tanium servers in Visual Studio Code.
 
 ## Features
 
-* **Tanium: Compare Content Set** command - allows you to download a content set xml file from Tanium support and compare it to the sensors on your server.
+* **Commands**
+    * `Tanium: Compare Content Set` - allows you to download a content set xml file from Tanium support and compare it to the sensors on your server.
 
-## Extension Settings
-
-* none
+* **Available Settings**
+    * `hoganslender.tanium.contentSetUrls` - List of recently used content set urls
+    * `hoganslender.tanium.fqdns` - List of recently used Tanium server fqdns
+    * `hoganslender.tanium.usernames` - List of recentrly used Tanium usernames
 
 ## Known Issues
 
@@ -22,4 +24,6 @@ Users appreciate release notes as you update your extension.
 
 Initial release of 'Tanium: Compare Content Set' command
 
------------------------------------------------------------------------------------------------------------
+## Recommended Extensions
+
+- [Diff Folders](https://marketplace.visualstudio.com/items?itemName=L13RARY.l13-diff) - Extremely useful in comparing Tanium content

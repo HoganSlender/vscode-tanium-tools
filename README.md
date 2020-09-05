@@ -18,7 +18,7 @@ Contains miscellaneous commands to work with Tanium servers in Visual Studio Cod
 
 ## Release Notes
 
-### 1.0.0
+### 0.0.1
 
 Initial release of `Tanium: Compare Content Set` command
 

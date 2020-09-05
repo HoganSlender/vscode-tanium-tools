@@ -18,11 +18,9 @@ Contains miscellaneous commands to work with Tanium servers in Visual Studio Cod
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
-
 ### 1.0.0
 
-Initial release of 'Tanium: Compare Content Set' command
+Initial release of `Tanium: Compare Content Set` command
 
 ## Recommended Extensions
 

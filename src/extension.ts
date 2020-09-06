@@ -5,7 +5,7 @@ import * as he from 'he';
 import * as parser from 'fast-xml-parser';
 import { sanitize } from "sanitize-filename-ts";
 import { TransformSensor } from './transform-sensor';
-import { OutputChannel, window, ExtensionContext, commands, workspace } from 'vscode';
+import { OutputChannel, window, ExtensionContext, commands, workspace, ProgressLocation } from 'vscode';
 import { collectInputs } from './content-set-parameters';
 import { RequestError } from 'got';
 
@@ -17,11 +17,6 @@ var outputChannel: OutputChannel;
 
 function log(msg: string) {
 	outputChannel.appendLine(msg);
-}
-
-function logWithMessage(msg: string) {
-	log(msg);
-	window.showInformationMessage(msg);
 }
 
 function logError(msg: string, errObject: any) {
@@ -66,15 +61,15 @@ export function activate(context: ExtensionContext) {
 		const username: string = state.usernameString;
 		const password: string = state.password;
 
-		log(`contentSet: ${contentSet}`);
-		log(`fqdn: ${fqdn}`);
-		log(`username: ${username}`);
-		log(`password: XXXXXXXX`);
-
 		const restBase = `https://${fqdn}/api/v2`;
 
 		outputChannel.show();
 		outputChannel.clear();
+
+		log(`contentSet: ${contentSet}`);
+		log(`fqdn: ${fqdn}`);
+		log(`username: ${username}`);
+		log(`password: XXXXXXXX`);
 
 		// get filename from url
 		const parsed = url.parse(contentSet);
@@ -144,35 +139,67 @@ export function activate(context: ExtensionContext) {
 					// process sensors
 					var sensorInfo: any[] = [];
 
-					var lastSensorName = jsonObj.content.sensor[jsonObj.content.sensor.length - 1].name;
-					jsonObj.content.sensor.forEach((sensor: any) => {
-						sensorInfo.push({
-							name: sensor.name,
-							hash: `${sensor.what_hash}`
+					window.withProgress({
+						location: ProgressLocation.Notification,
+						title: "content set extraction",
+						cancellable: true
+					}, (progress, token) => {
+						token.onCancellationRequested(() => {
+							outputChannel.appendLine("User canceled the long running operation");
 						});
-						const name = sanitize(sensor.name);
 
-						try {
-							const tmpSensor = TransformSensor.transformContentSet(sensor);
+						const jsonTotal = jsonObj.content.sensor.length;
+						const jsonIncrement = 100 / jsonTotal;
 
-							const content = JSON.stringify(tmpSensor, null, 2);
+						var jsonCounter = 0;
 
-							// write to file
-							const contentDirFile = path.join(contentDir, name + ".json");
-							fs.writeFile(contentDirFile, content, (err) => {
-								if (err) {
-									logError(`error writing ${contentDirFile}`, err);
-									return;
-								}
+						const p = new Promise(resolve => {
+							progress.report({ increment: 0 });
+							jsonObj.content.sensor.forEach((sensor: any) => {
+								sensorInfo.push({
+									name: sensor.name,
+									hash: `${sensor.what_hash}`
+								});
+								const name = sanitize(sensor.name);
 
-								if (lastSensorName === sensor.name) {
-									logWithMessage('content set extraction complete');
+								try {
+									const tmpSensor = TransformSensor.transformContentSet(sensor);
+
+									const content = JSON.stringify(tmpSensor, null, 2);
+
+									// write to file
+									const contentDirFile = path.join(contentDir, name + ".json");
+									fs.writeFile(contentDirFile, content, (err) => {
+										if (err) {
+											logError(`error writing ${contentDirFile}`, err);
+											return;
+										}
+
+										jsonCounter++;
+										progress.report({
+											increment: jsonCounter * jsonIncrement
+										});
+
+										if (jsonTotal === jsonCounter) {
+											resolve();
+										}
+									});
+								} catch (err) {
+									logError(`error processing content set - ${name}`, err);
+
+									jsonCounter++;
+									progress.report({
+										increment: jsonCounter * jsonIncrement
+									});
+
+									if (jsonTotal === jsonCounter) {
+										resolve();
+									}
 								}
 							});
-						} catch (err) {
-							logError(`error processing content set - ${name}`, err);
-						}
+						});
 
+						return p;
 					});
 
 					// get session
@@ -193,47 +220,99 @@ export function activate(context: ExtensionContext) {
 						return;
 					}
 
-					const lastHash = sensorInfo[sensorInfo.length - 1].hash;
-					sensorInfo.forEach(async (sensorInfo: any) => {
-						try {
-							const hash = sensorInfo.hash;
-							const { body } = await got.get(`${restBase}/sensors/by-hash/${hash}`, {
-								headers: {
-									session: session,
-								},
-								responseType: 'json',
-								timeout: httpTimeout,
+					window.withProgress({
+						location: ProgressLocation.Notification,
+						title: `sensor retrieval from ${fqdn}`,
+						cancellable: true
+					}, (progress, token) => {
+						token.onCancellationRequested(() => {
+							outputChannel.appendLine(`sensor retrieval from ${fqdn}`);
+						});
+
+						const sensorTotal = sensorInfo.length;
+						const sensorIncrement = 100 / sensorTotal;
+
+						var sensorCounter = 0;
+
+						const p = new Promise(resolve => {
+							progress.report({ increment: 0 });
+							sensorInfo.forEach(async (sensorInfo: any) => {
+								try {
+									const hash = sensorInfo.hash;
+									const { body } = await got.get(`${restBase}/sensors/by-hash/${hash}`, {
+										headers: {
+											session: session,
+										},
+										responseType: 'json',
+										timeout: httpTimeout,
+									});
+
+									let sensor: any = body.data;
+									const name: string = sanitize(sensor.name);
+
+									try {
+										sensor = TransformSensor.transform(sensor);
+										const content: string = JSON.stringify(sensor, null, 2);
+
+										const serverFile = path.join(serverDir, name + '.json');
+										fs.writeFile(serverFile, content, (err) => {
+											if (err) {
+												logError(`could not write ${serverFile}`, err);
+											}
+
+											sensorCounter++;
+											progress.report({
+												increment: sensorCounter * sensorIncrement
+											});
+
+											if (sensorTotal === sensorCounter) {
+												window.withProgress({
+													location: ProgressLocation.Notification,
+													title: "Processing Complete!",
+													cancellable: false
+												}, (progress, token) => {
+													progress.report({
+														increment: 100,
+														message: 'Processing is complete',
+													});
+
+													const p = new Promise(resolve => {
+														setTimeout(() => {
+															resolve();
+														}, 5000);
+													});
+
+													return p;
+												});
+												resolve();
+											}
+										});
+									} catch (err) {
+										logError(`error processing server sensor - ${name}`, err);
+									}
+								} catch (err) {
+									if (!err.message.includes('404')) {
+										logError(`error retrieving ${sensorInfo.name} from ${fqdn}`, err);
+									}
+
+									sensorCounter++;
+									progress.report({
+										increment: sensorCounter * sensorIncrement
+									});
+
+									if (sensorTotal === sensorCounter) {
+										resolve();
+									}
+								}
 							});
 
-							let sensor: any = body.data;
-							const name: string = sanitize(sensor.name);
+						});
 
-							try {
-								sensor = TransformSensor.transform(sensor);
-								const content: string = JSON.stringify(sensor, null, 2);
-
-								const serverFile = path.join(serverDir, name + '.json');
-								fs.writeFile(serverFile, content, (err) => {
-									if (err) {
-										logError(`could not write ${serverFile}`, err);
-									}
-									if (lastHash === hash) {
-										logWithMessage('server sensor retrieval complete');
-									}
-								});
-							} catch (err) {
-								logError(`error processing server sensor - ${name}`, err);
-							}
-						} catch (err) {
-							if (!err.message.includes('404')) {
-								logError(`error retrieving ${sensorInfo.name} from ${fqdn}`, err);
-							}
-						}
+						return p;
 					});
 				}
 			});
 		})();
-
 	});
 
 	context.subscriptions.push(disposable);

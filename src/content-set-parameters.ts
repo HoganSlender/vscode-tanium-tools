@@ -154,7 +154,7 @@ export async function pickUsername(input: MultiStepInput, state: Partial<State>,
 export async function inputUsername(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
     state.username = await input.showInputBox({
         title,
-        step: 2 + stepModifier,
+        step: 4 + stepModifier,
         totalSteps: 4 + stepModifier,
         value: typeof state.username === 'string' ? state.username : '',
         prompt: 'Please enter the Tanium server username',
@@ -166,7 +166,7 @@ export async function inputUsername(input: MultiStepInput, state: Partial<State>
 export async function inputPassword(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
     state.password = await input.showInputBox({
         title,
-        step: 2 + stepModifier,
+        step: 4 + stepModifier,
         totalSteps: 4 + stepModifier,
         value: typeof state.password === 'string' ? state.password : '',
         prompt: 'Please enter the Tanium server password',

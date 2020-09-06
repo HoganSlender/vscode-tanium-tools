@@ -5,9 +5,9 @@ import * as he from 'he';
 import * as parser from 'fast-xml-parser';
 import { sanitize } from "sanitize-filename-ts";
 import { TransformSensor } from './transform-sensor';
-import { MultiStepInput, MyButton, State } from './multi-step-input';
-import { OutputChannel, window, ExtensionContext, commands, QuickInputButton, Uri, workspace, QuickPickItem, QuickInput, Disposable, QuickInputButtons, ConfigurationTarget, SelectionRange } from 'vscode';
-import { pickContentSetUrl, collectInputs } from './content-set-parameters';
+import { OutputChannel, window, ExtensionContext, commands, workspace } from 'vscode';
+import { collectInputs } from './content-set-parameters';
+import { RequestError } from 'got';
 
 const got = require('got');
 const { promisify } = require('util');
@@ -27,9 +27,11 @@ function logWithMessage(msg: string) {
 function logError(msg: string, errObject: any) {
 	log(msg);
 	if (errObject instanceof TypeError) {
-		log(`${errObject.message} at ${errObject.stack}`);
+		log(`\t${errObject.message} at ${errObject.stack}`);
+	} else if (errObject instanceof RequestError) {
+		log(`\t${errObject.message} at ${errObject.stack}`);
 	} else {
-		log(JSON.stringify(errObject, null, 2));
+		log(`\t${JSON.stringify(errObject, null, 2)}`);
 	}
 }
 
@@ -54,6 +56,7 @@ export function activate(context: ExtensionContext) {
 
 		// get configurations
 		const config = workspace.getConfiguration('hoganslender.tanium');
+		const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
 
 		const state = await collectInputs(config, context);
 
@@ -71,6 +74,7 @@ export function activate(context: ExtensionContext) {
 		const restBase = `https://${fqdn}/api/v2`;
 
 		outputChannel.show();
+		outputChannel.clear();
 
 		// get filename from url
 		const parsed = url.parse(contentSet);
@@ -80,17 +84,21 @@ export function activate(context: ExtensionContext) {
 		// download the file
 		const contentSetFile = path.join(folderPath!, contentFilename);
 
-		var file = fs.createWriteStream(contentSetFile);
-
 		const pipeline = promisify(stream.pipeline);
 
 		(async () => {
-			await pipeline(
-				got.stream(contentSet),
-				fs.createWriteStream(contentSetFile)
-			);
+			try {
+				await pipeline(
+					got.stream(contentSet, {
+						timeout: httpTimeout,
+					}),
+					fs.createWriteStream(contentSetFile)
+				);
+			} catch (err) {
+				logError(`error downloading ${contentSet}`, err);
+				return;
+			}
 
-			file.close();  // close() is async, call cb after close completes.
 			log(`download complete.`);
 
 			fs.readFile(contentSetFile, 'utf8', async function (err, data) {
@@ -134,11 +142,14 @@ export function activate(context: ExtensionContext) {
 					}
 
 					// process sensors
-					var sensorHash: string[] = [];
+					var sensorInfo: any[] = [];
 
 					var lastSensorName = jsonObj.content.sensor[jsonObj.content.sensor.length - 1].name;
 					jsonObj.content.sensor.forEach((sensor: any) => {
-						sensorHash.push(`${sensor.what_hash}`);
+						sensorInfo.push({
+							name: sensor.name,
+							hash: `${sensor.what_hash}`
+						});
 						const name = sanitize(sensor.name);
 
 						try {
@@ -165,43 +176,58 @@ export function activate(context: ExtensionContext) {
 					});
 
 					// get session
-					const { body } = await got.post(`${restBase}/session/login`, {
-						json: {
-							username: username,
-							password: password,
-						},
-						responseType: 'json'
-					});
-
-					var session: string = body.data.session;
-
-					const lastHash = sensorHash[sensorHash.length - 1];
-					sensorHash.forEach(async (hash) => {
-						const { body } = await got.get(`${restBase}/sensors/by-hash/${hash}`, {
-							headers: {
-								session: session,
+					var session: string;
+					try {
+						const { body } = await got.post(`${restBase}/session/login`, {
+							json: {
+								username: username,
+								password: password,
 							},
-							responseType: 'json'
+							responseType: 'json',
+							timeout: httpTimeout,
 						});
 
-						let sensor: any = body.data;
-						const name: string = sanitize(sensor.name);
+						session = body.data.session;
+					} catch (err) {
+						logError('could not retrieve session', err);
+						return;
+					}
 
+					const lastHash = sensorInfo[sensorInfo.length - 1].hash;
+					sensorInfo.forEach(async (sensorInfo: any) => {
 						try {
-							sensor = TransformSensor.transform(sensor);
-							const content: string = JSON.stringify(sensor, null, 2);
-
-							const serverFile = path.join(serverDir, name + '.json');
-							fs.writeFile(serverFile, content, (err) => {
-								if (err) {
-									logError(`could not write ${serverFile}`, err);
-								}
-								if (lastHash === hash) {
-									logWithMessage('server sensor retrieval complete');
-								}
+							const hash = sensorInfo.hash;
+							const { body } = await got.get(`${restBase}/sensors/by-hash/${hash}`, {
+								headers: {
+									session: session,
+								},
+								responseType: 'json',
+								timeout: httpTimeout,
 							});
+
+							let sensor: any = body.data;
+							const name: string = sanitize(sensor.name);
+
+							try {
+								sensor = TransformSensor.transform(sensor);
+								const content: string = JSON.stringify(sensor, null, 2);
+
+								const serverFile = path.join(serverDir, name + '.json');
+								fs.writeFile(serverFile, content, (err) => {
+									if (err) {
+										logError(`could not write ${serverFile}`, err);
+									}
+									if (lastHash === hash) {
+										logWithMessage('server sensor retrieval complete');
+									}
+								});
+							} catch (err) {
+								logError(`error processing server sensor - ${name}`, err);
+							}
 						} catch (err) {
-							logError(`error processing server sensor - ${name}`, err);
+							if (!err.message.includes('404')) {
+								logError(`error retrieving ${sensorInfo.name} from ${fqdn}`, err);
+							}
 						}
 					});
 				}

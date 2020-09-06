@@ -154,7 +154,7 @@ export async function pickUsername(input: MultiStepInput, state: Partial<State>,
 export async function inputUsername(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
     state.username = await input.showInputBox({
         title,
-        step: 4 + stepModifier,
+        step: 3 + stepModifier,
         totalSteps: 4 + stepModifier,
         value: typeof state.username === 'string' ? state.username : '',
         prompt: 'Please enter the Tanium server username',

@@ -38,11 +38,6 @@
 					"default": 10,
 					"description": "Number of seconds for HTTP request timeout"
 				},
-				"hoganslender.tanium.contentSetUrls": {
-					"type": "array",
-					"default": [],
-					"description": "content set urls that have been used"
-				},
 				"hoganslender.tanium.fqdns": {
 					"type": "array",
 					"default": [],

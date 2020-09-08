@@ -1,13 +1,25 @@
-import { MultiStepInput, State, MyButton } from "./multi-step-input";
+import { MultiStepInput, MyButton } from "./multi-step-input";
 import { QuickPickItem, WorkspaceConfiguration, ExtensionContext, Uri, ConfigurationTarget } from "vscode";
 
 const title = 'Compare Content Set';
 
-var contentSetUrlQuickPickItems: QuickPickItem[];
 var fqdnQuickPickItems: QuickPickItem[];
 var usernameQuickPickItems: QuickPickItem[];
+var lastUsedUrl: string;
 
 var addButton: MyButton;
+
+interface State {
+	title: string;
+	step: number;
+	totalSteps: number;
+	contentSetUrl: string;
+	fqdn: QuickPickItem | string;
+	username: QuickPickItem | string;
+	password: string;
+	fqdnString: string;
+	usernameString: string;
+}
 
 export async function collectInputs(config: WorkspaceConfiguration, context: ExtensionContext) {
     addButton = new MyButton({
@@ -15,9 +27,9 @@ export async function collectInputs(config: WorkspaceConfiguration, context: Ext
         light: Uri.file(context.asAbsolutePath('resources/light/add.svg')),
     }, '');
 
-    // get urls
-    const urls: string[] = config.get('contentSetUrls', []);
-    contentSetUrlQuickPickItems = urls.map(label => ({ label }));
+    // get last url
+    var retval = context.globalState.get<string>('hoganslender.tanium.contentset.url');
+    lastUsedUrl = retval === undefined ? '' : retval;
 
     // get fqdns
     const fqdns: string[] = config.get('fqdns', []);
@@ -28,15 +40,9 @@ export async function collectInputs(config: WorkspaceConfiguration, context: Ext
     usernameQuickPickItems = usernames.map(label => ({ label }));
 
     const state = {} as Partial<State>;
-    await MultiStepInput.run(input => pickContentSetUrl(input, state));
+    await MultiStepInput.run(input => inputContentSetUrl(input, state));
 
-    if (typeof state.contentSetUrl === 'string') {
-        urls.push(state.contentSetUrl);
-        config.update('contentSetUrls', urls, ConfigurationTarget.Global);
-        state.contentSetString = state.contentSetUrl;
-    } else {
-        state.contentSetString = state.contentSetUrl!.label;
-    }
+    context.globalState.update('hoganslender.tanium.contentset.url', state.contentSetUrl);
 
     if (typeof state.fqdn === 'string') {
         fqdns.push(state.fqdn);
@@ -58,50 +64,27 @@ export async function collectInputs(config: WorkspaceConfiguration, context: Ext
     return state as State;
 }
 
-export async function pickContentSetUrl(input: MultiStepInput, state: Partial<State>) {
-    if (contentSetUrlQuickPickItems.length === 0) {
-        return (input: MultiStepInput) => inputContentSetUrl(input, state, 0);
-    } else {
-        addButton.tooltip = 'Add New Content Url';
-        const pick = await input.showQuickPick({
-            title,
-            step: 1,
-            totalSteps: 4,
-            placeholder: 'Please choose the url for the content set.',
-            items: contentSetUrlQuickPickItems,
-            activeItem: typeof state.contentSetUrl !== 'string' ? state.contentSetUrl : undefined,
-            buttons: [addButton],
-            shouldResume: shouldResume
-        });
-        if (pick instanceof MyButton) {
-            return (input: MultiStepInput) => inputContentSetUrl(input, state, 1);
-        }
-        state.contentSetUrl = pick;
-        return (input: MultiStepInput) => pickFqdn(input, state, 0);
-    }
-}
-
-export async function inputContentSetUrl(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
+async function inputContentSetUrl(input: MultiStepInput, state: Partial<State>) {
     state.contentSetUrl = await input.showInputBox({
         title,
-        step: 1 + stepModifier,
-        totalSteps: 4 + stepModifier,
-        value: typeof state.contentSetUrl === 'string' ? state.contentSetUrl : '',
+        step: 1,
+        totalSteps: 4,
+        value: lastUsedUrl,
         prompt: 'Please enter the url for the content set.',
         shouldResume: shouldResume
     });
-    return (input: MultiStepInput) => pickFqdn(input, state, stepModifier);
+    return (input: MultiStepInput) => pickFqdn(input, state);
 }
 
-export async function pickFqdn(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
+async function pickFqdn(input: MultiStepInput, state: Partial<State>) {
     if (fqdnQuickPickItems.length === 0) {
-        return (input: MultiStepInput) => inputFqdn(input, state, stepModifier);
+        return (input: MultiStepInput) => inputFqdn(input, state, 0);
     } else {
         addButton.tooltip = 'Add New FQDN';
         const pick = await input.showQuickPick({
             title,
-            step: 2 + stepModifier,
-            totalSteps: 4 + stepModifier,
+            step: 2,
+            totalSteps: 4,
             placeholder: 'Please choose the Tanium server fqdn',
             items: fqdnQuickPickItems,
             activeItem: typeof state.fqdn !== 'string' ? state.fqdn : undefined,
@@ -109,14 +92,14 @@ export async function pickFqdn(input: MultiStepInput, state: Partial<State>, ste
             shouldResume: shouldResume
         });
         if (pick instanceof MyButton) {
-            return (input: MultiStepInput) => inputFqdn(input, state, stepModifier + 1);
+            return (input: MultiStepInput) => inputFqdn(input, state, 1);
         }
         state.fqdn = pick;
-        return (input: MultiStepInput) => pickUsername(input, state, stepModifier);
+        return (input: MultiStepInput) => pickUsername(input, state, 1);
     }
 }
 
-export async function inputFqdn(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
+async function inputFqdn(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
     state.fqdn = await input.showInputBox({
         title,
         step: 2 + stepModifier,
@@ -128,7 +111,7 @@ export async function inputFqdn(input: MultiStepInput, state: Partial<State>, st
     return (input: MultiStepInput) => pickUsername(input, state, stepModifier);
 }
 
-export async function pickUsername(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
+async function pickUsername(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
     if (usernameQuickPickItems.length === 0) {
         return (input: MultiStepInput) => inputUsername(input, state, stepModifier);
     } else {
@@ -151,7 +134,7 @@ export async function pickUsername(input: MultiStepInput, state: Partial<State>,
     }
 }
 
-export async function inputUsername(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
+async function inputUsername(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
     state.username = await input.showInputBox({
         title,
         step: 3 + stepModifier,
@@ -163,7 +146,7 @@ export async function inputUsername(input: MultiStepInput, state: Partial<State>
     return (input: MultiStepInput) => inputPassword(input, state, stepModifier);
 }
 
-export async function inputPassword(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
+async function inputPassword(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
     state.password = await input.showInputBox({
         title,
         step: 4 + stepModifier,

@@ -56,7 +56,7 @@ export function activate(context: ExtensionContext) {
 		const state = await collectInputs(config, context);
 
 		// store values
-		const contentSet: string = state.contentSetString;
+		const contentSet: string = state.contentSetUrl;
 		const fqdn: string = state.fqdnString;
 		const username: string = state.usernameString;
 		const password: string = state.password;

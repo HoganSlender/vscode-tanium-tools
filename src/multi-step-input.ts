@@ -1,18 +1,5 @@
 import { QuickInput, QuickPickItem, QuickInputButton, Disposable, window, QuickInputButtons, Uri } from "vscode";
 
-export interface State {
-	title: string;
-	step: number;
-	totalSteps: number;
-	contentSetUrl: QuickPickItem | string;
-	fqdn: QuickPickItem | string;
-	username: QuickPickItem | string;
-	password: string;
-	contentSetString: string;
-	fqdnString: string;
-	usernameString: string;
-}
-
 export class MyButton implements QuickInputButton {
 	constructor(public iconPath: { light: Uri; dark: Uri; }, public tooltip: string) { }
 }

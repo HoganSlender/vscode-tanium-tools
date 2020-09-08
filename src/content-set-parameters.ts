@@ -3,6 +3,7 @@ import { QuickPickItem, WorkspaceConfiguration, ExtensionContext, Uri, Configura
 
 const title = 'Compare Content Set';
 
+const commentWhitespaceItems: QuickPickItem[] = ['Yes', 'No'].map(label => ({ label }));
 var fqdnQuickPickItems: QuickPickItem[];
 var usernameQuickPickItems: QuickPickItem[];
 var lastUsedUrl: string;
@@ -18,7 +19,8 @@ interface State {
 	username: QuickPickItem | string;
 	password: string;
 	fqdnString: string;
-	usernameString: string;
+    usernameString: string;
+    extractCommentWhitespace: boolean;
 }
 
 export async function collectInputs(config: WorkspaceConfiguration, context: ExtensionContext) {
@@ -68,12 +70,26 @@ async function inputContentSetUrl(input: MultiStepInput, state: Partial<State>) 
     state.contentSetUrl = await input.showInputBox({
         title,
         step: 1,
-        totalSteps: 4,
+        totalSteps: 5,
         value: lastUsedUrl,
         prompt: 'Please enter the url for the content set.',
         shouldResume: shouldResume
     });
-    return (input: MultiStepInput) => pickFqdn(input, state);
+    return (input: MultiStepInput) => pickCommentWhitespace(input, state);
+}
+
+async function pickCommentWhitespace(input: MultiStepInput, state: Partial<State>) {
+        const pick = await input.showQuickPick({
+            title,
+            step: 2,
+            totalSteps: 5,
+            placeholder: 'Extract/group sensors with only comment and whitespace differences?',
+            items: commentWhitespaceItems,
+            //activeItem: state.extractCommentWhitespace,
+            shouldResume: shouldResume
+        });
+        state.extractCommentWhitespace = pick.label === 'Yes' ? true : false;
+        return (input: MultiStepInput) => pickFqdn(input, state);
 }
 
 async function pickFqdn(input: MultiStepInput, state: Partial<State>) {
@@ -83,8 +99,8 @@ async function pickFqdn(input: MultiStepInput, state: Partial<State>) {
         addButton.tooltip = 'Add New FQDN';
         const pick = await input.showQuickPick({
             title,
-            step: 2,
-            totalSteps: 4,
+            step: 3,
+            totalSteps: 5,
             placeholder: 'Please choose the Tanium server fqdn',
             items: fqdnQuickPickItems,
             activeItem: typeof state.fqdn !== 'string' ? state.fqdn : undefined,
@@ -102,8 +118,8 @@ async function pickFqdn(input: MultiStepInput, state: Partial<State>) {
 async function inputFqdn(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
     state.fqdn = await input.showInputBox({
         title,
-        step: 2 + stepModifier,
-        totalSteps: 4 + stepModifier,
+        step: 3 + stepModifier,
+        totalSteps: 5 + stepModifier,
         value: typeof state.fqdn === 'string' ? state.fqdn : '',
         prompt: 'Please enter the Tanium server fqdn',
         shouldResume: shouldResume
@@ -118,8 +134,8 @@ async function pickUsername(input: MultiStepInput, state: Partial<State>, stepMo
         addButton.tooltip = 'Add New Username';
         const pick = await input.showQuickPick({
             title,
-            step: 3 + stepModifier,
-            totalSteps: 4 + stepModifier,
+            step: 4 + stepModifier,
+            totalSteps: 5 + stepModifier,
             placeholder: 'Please choose the Tanium server username',
             items: usernameQuickPickItems,
             activeItem: typeof state.username !== 'string' ? state.username : undefined,
@@ -137,8 +153,8 @@ async function pickUsername(input: MultiStepInput, state: Partial<State>, stepMo
 async function inputUsername(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
     state.username = await input.showInputBox({
         title,
-        step: 3 + stepModifier,
-        totalSteps: 4 + stepModifier,
+        step: 4 + stepModifier,
+        totalSteps: 5 + stepModifier,
         value: typeof state.username === 'string' ? state.username : '',
         prompt: 'Please enter the Tanium server username',
         shouldResume: shouldResume
@@ -149,8 +165,8 @@ async function inputUsername(input: MultiStepInput, state: Partial<State>, stepM
 async function inputPassword(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
     state.password = await input.showInputBox({
         title,
-        step: 4 + stepModifier,
-        totalSteps: 4 + stepModifier,
+        step: 5 + stepModifier,
+        totalSteps: 5 + stepModifier,
         value: typeof state.password === 'string' ? state.password : '',
         prompt: 'Please enter the Tanium server password',
         password: true,

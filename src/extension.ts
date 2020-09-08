@@ -9,6 +9,8 @@ import { OutputChannel, window, ExtensionContext, commands, workspace, ProgressL
 import { collectInputs } from './content-set-parameters';
 import { RequestError } from 'got';
 
+const diffMatchPatch = require('diff-match-patch');
+
 const got = require('got');
 const { promisify } = require('util');
 const stream = require('stream');
@@ -55,11 +57,12 @@ export function activate(context: ExtensionContext) {
 
 		const state = await collectInputs(config, context);
 
-		// store values
+		// collect values
 		const contentSet: string = state.contentSetUrl;
 		const fqdn: string = state.fqdnString;
 		const username: string = state.usernameString;
 		const password: string = state.password;
+		const extractCommentWhitespace: boolean = state.extractCommentWhitespace;
 
 		const restBase = `https://${fqdn}/api/v2`;
 
@@ -67,6 +70,7 @@ export function activate(context: ExtensionContext) {
 		outputChannel.clear();
 
 		log(`contentSet: ${contentSet}`);
+		log(`commentWhitespace: ${extractCommentWhitespace}`);
 		log(`fqdn: ${fqdn}`);
 		log(`username: ${username}`);
 		log(`password: XXXXXXXX`);
@@ -127,6 +131,9 @@ export function activate(context: ExtensionContext) {
 					// create folders
 					const contentDir = path.join(folderPath!, `1 - ${contentFilename.replace('.xml', '')}`);
 					const serverDir = path.join(folderPath!, `2 - ${sanitize(fqdn)}`);
+					const commentDir = path.join(folderPath!, 'Comments Only');
+					const commentContentDir = path.join(commentDir, `1 - ${contentFilename.replace('.xml', '')}`);
+					const commentServerDir = path.join(commentDir, `2 - ${sanitize(fqdn)}`);
 
 					if (!fs.existsSync(contentDir)) {
 						fs.mkdirSync(contentDir);
@@ -135,6 +142,19 @@ export function activate(context: ExtensionContext) {
 					if (!fs.existsSync(serverDir)) {
 						fs.mkdirSync(serverDir);
 					}
+
+					if (!fs.existsSync(commentDir)) {
+						fs.mkdirSync(commentDir);
+					}
+
+					if (!fs.existsSync(commentContentDir)) {
+						fs.mkdirSync(commentContentDir);
+					}
+
+					if (!fs.existsSync(commentServerDir)) {
+						fs.mkdirSync(commentServerDir);
+					}
+
 
 					// process sensors
 					var sensorInfo: any[] = [];
@@ -182,6 +202,7 @@ export function activate(context: ExtensionContext) {
 
 										if (jsonTotal === jsonCounter) {
 											resolve();
+
 										}
 									});
 								} catch (err) {
@@ -220,7 +241,7 @@ export function activate(context: ExtensionContext) {
 						return;
 					}
 
-					window.withProgress({
+					await window.withProgress({
 						location: ProgressLocation.Notification,
 						title: `sensor retrieval from ${fqdn}`,
 						cancellable: true
@@ -310,6 +331,61 @@ export function activate(context: ExtensionContext) {
 
 						return p;
 					});
+
+					if (extractCommentWhitespace) {
+						const files: string[] = fs.readdirSync(contentDir);
+						files.forEach(file => {
+							try {
+								// check files
+								const leftTarget = path.join(contentDir, file);
+								const rightTarget = leftTarget.replace(contentDir, serverDir);
+								if (fs.existsSync(rightTarget)) {
+									// read contents of each file
+									const leftContent = fs.readFileSync(leftTarget, 'utf-8');
+									const rightContent = fs.readFileSync(rightTarget, 'utf-8');
+
+									// do diff
+									const dmp = new diffMatchPatch();
+									const diffs = dmp.diff_main(leftContent, rightContent);
+									dmp.diff_cleanupSemantic(diffs);
+
+									var onlyComments = true;
+									var allEqual = true;
+
+									diffs.forEach((diff: any) => {
+										const operation: number = diff[0];
+										const text: string = diff[1];
+
+										if (operation !== diffMatchPatch.DIFF_EQUAL) {
+											allEqual = false;
+
+											// trim text
+											var test = text.trim();
+
+											if (test.length !== 0) {
+												var first = test.substr(0, 1);
+												if (first === '"') {
+													first = test.substr(1, 1);
+												}
+
+												if (first !== '#' && first !== "'" && first !== ',') {
+													onlyComments = false;
+												}
+											}
+										}
+									});
+
+									if (onlyComments && !allEqual) {
+										// move the files
+										fs.renameSync(leftTarget, path.join(commentContentDir, file));
+										fs.renameSync(rightTarget, path.join(commentServerDir, file));
+									}
+								}
+							} catch (err) {
+								logError('error comparing files', err);
+							}
+						});
+					}
 				}
 			});
 		})();

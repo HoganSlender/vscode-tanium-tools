@@ -79,6 +79,7 @@
 		"webpack-cli": "^3.3.12"
 	},
 	"dependencies": {
+		"@types/diff-match-patch": "^1.0.32",
 		"@types/got": "^9.6.11",
 		"@types/he": "^1.1.1",
 		"@types/lodash": "^4.14.161",

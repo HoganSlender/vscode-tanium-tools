@@ -287,24 +287,6 @@ export function activate(context: ExtensionContext) {
 											});
 
 											if (sensorTotal === sensorCounter) {
-												window.withProgress({
-													location: ProgressLocation.Notification,
-													title: "Processing Complete!",
-													cancellable: false
-												}, (progress, token) => {
-													progress.report({
-														increment: 100,
-														message: 'Processing is complete',
-													});
-
-													const p = new Promise(resolve => {
-														setTimeout(() => {
-															resolve();
-														}, 5000);
-													});
-
-													return p;
-												});
 												resolve();
 											}
 										});
@@ -334,58 +316,106 @@ export function activate(context: ExtensionContext) {
 
 					if (extractCommentWhitespace) {
 						const files: string[] = fs.readdirSync(contentDir);
-						files.forEach(file => {
-							try {
-								// check files
-								const leftTarget = path.join(contentDir, file);
-								const rightTarget = leftTarget.replace(contentDir, serverDir);
-								if (fs.existsSync(rightTarget)) {
-									// read contents of each file
-									const leftContent = fs.readFileSync(leftTarget, 'utf-8');
-									const rightContent = fs.readFileSync(rightTarget, 'utf-8');
+						await window.withProgress({
+							location: ProgressLocation.Notification,
+							title: 'Extracting sensors with comments/whitspaces changes only',
+							cancellable: true
+						}, (progress, token) => {
+							token.onCancellationRequested(() => {
+								outputChannel.appendLine('Extracting sensors with comments/whitspaces changes only');
+							});
 
-									// do diff
-									const dmp = new diffMatchPatch();
-									const diffs = dmp.diff_main(leftContent, rightContent);
-									dmp.diff_cleanupSemantic(diffs);
+							const fileTotal = files.length;
+							const fileIncrement = 100 / fileTotal;
 
-									var onlyComments = true;
-									var allEqual = true;
+							var fileCounter = 0;
 
-									diffs.forEach((diff: any) => {
-										const operation: number = diff[0];
-										const text: string = diff[1];
+							const p = new Promise(resolve => {
+								progress.report({ increment: 0 });
+								files.forEach(file => {
+									try {
+										// check files
+										const leftTarget = path.join(contentDir, file);
+										const rightTarget = leftTarget.replace(contentDir, serverDir);
+										if (fs.existsSync(rightTarget)) {
+											// read contents of each file
+											const leftContent = fs.readFileSync(leftTarget, 'utf-8');
+											const rightContent = fs.readFileSync(rightTarget, 'utf-8');
 
-										if (operation !== diffMatchPatch.DIFF_EQUAL) {
-											allEqual = false;
+											// do diff
+											const dmp = new diffMatchPatch();
+											const diffs = dmp.diff_main(leftContent, rightContent);
+											dmp.diff_cleanupSemantic(diffs);
 
-											// trim text
-											var test = text.trim();
+											var onlyComments = true;
+											var allEqual = true;
 
-											if (test.length !== 0) {
-												var first = test.substr(0, 1);
-												if (first === '"') {
-													first = test.substr(1, 1);
+											diffs.forEach((diff: any) => {
+												const operation: number = diff[0];
+												const text: string = diff[1];
+
+												if (operation !== diffMatchPatch.DIFF_EQUAL) {
+													allEqual = false;
+
+													// trim text
+													var test = text.trim();
+
+													if (test.length !== 0) {
+														var first = test.substr(0, 1);
+														if (first === '"') {
+															first = test.substr(1, 1);
+														}
+
+														if (first !== '#' && first !== "'" && first !== ',') {
+															onlyComments = false;
+														}
+													}
 												}
+											});
 
-												if (first !== '#' && first !== "'" && first !== ',') {
-													onlyComments = false;
-												}
+											if (onlyComments && !allEqual) {
+												// move the files
+												fs.renameSync(leftTarget, path.join(commentContentDir, file));
+												fs.renameSync(rightTarget, path.join(commentServerDir, file));
 											}
 										}
-									});
 
-									if (onlyComments && !allEqual) {
-										// move the files
-										fs.renameSync(leftTarget, path.join(commentContentDir, file));
-										fs.renameSync(rightTarget, path.join(commentServerDir, file));
+										fileCounter++;
+										progress.report({
+											increment: fileCounter * fileIncrement
+										});
+
+										if (fileTotal === fileCounter) {
+											resolve();
+										}
+									} catch (err) {
+										logError('error comparing files', err);
 									}
-								}
-							} catch (err) {
-								logError('error comparing files', err);
-							}
+								});
+							});
+
+							return p;
 						});
 					}
+
+					window.withProgress({
+						location: ProgressLocation.Notification,
+						title: "Processing Complete!",
+						cancellable: false
+					}, (progress, token) => {
+						progress.report({
+							increment: 100,
+							message: 'Processing is complete',
+						});
+
+						const p = new Promise(resolve => {
+							setTimeout(() => {
+								resolve();
+							}, 5000);
+						});
+
+						return p;
+					});
 				}
 			});
 		})();

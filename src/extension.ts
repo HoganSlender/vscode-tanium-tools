@@ -7,7 +7,7 @@ import { sanitize } from "sanitize-filename-ts";
 import { TransformSensor } from './transform-sensor';
 import { OutputChannel, window, ExtensionContext, commands, workspace, ProgressLocation } from 'vscode';
 import { collectInputs } from './content-set-parameters';
-import { RequestError } from 'got';
+import { OutputChannelLogging } from './logging';
 
 const diffMatchPatch = require('diff-match-patch');
 
@@ -15,30 +15,9 @@ const got = require('got');
 const { promisify } = require('util');
 const stream = require('stream');
 
-var outputChannel: OutputChannel;
-
-function log(msg: string) {
-	outputChannel.appendLine(msg);
-}
-
-function logError(msg: string, errObject: any) {
-	log(msg);
-	if (errObject instanceof TypeError) {
-		log(`\t${errObject.message} at ${errObject.stack}`);
-	} else if (errObject instanceof RequestError) {
-		log(`\t${errObject.message} at ${errObject.stack}`);
-	} else {
-		log(`\t${JSON.stringify(errObject, null, 2)}`);
-	}
-}
-
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: ExtensionContext) {
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "hoganslendertanium" is now active!');
-
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
@@ -47,9 +26,7 @@ export function activate(context: ExtensionContext) {
 		const folderPath = workspace.rootPath;
 
 		// define output channel
-		if (outputChannel === undefined) {
-			outputChannel = window.createOutputChannel("tanium");
-		}
+		OutputChannelLogging.initialize();
 
 		// get configurations
 		const config = workspace.getConfiguration('hoganslender.tanium');
@@ -66,19 +43,18 @@ export function activate(context: ExtensionContext) {
 
 		const restBase = `https://${fqdn}/api/v2`;
 
-		outputChannel.show();
-		outputChannel.clear();
+		OutputChannelLogging.showClear();
 
-		log(`contentSet: ${contentSet}`);
-		log(`commentWhitespace: ${extractCommentWhitespace}`);
-		log(`fqdn: ${fqdn}`);
-		log(`username: ${username}`);
-		log(`password: XXXXXXXX`);
+		OutputChannelLogging.log(`contentSet: ${contentSet}`);
+		OutputChannelLogging.log(`commentWhitespace: ${extractCommentWhitespace}`);
+		OutputChannelLogging.log(`fqdn: ${fqdn}`);
+		OutputChannelLogging.log(`username: ${username}`);
+		OutputChannelLogging.log(`password: XXXXXXXX`);
 
 		// get filename from url
 		const parsed = url.parse(contentSet);
 		const contentFilename = sanitize(path.basename(parsed.pathname!));
-		log(`downloading ${contentFilename}`);
+		OutputChannelLogging.log(`downloading ${contentFilename}`);
 
 		// download the file
 		const contentSetFile = path.join(folderPath!, contentFilename);
@@ -94,15 +70,15 @@ export function activate(context: ExtensionContext) {
 					fs.createWriteStream(contentSetFile)
 				);
 			} catch (err) {
-				logError(`error downloading ${contentSet}`, err);
+				OutputChannelLogging.logError(`error downloading ${contentSet}`, err);
 				return;
 			}
 
-			log(`download complete.`);
+			OutputChannelLogging.log(`download complete.`);
 
 			fs.readFile(contentSetFile, 'utf8', async function (err, data) {
 				if (err) {
-					logError(`could ot open '${contentSetFile}'`, err);
+					OutputChannelLogging.logError(`could ot open '${contentSetFile}'`, err);
 					return;
 				}
 
@@ -165,7 +141,7 @@ export function activate(context: ExtensionContext) {
 						cancellable: true
 					}, (progress, token) => {
 						token.onCancellationRequested(() => {
-							outputChannel.appendLine("User canceled the long running operation");
+							OutputChannelLogging.log("User canceled the long running operation");
 						});
 
 						const jsonTotal = jsonObj.content.sensor.length;
@@ -191,7 +167,7 @@ export function activate(context: ExtensionContext) {
 									const contentDirFile = path.join(contentDir, name + ".json");
 									fs.writeFile(contentDirFile, content, (err) => {
 										if (err) {
-											logError(`error writing ${contentDirFile}`, err);
+											OutputChannelLogging.logError(`error writing ${contentDirFile}`, err);
 											return;
 										}
 
@@ -206,7 +182,7 @@ export function activate(context: ExtensionContext) {
 										}
 									});
 								} catch (err) {
-									logError(`error processing content set - ${name}`, err);
+									OutputChannelLogging.logError(`error processing content set - ${name}`, err);
 
 									jsonCounter++;
 									progress.report({
@@ -237,7 +213,7 @@ export function activate(context: ExtensionContext) {
 
 						session = body.data.session;
 					} catch (err) {
-						logError('could not retrieve session', err);
+						OutputChannelLogging.logError('could not retrieve session', err);
 						return;
 					}
 
@@ -247,7 +223,7 @@ export function activate(context: ExtensionContext) {
 						cancellable: true
 					}, (progress, token) => {
 						token.onCancellationRequested(() => {
-							outputChannel.appendLine(`sensor retrieval from ${fqdn}`);
+							OutputChannelLogging.log(`sensor retrieval from ${fqdn}`);
 						});
 
 						const sensorTotal = sensorInfo.length;
@@ -278,7 +254,7 @@ export function activate(context: ExtensionContext) {
 										const serverFile = path.join(serverDir, name + '.json');
 										fs.writeFile(serverFile, content, (err) => {
 											if (err) {
-												logError(`could not write ${serverFile}`, err);
+												OutputChannelLogging.logError(`could not write ${serverFile}`, err);
 											}
 
 											sensorCounter++;
@@ -291,11 +267,11 @@ export function activate(context: ExtensionContext) {
 											}
 										});
 									} catch (err) {
-										logError(`error processing server sensor - ${name}`, err);
+										OutputChannelLogging.logError(`error processing server sensor - ${name}`, err);
 									}
 								} catch (err) {
 									if (!err.message.includes('404')) {
-										logError(`error retrieving ${sensorInfo.name} from ${fqdn}`, err);
+										OutputChannelLogging.logError(`error retrieving ${sensorInfo.name} from ${fqdn}`, err);
 									}
 
 									sensorCounter++;
@@ -322,7 +298,7 @@ export function activate(context: ExtensionContext) {
 							cancellable: true
 						}, (progress, token) => {
 							token.onCancellationRequested(() => {
-								outputChannel.appendLine('Extracting sensors with comments/whitspaces changes only');
+								OutputChannelLogging.log('Extracting sensors with comments/whitspaces changes only');
 							});
 
 							const fileTotal = files.length;
@@ -389,7 +365,7 @@ export function activate(context: ExtensionContext) {
 											resolve();
 										}
 									} catch (err) {
-										logError('error comparing files', err);
+										OutputChannelLogging.logError('error comparing files', err);
 									}
 								});
 							});

@@ -8,7 +8,7 @@ Contains miscellaneous commands to work with Tanium servers in Visual Studio Cod
     * `Tanium: Compare Content Set` - allows you to download a content set xml file from Tanium support and compare it to the sensors on your server.
 
 * **Available Settings**
-    * `hoganslender.tanium.contentSetUrls` - List of recently used content set urls
+    * `hoganslender.tanium.httpTimeoutSeconds` - Number of seconds for HTTP request timeout
     * `hoganslender.tanium.fqdns` - List of recently used Tanium server fqdns
     * `hoganslender.tanium.usernames` - List of recentrly used Tanium usernames
 

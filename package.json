@@ -19,14 +19,14 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:hoganslendertanium.compareContentSet"
+		"onCommand:hoganslendertanium.compareContentSetSensors"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "hoganslendertanium.compareContentSet",
-				"title": "Tanium: Compare Content Set"
+				"command": "hoganslendertanium.compareContentSetSensors",
+				"title": "Tanium: Compare Content Set Sensors"
 			}
 		],
 		"configuration": {

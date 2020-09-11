@@ -10,7 +10,7 @@ var lastUsedUrl: string;
 
 var addButton: MyButton;
 
-interface State {
+interface ContentSetSensorState {
 	title: string;
 	step: number;
 	totalSteps: number;
@@ -23,7 +23,7 @@ interface State {
     extractCommentWhitespace: boolean;
 }
 
-export async function collectInputs(config: WorkspaceConfiguration, context: ExtensionContext) {
+export async function collectContentSetSensorInputs(config: WorkspaceConfiguration, context: ExtensionContext) {
     addButton = new MyButton({
         dark: Uri.file(context.asAbsolutePath('resources/dark/add.svg')),
         light: Uri.file(context.asAbsolutePath('resources/light/add.svg')),
@@ -41,7 +41,7 @@ export async function collectInputs(config: WorkspaceConfiguration, context: Ext
     const usernames: string[] = config.get('usernames', []);
     usernameQuickPickItems = usernames.map(label => ({ label }));
 
-    const state = {} as Partial<State>;
+    const state = {} as Partial<ContentSetSensorState>;
     await MultiStepInput.run(input => inputContentSetUrl(input, state));
 
     context.globalState.update('hoganslender.tanium.contentset.url', state.contentSetUrl);
@@ -63,10 +63,10 @@ export async function collectInputs(config: WorkspaceConfiguration, context: Ext
     }
 
     // store data
-    return state as State;
+    return state as ContentSetSensorState;
 }
 
-async function inputContentSetUrl(input: MultiStepInput, state: Partial<State>) {
+async function inputContentSetUrl(input: MultiStepInput, state: Partial<ContentSetSensorState>) {
     state.contentSetUrl = await input.showInputBox({
         title,
         step: 1,
@@ -78,7 +78,7 @@ async function inputContentSetUrl(input: MultiStepInput, state: Partial<State>) 
     return (input: MultiStepInput) => pickCommentWhitespace(input, state);
 }
 
-async function pickCommentWhitespace(input: MultiStepInput, state: Partial<State>) {
+async function pickCommentWhitespace(input: MultiStepInput, state: Partial<ContentSetSensorState>) {
         const pick = await input.showQuickPick({
             title,
             step: 2,
@@ -92,7 +92,7 @@ async function pickCommentWhitespace(input: MultiStepInput, state: Partial<State
         return (input: MultiStepInput) => pickFqdn(input, state);
 }
 
-async function pickFqdn(input: MultiStepInput, state: Partial<State>) {
+async function pickFqdn(input: MultiStepInput, state: Partial<ContentSetSensorState>) {
     if (fqdnQuickPickItems.length === 0) {
         return (input: MultiStepInput) => inputFqdn(input, state, 0);
     } else {
@@ -115,7 +115,7 @@ async function pickFqdn(input: MultiStepInput, state: Partial<State>) {
     }
 }
 
-async function inputFqdn(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
+async function inputFqdn(input: MultiStepInput, state: Partial<ContentSetSensorState>, stepModifier: number) {
     state.fqdn = await input.showInputBox({
         title,
         step: 3 + stepModifier,
@@ -127,7 +127,7 @@ async function inputFqdn(input: MultiStepInput, state: Partial<State>, stepModif
     return (input: MultiStepInput) => pickUsername(input, state, stepModifier);
 }
 
-async function pickUsername(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
+async function pickUsername(input: MultiStepInput, state: Partial<ContentSetSensorState>, stepModifier: number) {
     if (usernameQuickPickItems.length === 0) {
         return (input: MultiStepInput) => inputUsername(input, state, stepModifier);
     } else {
@@ -150,7 +150,7 @@ async function pickUsername(input: MultiStepInput, state: Partial<State>, stepMo
     }
 }
 
-async function inputUsername(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
+async function inputUsername(input: MultiStepInput, state: Partial<ContentSetSensorState>, stepModifier: number) {
     state.username = await input.showInputBox({
         title,
         step: 4 + stepModifier,
@@ -162,7 +162,7 @@ async function inputUsername(input: MultiStepInput, state: Partial<State>, stepM
     return (input: MultiStepInput) => inputPassword(input, state, stepModifier);
 }
 
-async function inputPassword(input: MultiStepInput, state: Partial<State>, stepModifier: number) {
+async function inputPassword(input: MultiStepInput, state: Partial<ContentSetSensorState>, stepModifier: number) {
     state.password = await input.showInputBox({
         title,
         step: 5 + stepModifier,

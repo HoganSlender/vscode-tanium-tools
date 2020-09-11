@@ -39,6 +39,7 @@ export class TransformSensor {
         TransformSensor.mapProperty('name', sensor, result);
         TransformSensor.mapProperty('value_type', sensor, result);
         TransformSensor.mapProperty('max_age_seconds', sensor, result);
+        TransformSensor.mapProperty('max_string_age_minutes', sensor, result);
         TransformSensor.mapProperty('ignore_case_flag', sensor, result);
         TransformSensor.mapProperty('category', sensor, result);
         TransformSensor.mapProperty('exclude_from_parse_flag', sensor, result);
@@ -134,7 +135,11 @@ export class TransformSensor {
                 result['columns'] = '';
             }
         },
-        'meta_data': 'meta_data',
+        'meta_data': function(result: any, val: any) {
+            if ((val || "") !== "") {
+                result['meta_data'] = val;
+            }
+        },
     };
 
     private static _propertyMap: any = {
@@ -237,9 +242,7 @@ export class TransformSensor {
             }
         },
         'metadata': function (result: any, val: any) {
-            if ((val || "") === "") {
-                result['meta_data'] = '';
-            } else {
+            if ((val || "") !== "") {
                 if (val.length === 1) {
                     result['meta_data'] = {
                         meta_data_item: TransformMetadataItem.transform(val[0]),

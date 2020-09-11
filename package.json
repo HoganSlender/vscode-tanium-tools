@@ -19,7 +19,9 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:hoganslendertanium.compareContentSetSensors"
+		"onCommand:hoganslendertanium.compareContentSetSensors",
+		"onCommand:hoganslendertanium.compareServerServerSensors",
+		"onCommand:hoganslendertanium.generateExportFileMissingSensors"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
@@ -27,12 +29,34 @@
 			{
 				"command": "hoganslendertanium.compareContentSetSensors",
 				"title": "Tanium: Compare Content Set Sensors"
+			},
+			{
+				"command": "hoganslendertanium.compareServerServerSensors",
+				"title": "Tanium: Compare Tanium Server Sensors"
+			},
+			{
+				"command": "hoganslendertanium.generateExportFileMissingSensors",
+				"title": "Tanium: Generate Export File for Missing Sensors"
 			}
 		],
+		"menus": {
+			"explorer/context": [
+				{
+					"command": "hoganslendertanium.generateExportFileMissingSensors",
+					"group": "3_compare@1",
+					"when": "explorerResourceIsFolder && listDoubleSelection"
+				}
+			]
+		},
 		"configuration": {
 			"type": "object",
 			"title": "Tanium Tools",
 			"properties": {
+				"hoganslender.tanium.allowSelfSignedCerts": {
+					"type": "boolean",
+					"default": false,
+					"description": "Set to true if communicating with servers that are using a self signed certificate"
+				},
 				"hoganslender.tanium.httpTimeoutSeconds": {
 					"type": "number",
 					"default": 10,

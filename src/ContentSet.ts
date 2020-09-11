@@ -6,7 +6,7 @@ import * as parser from 'fast-xml-parser';
 import { sanitize } from "sanitize-filename-ts";
 import { TransformSensor } from './transform-sensor';
 import * as vscode from 'vscode';
-import { collectInputs } from './content-set-parameters';
+import { collectContentSetSensorInputs } from './content-set-sensors-parameters';
 import { OutputChannelLogging } from './logging';
 import * as commands from './common/commands';
 
@@ -16,16 +16,16 @@ const got = require('got');
 const { promisify } = require('util');
 const stream = require('stream');
 
-export function activate (context:vscode.ExtensionContext) {
-    commands.register(context, {
-        'hoganslendertanium.compareContentSetSensors': async () => {
-            ContentSet.processSensors(context);
-        },
-    });
+export function activate(context: vscode.ExtensionContext) {
+	commands.register(context, {
+		'hoganslendertanium.compareContentSetSensors': async () => {
+			ContentSet.processSensors(context);
+		},
+	});
 }
 
-export class ContentSet {
-    public static async processSensors(context:vscode.ExtensionContext) {
+class ContentSet {
+	public static async processSensors(context: vscode.ExtensionContext) {
 		// get the current folder
 		const folderPath = vscode.workspace.rootPath;
 
@@ -36,7 +36,7 @@ export class ContentSet {
 		const config = vscode.workspace.getConfiguration('hoganslender.tanium');
 		const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
 
-		const state = await collectInputs(config, context);
+		const state = await collectContentSetSensorInputs(config, context);
 
 		// collect values
 		const contentSet: string = state.contentSetUrl;
@@ -123,18 +123,19 @@ export class ContentSet {
 						fs.mkdirSync(serverDir);
 					}
 
-					if (!fs.existsSync(commentDir)) {
-						fs.mkdirSync(commentDir);
-					}
+					if (extractCommentWhitespace) {
+						if (!fs.existsSync(commentDir)) {
+							fs.mkdirSync(commentDir);
+						}
 
-					if (!fs.existsSync(commentContentDir)) {
-						fs.mkdirSync(commentContentDir);
-					}
+						if (!fs.existsSync(commentContentDir)) {
+							fs.mkdirSync(commentContentDir);
+						}
 
-					if (!fs.existsSync(commentServerDir)) {
-						fs.mkdirSync(commentServerDir);
+						if (!fs.existsSync(commentServerDir)) {
+							fs.mkdirSync(commentServerDir);
+						}
 					}
-
 
 					// process sensors
 					var sensorInfo: any[] = [];
@@ -227,7 +228,7 @@ export class ContentSet {
 						cancellable: true
 					}, (progress, token) => {
 						token.onCancellationRequested(() => {
-							OutputChannelLogging.log(`sensor retrieval from ${fqdn}`);
+							OutputChannelLogging.log(`sensor retrieval from ${fqdn} cancelled`);
 						});
 
 						const sensorTotal = sensorInfo.length;

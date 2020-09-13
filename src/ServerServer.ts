@@ -8,6 +8,7 @@ import * as fs from 'fs';
 const got = require('got');
 import { TransformSensor } from './transform-sensor';
 import { wrapOption } from './common/requestOption';
+import { collectServerServerMissingSensorInputs } from './server-server-missing-sensors-parameters';
 
 const diffMatchPatch = require('diff-match-patch');
 
@@ -17,13 +18,39 @@ export function activate(context: vscode.ExtensionContext) {
             ServerServer.processSensors(context);
         },
         'hoganslendertanium.generateExportFileMissingSensors': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            ServerServer.processMissingSensors(uris[0], uris[1]);
+            ServerServer.processMissingSensors(uris[0], uris[1], context);
         },
     });
 }
 
 class ServerServer {
-    public static async processMissingSensors(left: vscode.Uri, right: vscode.Uri) {
+    public static async processMissingSensors(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
+        // get the current folder
+        const folderPath = vscode.workspace.rootPath;
+
+        // define output channel
+        OutputChannelLogging.initialize();
+
+        // get configurations
+        const config = vscode.workspace.getConfiguration('hoganslender.tanium');
+        const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
+        const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
+
+        const state = await collectServerServerMissingSensorInputs(config, context);
+
+        // collect values
+        const leftFqdn: string = state.leftFqdnString;
+        const leftUsername: string = state.leftUsernameString;
+        const leftPassword: string = state.leftPassword;
+
+        const leftRestBase = `https://${leftFqdn}/api/v2`;
+
+        OutputChannelLogging.showClear();
+
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left username: ${leftUsername}`);
+        OutputChannelLogging.log(`left password: XXXXXXXX`);
+
         const leftDir = left.fsPath;
         const rightDir = right.fsPath;
 
@@ -39,6 +66,7 @@ class ServerServer {
             }
         };
 
+        OutputChannelLogging.log('retrieving sensors');
         files.forEach(file => {
             const leftTarget = path.join(leftDir, file);
             const rightTarget = leftTarget.replace(leftDir, rightDir);
@@ -50,14 +78,64 @@ class ServerServer {
                 exportSensorObj.sensors.include.push(sensorObj.name);
             }
         });
+        OutputChannelLogging.log('sensors retrieved');
 
         // make export call from left to get all sensors
-        if (exportSensorObj.sensors.include.length !== 0)  {
-            // make call
-            console.log(JSON.stringify(exportSensorObj, null, 2));
-        }
+        if (exportSensorObj.sensors.include.length !== 0) {
+            OutputChannelLogging.log(`exporting ${exportSensorObj.sensors.include.length} sensors from ${leftFqdn}`);
+            OutputChannelLogging.log(`retrieving session`);
 
-        // write out file
+            var leftSession: string;
+            try {
+                const options = wrapOption(allowSelfSignedCerts, {
+                    json: {
+                        username: leftUsername,
+                        password: leftPassword,
+                    },
+                    responseType: 'json',
+                    timeout: httpTimeout,
+                });
+
+                const { body } = await got.post(`${leftRestBase}/session/login`, options);
+
+                leftSession = body.data.session;
+            } catch (err) {
+                OutputChannelLogging.logError('could not retrieve left session', err);
+                return;
+            }
+
+            // get export output
+            OutputChannelLogging.log(`retrieving export data from ${leftFqdn}`);
+            try {
+                const options = wrapOption(allowSelfSignedCerts, {
+                    headers: {
+                        session: leftSession,
+                    },
+                    json: exportSensorObj,
+                    responseType: 'json',
+                    timeout: httpTimeout,
+                });
+
+                const { body } = await got.post(`${leftRestBase}/export`, options);
+                OutputChannelLogging.log(`export data retrieved`);
+
+                const exportContent = JSON.stringify(body.data, null, 2);
+
+                // write out file
+                OutputChannelLogging.log(`writing file AddObjects.json`);
+                fs.writeFile(path.join(folderPath!, 'AddObjects.json'), exportContent, (err) => {
+                    if (err) {
+                        OutputChannelLogging.logError('could not write AddObjects.json', err);
+                    }
+
+                    OutputChannelLogging.log(`file written`);
+                });
+            } catch (err) {
+                OutputChannelLogging.logError('error retrieving export data', err);
+            }
+        } else {
+            OutputChannelLogging.log(`no sensors were found`);
+        }
     }
 
     public static async processSensors(context: vscode.ExtensionContext) {

@@ -1,6 +1,7 @@
 import { ExtensionContext } from 'vscode';
 import * as contentset from './ContentSet';
 import * as serverServer from './ServerServer';
+import * as signContentFile from './SignContentFile';
 import { OutputChannelLogging } from './logging';
 
 // this method is called when your extension is activated
@@ -10,6 +11,7 @@ export function activate(context: ExtensionContext) {
 
 	contentset.activate(context);
 	serverServer.activate(context);
+	signContentFile.activate(context);
 }
 
 // this method is called when your extension is deactivated

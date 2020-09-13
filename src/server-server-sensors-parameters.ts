@@ -6,7 +6,6 @@ const title = 'Compare Content Set';
 const commentWhitespaceItems: QuickPickItem[] = ['Yes', 'No'].map(label => ({ label }));
 var fqdnQuickPickItems: QuickPickItem[];
 var usernameQuickPickItems: QuickPickItem[];
-var lastUsedUrl: string;
 
 var addButton: MyButton;
 
@@ -97,7 +96,7 @@ async function pickLeftFqdn(input: MultiStepInput, state: Partial<ServerServerSe
             title,
             step: 1,
             totalSteps: 7,
-            placeholder: 'Please choose the source Tanium server fqdn',
+            placeholder: 'Please choose the source Tanium server fqdn or click + upper right to add new',
             items: fqdnQuickPickItems,
             activeItem: typeof state.leftFqdn !== 'string' ? state.leftFqdn : undefined,
             buttons: [addButton],
@@ -132,7 +131,7 @@ async function pickLeftUsername(input: MultiStepInput, state: Partial<ServerServ
             title,
             step: 2 + stepModifier,
             totalSteps: 7 + stepModifier,
-            placeholder: 'Please choose the source Tanium server username',
+            placeholder: 'Please choose the source Tanium server username or click + upper right to add new',
             items: usernameQuickPickItems,
             activeItem: typeof state.leftUsername !== 'string' ? state.leftUsername : undefined,
             buttons: [addButton],
@@ -180,7 +179,7 @@ async function pickRightFqdn(input: MultiStepInput, state: Partial<ServerServerS
             title,
             step: 4,
             totalSteps: 7,
-            placeholder: 'Please choose the dest Tanium server fqdn',
+            placeholder: 'Please choose the dest Tanium server fqdn or click + upper right to add new',
             items: fqdnQuickPickItems,
             activeItem: typeof state.leftFqdn !== 'string' ? state.leftFqdn : undefined,
             buttons: [addButton],
@@ -215,7 +214,7 @@ async function pickRightUsername(input: MultiStepInput, state: Partial<ServerSer
             title,
             step: 5 + stepModifier,
             totalSteps: 7 + stepModifier,
-            placeholder: 'Please choose the source Tanium server username',
+            placeholder: 'Please choose the source Tanium server username or click + upper right to add new',
             items: usernameQuickPickItems,
             activeItem: typeof state.leftUsername !== 'string' ? state.leftUsername : undefined,
             buttons: [addButton],

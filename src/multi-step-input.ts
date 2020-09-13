@@ -1,4 +1,4 @@
-import { QuickInput, QuickPickItem, QuickInputButton, Disposable, window, QuickInputButtons, Uri } from "vscode";
+import { QuickInput, QuickPickItem, QuickInputButton, Disposable, window, QuickInputButtons, Uri, OpenDialogOptions } from "vscode";
 
 export class MyButton implements QuickInputButton {
 	constructor(public iconPath: { light: Uri; dark: Uri; }, public tooltip: string) { }
@@ -39,6 +39,54 @@ export class MultiStepInput {
 		}
 		if (this.current) {
 			this.current.dispose();
+		}
+	}
+
+	async showFileDialog<T extends QuickPickItem, P extends QuickPickFileDialogParameters<T>>({ title, step, totalSteps, activeItem, placeholder, buttons, openFileDialogOptions, shouldResume }: P) {
+		const disposables: Disposable[] = [];
+		try {
+			return await new Promise<string>((resolve, reject) => {
+				const input = window.createQuickPick<T>();
+				input.title = title;
+				input.step = step;
+				input.totalSteps = totalSteps;
+				input.placeholder = placeholder;
+				if (activeItem) {
+					input.activeItems = [activeItem];
+				}
+				input.buttons = [
+					...(this.steps.length > 1 ? [QuickInputButtons.Back] : []),
+					...(buttons || [])
+				];
+				disposables.push(
+					input.onDidTriggerButton(item => {
+						if (item === QuickInputButtons.Back) {
+							reject(InputFlowAction.back);
+						} else {
+							// show file dialog
+							(async () => {
+								const uris = await window.showOpenDialog(openFileDialogOptions);
+								const retval = uris === undefined ? undefined : uris[0].fsPath;
+								resolve(<any>retval);
+							})();
+						}
+					}),
+					//input.onDidChangeSelection(items => resolve(items[0])),
+					input.onDidHide(() => {
+						(async () => {
+							reject(shouldResume && await shouldResume() ? InputFlowAction.resume : InputFlowAction.cancel);
+						})()
+							.catch(reject);
+					})
+				);
+				if (this.current) {
+					this.current.dispose();
+				}
+				this.current = input;
+				this.current.show();
+			});
+		} finally {
+			disposables.forEach(d => d.dispose());
 		}
 	}
 
@@ -155,14 +203,14 @@ interface QuickPickParameters<T extends QuickPickItem> {
 	shouldResume: () => Thenable<boolean>;
 }
 
-interface QuickPickParameters<T extends QuickPickItem> {
+interface QuickPickFileDialogParameters<T extends QuickPickItem> {
 	title: string;
 	step: number;
 	totalSteps: number;
-	items: T[];
 	activeItem?: T;
 	placeholder: string;
 	buttons?: QuickInputButton[];
+	openFileDialogOptions: OpenDialogOptions,
 	shouldResume: () => Thenable<boolean>;
 }
 

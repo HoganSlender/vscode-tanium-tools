@@ -1,7 +1,127 @@
-import { QuickInput, QuickPickItem, QuickInputButton, Disposable, window, QuickInputButtons, Uri, OpenDialogOptions } from "vscode";
+import { QuickInput, QuickPickItem, QuickInputButton, Disposable, window, QuickInputButtons, Uri, OpenDialogOptions, WorkspaceConfiguration, ExtensionContext } from "vscode";
 
 export class MyButton implements QuickInputButton {
 	constructor(public iconPath: { light: Uri; dark: Uri; }, public tooltip: string) { }
+}
+
+export enum StepType {
+	quickPick,
+	inputBox,
+	fileDialog,
+}
+
+export interface Step {
+	stepType: StepType,
+	step: number,
+	totalSteps: number,
+	quickPickItems: QuickPickItem[],
+	quickPickButtons: QuickInputButton[],
+	fileDialogButtons: QuickInputButton[],
+	buttonTooltip: string,
+	quickPickPlaceholder: string,
+	activeItemPropertyName: string,
+	inputPrompt: string,
+}
+
+export async function collectInputs(title: string, state: any, steps: Step[]) {
+	await MultiStepInput.run(input => stepTypeSelector(title, input, state, steps, 0, 0));
+
+	return state;
+}
+
+function shouldResume() {
+	// Could show a notification with the option to resume.
+	return new Promise<boolean>((resolve, reject) => {
+		// noop
+	});
+}
+
+function stepTypeSelector(title: string, input: MultiStepInput, state: any, steps: Step[], stepIndex: number, stepModifier: number): any {
+	if (stepIndex < steps.length) {
+		const step = steps[stepIndex];
+		switch (step.stepType) {
+			case StepType.quickPick:
+				if (step.quickPickItems.length === 0) {
+					stepIndex++;
+					return (input: MultiStepInput) => stepTypeSelector(title, input, state, steps, stepIndex, 0);
+				} else {
+					return (input: MultiStepInput) => pickQuickPickItem(title, input, state, steps, stepIndex, 0);
+				}
+
+			case StepType.inputBox:
+				return (input: MultiStepInput) => inputLabel(title, input, state, steps, stepIndex, 0);
+
+			case StepType.fileDialog:
+				return (input: MultiStepInput) => pickFileDialog(title, input, state, steps, stepIndex, 0);
+		}
+	}
+}
+
+async function pickQuickPickItem(title: string, input: MultiStepInput, state: any, steps: Step[], stepIndex: number, stepModifier: number) {
+	const step = steps[stepIndex];
+	const pick = await input.showQuickPick({
+		title: title,
+		step: step.step + stepModifier,
+		totalSteps: step.totalSteps + stepModifier,
+		placeholder: step.quickPickPlaceholder,
+		items: step.quickPickItems,
+		activeItem: typeof state[step.activeItemPropertyName] !== 'string' ? state[step.activeItemPropertyName] : undefined,
+		buttons: step.quickPickButtons,
+		shouldResume: shouldResume
+	});
+	if (pick instanceof MyButton) {
+		stepIndex++;
+		stepModifier++;
+		return (input: MultiStepInput) => stepTypeSelector(title, input, state, steps, stepIndex, stepModifier);
+	}
+	state[step.activeItemPropertyName] = pick;
+
+	if (step.step !== step.totalSteps) {
+		stepIndex++;
+		return (input: MultiStepInput) => stepTypeSelector(title, input, state, steps, stepIndex, stepModifier);
+	}
+}
+
+async function inputLabel(title: string, input: MultiStepInput, state: any, steps: Step[], stepIndex: number, stepModifier: number) {
+	const step = steps[stepIndex];
+	state[step.activeItemPropertyName] = await input.showInputBox({
+		title: title,
+		step: step.step + stepModifier,
+		totalSteps: step.totalSteps,
+		value: typeof state[step.activeItemPropertyName] === 'string' ? state[step.activeItemPropertyName] : '',
+		prompt: step.inputPrompt,
+		shouldResume: shouldResume
+	});
+
+	if (step.step !== step.totalSteps) {
+		stepIndex++;
+		return (input: MultiStepInput) => stepTypeSelector(title, input, state, steps, stepIndex, stepModifier);
+	}
+}
+
+async function pickFileDialog(title: string, input: MultiStepInput, state: any, steps: Step[], stepIndex: number, stepModifier: number) {
+	const step = steps[stepIndex];
+	state[step.activeItemPropertyName] = await input.showFileDialog({
+		title,
+		step: step.step + stepModifier,
+		totalSteps: step.totalSteps + stepModifier,
+		placeholder: step.quickPickPlaceholder,
+		activeItem: typeof state[step.activeItemPropertyName] !== 'string' ? state[step.activeItemPropertyName] : undefined,
+		buttons: step.fileDialogButtons,
+		openFileDialogOptions: {
+			canSelectFiles: true,
+			canSelectFolders: false,
+			canSelectMany: false,
+		},
+		shouldResume: shouldResume
+	});
+
+	if (state[step.activeItemPropertyName] !== undefined) {
+		if (step.step !== step.totalSteps) {
+			stepIndex++;
+			return (input: MultiStepInput) => stepTypeSelector(title, input, state, steps, stepIndex, stepModifier);
+		}
+	}
 }
 
 export class MultiStepInput {

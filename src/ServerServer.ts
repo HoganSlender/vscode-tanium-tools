@@ -224,7 +224,7 @@ class ServerServer {
             return;
         }
 
-        vscode.window.withProgress({
+        const leftPromise = vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: `sensor retrieval from ${leftFqdn}`,
             cancellable: true
@@ -323,7 +323,7 @@ class ServerServer {
             return;
         }
 
-        await vscode.window.withProgress({
+        const rightPromise = vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: `sensor retrieval from ${rightFqdn}`,
             cancellable: true
@@ -396,6 +396,8 @@ class ServerServer {
 
             return p;
         });
+
+        await Promise.all([leftPromise, rightPromise]);
 
         if (extractCommentWhitespace) {
             var files: string[];

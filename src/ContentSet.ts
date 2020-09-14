@@ -140,7 +140,7 @@ class ContentSet {
 					// process sensors
 					var sensorInfo: any[] = [];
 
-					vscode.window.withProgress({
+					const contentSetExtractionPromise = vscode.window.withProgress({
 						location: vscode.ProgressLocation.Notification,
 						title: "content set extraction",
 						cancellable: true
@@ -222,7 +222,7 @@ class ContentSet {
 						return;
 					}
 
-					await vscode.window.withProgress({
+					const sensorRetrievalPromise = vscode.window.withProgress({
 						location: vscode.ProgressLocation.Notification,
 						title: `sensor retrieval from ${fqdn}`,
 						cancellable: true
@@ -294,6 +294,8 @@ class ContentSet {
 
 						return p;
 					});
+
+					Promise.all([contentSetExtractionPromise, sensorRetrievalPromise]);
 
 					if (extractCommentWhitespace) {
 						const files: string[] = fs.readdirSync(contentDir);

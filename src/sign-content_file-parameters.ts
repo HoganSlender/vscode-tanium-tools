@@ -6,6 +6,7 @@ const title = 'Sign Content File';
 var serverLabelQuickPickItems: QuickPickItem[];
 
 var addButton: MyButton;
+var fileButton: MyButton;
 
 interface SigningContentFileState {
     title: string;
@@ -21,6 +22,11 @@ export async function collectSignContentFileInputs(config: WorkspaceConfiguratio
     addButton = new MyButton({
         dark: Uri.file(context.asAbsolutePath('resources/dark/add.svg')),
         light: Uri.file(context.asAbsolutePath('resources/light/add.svg')),
+    }, '');
+
+    fileButton = new MyButton({
+        dark: Uri.file(context.asAbsolutePath('resources/dark/dotdotdot.svg')),
+        light: Uri.file(context.asAbsolutePath('resources/light/dotdotdot.svg')),
     }, '');
 
     // get items
@@ -90,13 +96,14 @@ async function inputServerLabel(input: MultiStepInput, state: Partial<SigningCon
 }
 
 async function pickKeyUtilityPath(input: MultiStepInput, state: Partial<SigningContentFileState>, stepModifier: number) {
+    fileButton.tooltip = 'Select KeyUtility.exe path';
     state.keyUtilityPath = await input.showFileDialog({
         title,
         step: 2 + stepModifier,
         totalSteps: 3 + stepModifier,
-        placeholder: 'Please choose the path to KeyUtility.exe by clicking + upper right',
+        placeholder: 'Please choose the path to KeyUtility.exe by clicking ... upper right',
         activeItem: typeof state.serverLabel !== 'string' ? state.serverLabel : undefined,
-        buttons: [addButton],
+        buttons: [fileButton],
         openFileDialogOptions: {
             canSelectFiles: true,
             canSelectFolders: false,
@@ -110,13 +117,14 @@ async function pickKeyUtilityPath(input: MultiStepInput, state: Partial<SigningC
 }
 
 async function pickPrivateKeyPath(input: MultiStepInput, state: Partial<SigningContentFileState>, stepModifier: number) {
+    fileButton.tooltip = 'Select private key path';
     state.privateKeyPath = await input.showFileDialog({
         title,
         step: 3 + stepModifier,
         totalSteps: 3 + stepModifier,
-        placeholder: 'Please choose the path to private key by clicking + upper right',
+        placeholder: 'Please choose the path to private key by clicking ... upper right',
         activeItem: typeof state.serverLabel !== 'string' ? state.serverLabel : undefined,
-        buttons: [addButton],
+        buttons: [fileButton],
         openFileDialogOptions: {
             canSelectFiles: true,
             canSelectFolders: false,

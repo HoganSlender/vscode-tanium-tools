@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as commands from './common/commands';
 import { OutputChannelLogging } from './logging';
 import { collectSignContentFileInputs } from './sign-content_file-parameters';
+import { exec } from 'child_process';
 
 
 export function activate(context: vscode.ExtensionContext) {
@@ -28,12 +29,30 @@ class SignContentFile {
         }
 
         // collect values
-        const keyUtilityPath = state.selectedItem.keyUtilityPath;
-        const privateKeyFilePath = state.selectedItem.privateKeyFilePath;
+        const keyUtilityPath = state.selectedItem.keyUtilityPath.includes(' ') ? `"${state.selectedItem.keyUtilityPath}"` : state.selectedItem.keyUtilityPath;
+        const privateKeyFilePath = state.selectedItem.privateKeyFilePath.includes(' ') ? `"${state.selectedItem.privateKeyFilePath}"` : state.selectedItem.privateKeyFilePath;
+        const targetPath = target.fsPath.includes(' ') ? `"${target.fsPath}"` : target.fsPath;
 
         OutputChannelLogging.showClear();
         
         OutputChannelLogging.log(`Key utility path: ${keyUtilityPath}`);
         OutputChannelLogging.log(`private key file path: ${privateKeyFilePath}`);
+        OutputChannelLogging.log(`file to sign: ${targetPath}`);
+
+        const commandline = `${keyUtilityPath} signcontent ${privateKeyFilePath} ${targetPath}`;
+
+        OutputChannelLogging.log(`executing - ${commandline}`);
+
+        exec(commandline, (error, stdout, stderr) => {
+            if (error) {
+                OutputChannelLogging.logError(`error executing command`, error);
+            }
+
+            if (stderr) {
+                OutputChannelLogging.log(`error executing command - ${stderr}`);
+            }
+
+            OutputChannelLogging.log(`commmand output: ${stdout}`);
+        });
    }
 }

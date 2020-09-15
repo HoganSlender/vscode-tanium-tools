@@ -135,9 +135,16 @@ export class TransformSensor {
                 result['columns'] = '';
             }
         },
-        'meta_data': function(result: any, val: any) {
+        'meta_data': function (result: any, val: any) {
             if ((val || "") !== "") {
-                result['meta_data'] = val;
+                if (Array.isArray(val.meta_data_item)) {
+                    // sort items
+                    val.meta_data_item.sort((a: any, b: any) => (a.name > b.name) ? 1 : -1);
+
+                    result['meta_data'] = val;
+                } else {
+                    result['meta_data'] = val;
+                }
             }
         },
     };
@@ -248,12 +255,18 @@ export class TransformSensor {
                         meta_data_item: TransformMetadataItem.transform(val[0]),
                     };
                 } else {
-                    result['meta_data'] = {
-                        meta_data_item: []
-                    };
+                    var items: any[] = [];
+
                     for (var i = 0; val && i < val.length; i++) {
-                        result['meta_data']['meta_data_item'].push(TransformMetadataItem.transform(val[i]));
+                        items.push(TransformMetadataItem.transform(val[i]));
                     }
+
+                    // sort by name
+                    items.sort((a, b) => (a.name > b.name) ? 1 : -1);
+
+                    result['meta_data'] = {
+                        meta_data_item: items
+                    };
                 }
             }
         }

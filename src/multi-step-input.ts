@@ -14,13 +14,15 @@ export interface Step {
 	stepType: StepType,
 	step: number,
 	totalSteps: number,
-	quickPickItems: QuickPickItem[],
-	quickPickButtons: QuickInputButton[],
-	fileDialogButtons: QuickInputButton[],
-	buttonTooltip: string,
-	quickPickPlaceholder: string,
+	quickPickItems?: QuickPickItem[],
+	quickPickButtons?: QuickInputButton[],
+	fileDialogButtons?: QuickInputButton[],
+	buttonTooltip?: string,
+	quickPickPlaceholder?: string,
 	activeItemPropertyName: string,
-	inputPrompt: string,
+	password?: boolean,
+	value?: string,
+	inputPrompt?: string,
 }
 
 export async function collectInputs(title: string, state: any, steps: Step[]) {
@@ -41,7 +43,7 @@ function stepTypeSelector(title: string, input: MultiStepInput, state: any, step
 		const step = steps[stepIndex];
 		switch (step.stepType) {
 			case StepType.quickPick:
-				if (step.quickPickItems.length === 0) {
+				if (step.quickPickItems?.length === 0) {
 					stepIndex++;
 					return (input: MultiStepInput) => stepTypeSelector(title, input, state, steps, stepIndex, 0);
 				} else {
@@ -63,8 +65,8 @@ async function pickQuickPickItem(title: string, input: MultiStepInput, state: an
 		title: title,
 		step: step.step + stepModifier,
 		totalSteps: step.totalSteps + stepModifier,
-		placeholder: step.quickPickPlaceholder,
-		items: step.quickPickItems,
+		placeholder: step.quickPickPlaceholder ?? '',
+		items: step.quickPickItems ?? [],
 		activeItem: typeof state[step.activeItemPropertyName] !== 'string' ? state[step.activeItemPropertyName] : undefined,
 		buttons: step.quickPickButtons,
 		shouldResume: shouldResume
@@ -87,9 +89,10 @@ async function inputLabel(title: string, input: MultiStepInput, state: any, step
 	state[step.activeItemPropertyName] = await input.showInputBox({
 		title: title,
 		step: step.step + stepModifier,
-		totalSteps: step.totalSteps,
+		totalSteps: step.totalSteps + stepModifier,
 		value: typeof state[step.activeItemPropertyName] === 'string' ? state[step.activeItemPropertyName] : '',
-		prompt: step.inputPrompt,
+		prompt: step.inputPrompt ?? '',
+		password: step.password ?? false,
 		shouldResume: shouldResume
 	});
 
@@ -105,7 +108,7 @@ async function pickFileDialog(title: string, input: MultiStepInput, state: any, 
 		title,
 		step: step.step + stepModifier,
 		totalSteps: step.totalSteps + stepModifier,
-		placeholder: step.quickPickPlaceholder,
+		placeholder: step.quickPickPlaceholder ?? '',
 		activeItem: typeof state[step.activeItemPropertyName] !== 'string' ? state[step.activeItemPropertyName] : undefined,
 		buttons: step.fileDialogButtons,
 		openFileDialogOptions: {

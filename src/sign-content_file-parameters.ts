@@ -1,17 +1,7 @@
-import { MultiStepInput, MyButton } from "./multi-step-input";
+import { collectInputs, MyButton, Step, StepType } from "./multi-step-input";
 import { QuickPickItem, WorkspaceConfiguration, ExtensionContext, Uri, ConfigurationTarget } from "vscode";
 
-const title = 'Sign Content File';
-
-var serverLabelQuickPickItems: QuickPickItem[];
-
-var addButton: MyButton;
-var fileButton: MyButton;
-
 interface SigningContentFileState {
-    title: string;
-    step: number;
-    totalSteps: number;
     serverLabel: QuickPickItem | string;
     keyUtilityPath: string;
     privateKeyPath: string;
@@ -19,22 +9,62 @@ interface SigningContentFileState {
 }
 
 export async function collectSignContentFileInputs(config: WorkspaceConfiguration, context: ExtensionContext) {
-    addButton = new MyButton({
+    const addButton = new MyButton({
         dark: Uri.file(context.asAbsolutePath('resources/dark/add.svg')),
         light: Uri.file(context.asAbsolutePath('resources/light/add.svg')),
     }, '');
 
-    fileButton = new MyButton({
+    const fileButton = new MyButton({
         dark: Uri.file(context.asAbsolutePath('resources/dark/dotdotdot.svg')),
         light: Uri.file(context.asAbsolutePath('resources/light/dotdotdot.svg')),
     }, '');
 
     // get items
     const items = config.get<any>('signingPaths', []);
-    serverLabelQuickPickItems = items.map((item: any) => ({ label: item.serverLabel }));
+
+    // define steps
+    const steps: Step[] = [
+        {
+            stepType: StepType.quickPick,
+            step: 1,
+            totalSteps: 1,
+            quickPickItems: items.map((item: any) => ({ label: item.serverLabel })),
+            quickPickButtons: [
+                addButton
+            ],
+            buttonTooltip: 'Add New Server Label',
+            quickPickPlaceholder: 'Please choose the Server Label or click + upper right to add new',
+            activeItemPropertyName: 'serverLabel',
+        },
+        {
+            stepType: StepType.inputBox,
+            step: 1,
+            totalSteps: 3,
+            activeItemPropertyName: 'serverLabel',
+            inputPrompt: 'Please enter the source Tanium server fqdn',
+        },
+        {
+            stepType: StepType.fileDialog,
+            step: 2,
+            totalSteps: 3,
+            fileDialogButtons: [fileButton],
+            buttonTooltip: 'Select KeyUtility.exe path',
+            quickPickPlaceholder: 'Please choose the path to KeyUtility.exe by clicking ... upper right',
+            activeItemPropertyName: 'keyUtilityPath',
+        },
+        {
+            stepType: StepType.fileDialog,
+            step: 3,
+            totalSteps: 3,
+            fileDialogButtons: [fileButton],
+            buttonTooltip: 'Select private key path',
+            quickPickPlaceholder: 'Please choose the path to private key by clicking ... upper right',
+            activeItemPropertyName: 'privateKeyPath',
+        }
+    ];
 
     const state = {} as Partial<SigningContentFileState>;
-    await MultiStepInput.run(input => pickServerLabel(input, state));
+    await collectInputs('Sign Content File', state, steps);
 
     if (typeof state.serverLabel === 'string') {
         // check for undefined values
@@ -59,84 +89,4 @@ export async function collectSignContentFileInputs(config: WorkspaceConfiguratio
 
     // store data
     return state as SigningContentFileState;
-}
-
-async function pickServerLabel(input: MultiStepInput, state: Partial<SigningContentFileState>) {
-    if (serverLabelQuickPickItems.length === 0) {
-        return (input: MultiStepInput) => inputServerLabel(input, state, 0);
-    } else {
-        addButton.tooltip = 'Add New Server Label';
-        const pick = await input.showQuickPick({
-            title,
-            step: 1,
-            totalSteps: 1,
-            placeholder: 'Please choose the Server Label or click + upper right to add new',
-            items: serverLabelQuickPickItems,
-            activeItem: typeof state.serverLabel !== 'string' ? state.serverLabel : undefined,
-            buttons: [addButton],
-            shouldResume: shouldResume
-        });
-        if (pick instanceof MyButton) {
-            return (input: MultiStepInput) => inputServerLabel(input, state, 1);
-        }
-        state.serverLabel = pick;
-    }
-}
-
-async function inputServerLabel(input: MultiStepInput, state: Partial<SigningContentFileState>, stepModifier: number) {
-    state.serverLabel = await input.showInputBox({
-        title,
-        step: 1 + stepModifier,
-        totalSteps: 3 + stepModifier,
-        value: typeof state.serverLabel === 'string' ? state.serverLabel : '',
-        prompt: 'Please enter the source Tanium server fqdn',
-        shouldResume: shouldResume
-    });
-    return (input: MultiStepInput) => pickKeyUtilityPath(input, state, stepModifier);
-}
-
-async function pickKeyUtilityPath(input: MultiStepInput, state: Partial<SigningContentFileState>, stepModifier: number) {
-    fileButton.tooltip = 'Select KeyUtility.exe path';
-    state.keyUtilityPath = await input.showFileDialog({
-        title,
-        step: 2 + stepModifier,
-        totalSteps: 3 + stepModifier,
-        placeholder: 'Please choose the path to KeyUtility.exe by clicking ... upper right',
-        activeItem: typeof state.serverLabel !== 'string' ? state.serverLabel : undefined,
-        buttons: [fileButton],
-        openFileDialogOptions: {
-            canSelectFiles: true,
-            canSelectFolders: false,
-            canSelectMany: false,
-        },
-        shouldResume: shouldResume
-    });
-    if (state.keyUtilityPath !== undefined) {
-        return (input: MultiStepInput) => pickPrivateKeyPath(input, state, stepModifier);
-    }
-}
-
-async function pickPrivateKeyPath(input: MultiStepInput, state: Partial<SigningContentFileState>, stepModifier: number) {
-    fileButton.tooltip = 'Select private key path';
-    state.privateKeyPath = await input.showFileDialog({
-        title,
-        step: 3 + stepModifier,
-        totalSteps: 3 + stepModifier,
-        placeholder: 'Please choose the path to private key by clicking ... upper right',
-        activeItem: typeof state.serverLabel !== 'string' ? state.serverLabel : undefined,
-        buttons: [fileButton],
-        openFileDialogOptions: {
-            canSelectFiles: true,
-            canSelectFolders: false,
-            canSelectMany: false,
-        },
-        shouldResume: shouldResume
-    });
-}
-
-function shouldResume() {
-    // Could show a notification with the option to resume.
-    return new Promise<boolean>((resolve, reject) => {
-        // noop
-    });
 }

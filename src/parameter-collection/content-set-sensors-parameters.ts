@@ -33,7 +33,6 @@ export async function collectContentSetSensorInputs(config: WorkspaceConfigurati
             stepType: StepType.inputBox,
             step: 1,
             totalSteps: 5,
-            value: lastUsedUrl,
             activeItemPropertyName: 'contentSetUrl',
             inputPrompt: 'Please enter the url for the content set.',
         },
@@ -80,6 +79,7 @@ export async function collectContentSetSensorInputs(config: WorkspaceConfigurati
     ];
 
     const state = {} as Partial<ContentSetSensorState>;
+    state.contentSetUrl = lastUsedUrl;
     await collectInputs('Compare Content Set', state, steps);
 
     context.globalState.update('hoganslender.tanium.contentset.url', state.contentSetUrl);

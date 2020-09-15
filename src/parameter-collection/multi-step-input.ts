@@ -21,7 +21,6 @@ export interface Step {
 	quickPickPlaceholder?: string,
 	activeItemPropertyName: string,
 	password?: boolean,
-	value?: string,
 	inputPrompt?: string,
 }
 

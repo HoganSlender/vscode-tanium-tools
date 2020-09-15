@@ -1,8 +1,8 @@
 import { ExtensionContext } from 'vscode';
-import * as contentset from './ContentSet';
-import * as serverServer from './ServerServer';
-import * as signContentFile from './SignContentFile';
-import { OutputChannelLogging } from './logging';
+import * as contentset from './services/ContentSet';
+import * as serverServer from './services/ServerServer';
+import * as signContentFile from './services/SignContentFile';
+import { OutputChannelLogging } from './common/logging';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed

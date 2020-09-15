@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import * as commands from './common/commands';
-import { OutputChannelLogging } from './logging';
+import * as commands from '../common/commands';
+import { OutputChannelLogging } from '../common/logging';
 import { exec } from 'child_process';
-import { collectSignContentFileInputs } from './parameter-collection/sign-content_file-parameters';
+import { collectSignContentFileInputs } from '../parameter-collection/sign-content_file-parameters';
 
 
 export function activate(context: vscode.ExtensionContext) {

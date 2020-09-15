@@ -1,4 +1,4 @@
-import { collectInputs, MyButton, Step, StepType } from "../multi-step-input";
+import { collectInputs, MyButton, Step, StepType } from "./multi-step-input";
 import { QuickPickItem, WorkspaceConfiguration, ExtensionContext, Uri, ConfigurationTarget } from "vscode";
 
 interface ServerServerMissingSensorState {

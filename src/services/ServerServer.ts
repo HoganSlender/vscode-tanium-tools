@@ -1,14 +1,14 @@
-import * as commands from './common/commands';
+import * as commands from '../common/commands';
 import * as vscode from 'vscode';
-import { OutputChannelLogging } from './logging';
-import { collectServerServerSensorInputs } from './parameter-collection/server-server-sensors-parameters';
+import { OutputChannelLogging } from '../common/logging';
+import { collectServerServerSensorInputs } from '../parameter-collection/server-server-sensors-parameters';
 import path = require('path');
 import { sanitize } from 'sanitize-filename-ts';
 import * as fs from 'fs';
 const got = require('got');
-import { TransformSensor } from './transform-sensor';
-import { wrapOption } from './common/requestOption';
-import { collectServerServerMissingSensorInputs } from './parameter-collection/server-server-missing-sensors-parameters';
+import { TransformSensor } from '../transform/transform-sensor';
+import { wrapOption } from '../common/requestOption';
+import { collectServerServerMissingSensorInputs } from '../parameter-collection/server-server-missing-sensors-parameters';
 
 const diffMatchPatch = require('diff-match-patch');
 

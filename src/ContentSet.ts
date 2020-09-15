@@ -6,7 +6,7 @@ import * as parser from 'fast-xml-parser';
 import { sanitize } from "sanitize-filename-ts";
 import { TransformSensor } from './transform-sensor';
 import * as vscode from 'vscode';
-import { collectContentSetSensorInputs } from './content-set-sensors-parameters';
+import { collectContentSetSensorInputs } from './parameter-collection/content-set-sensors-parameters';
 import { OutputChannelLogging } from './logging';
 import * as commands from './common/commands';
 

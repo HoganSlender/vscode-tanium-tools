@@ -295,7 +295,7 @@ class ContentSet {
 						return p;
 					});
 
-					Promise.all([contentSetExtractionPromise, sensorRetrievalPromise]);
+					await Promise.all([contentSetExtractionPromise, sensorRetrievalPromise]);
 
 					if (extractCommentWhitespace) {
 						const files: string[] = fs.readdirSync(contentDir);

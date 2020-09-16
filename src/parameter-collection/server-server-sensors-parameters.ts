@@ -2,16 +2,17 @@ import { collectInputs, MultiStepInput, MyButton, Step, StepType } from "./multi
 import { QuickPickItem, WorkspaceConfiguration, ExtensionContext, Uri, ConfigurationTarget } from "vscode";
 
 interface ServerServerSensorState {
-    leftFqdn: QuickPickItem | string;
-    leftUsername: QuickPickItem | string;
+    leftFqdnQp: QuickPickItem | string;
+    leftUsernameQp: QuickPickItem | string;
     leftPassword: string;
-    rightFqdn: QuickPickItem | string;
-    rightUsername: QuickPickItem | string;
+    rightFqdnQp: QuickPickItem | string;
+    rightUsernameQp: QuickPickItem | string;
     rightPassword: string;
-    leftFqdnString: string;
-    leftUsernameString: string;
-    rightFqdnString: string;
-    rightUsernameString: string;
+    extractCommentWhitespaceQp: QuickPickItem;
+    leftFqdn: string;
+    leftUsername: string;
+    rightFqdn: string;
+    rightUsername: string;
     extractCommentWhitespace: boolean;
 }
 
@@ -39,13 +40,7 @@ export async function collectServerServerSensorInputs(config: WorkspaceConfigura
             ],
             buttonTooltip: 'Add New FQDN',
             quickPickPlaceholder: 'Please choose the source Tanium server fqdn or click + upper right to add new',
-            activeItemPropertyName: 'leftFqdn',
-        },
-        {
-            stepType: StepType.inputBox,
-            step: 1,
-            totalSteps: 7,
-            activeItemPropertyName: 'leftFqdn',
+            activeItemPropertyName: 'leftFqdnQp',
             inputPrompt: 'Please enter the source Tanium server fqdn',
         },
         {
@@ -58,13 +53,7 @@ export async function collectServerServerSensorInputs(config: WorkspaceConfigura
             ],
             buttonTooltip: 'Add New Username',
             quickPickPlaceholder: 'Please choose the source Tanium server username or click + upper right to add new',
-            activeItemPropertyName: 'leftUsername',
-        },
-        {
-            stepType: StepType.inputBox,
-            step: 2,
-            totalSteps: 7,
-            activeItemPropertyName: 'leftUsername',
+            activeItemPropertyName: 'leftUsernameQp',
             inputPrompt: 'Please enter the source Tanium server username',
         },
         {
@@ -85,13 +74,7 @@ export async function collectServerServerSensorInputs(config: WorkspaceConfigura
             ],
             buttonTooltip: 'Add New FQDN',
             quickPickPlaceholder: 'Please choose the dest Tanium server fqdn or click + upper right to add new',
-            activeItemPropertyName: 'rightFqdn',
-        },
-        {
-            stepType: StepType.inputBox,
-            step: 4,
-            totalSteps: 7,
-            activeItemPropertyName: 'rightFqdn',
+            activeItemPropertyName: 'rightFqdnQp',
             inputPrompt: 'Please enter the source Tanium server fqdn',
         },
         {
@@ -104,13 +87,7 @@ export async function collectServerServerSensorInputs(config: WorkspaceConfigura
             ],
             buttonTooltip: 'Add New Username',
             quickPickPlaceholder: 'Please choose the source Tanium server username or click + upper right to add new',
-            activeItemPropertyName: 'rightUsername',
-        },
-        {
-            stepType: StepType.inputBox,
-            step: 5,
-            totalSteps: 7,
-            activeItemPropertyName: 'rightUsername',
+            activeItemPropertyName: 'rightUsernameQp',
             inputPrompt: 'Please enter the source Tanium server username',
         },
         {
@@ -122,57 +99,59 @@ export async function collectServerServerSensorInputs(config: WorkspaceConfigura
             password: true
         },
         {
-            stepType: StepType.inputBox,
+            stepType: StepType.quickPick,
             step: 7,
             totalSteps: 7,
-            activeItemPropertyName: 'extractCommentWhitespace',
-            inputPrompt: 'Extract/group sensors with only comment and whitespace differences?',
-            password: true
+            quickPickItems: ['Yes', 'No'].map(label => ({ label })),
+            quickPickPlaceholder: 'Extract/group sensors with only comment and whitespace differences?',
+            activeItemPropertyName: 'extractCommentWhitespaceQp',
         }
     ];
 
     const state = {} as Partial<ServerServerSensorState>;
-    await collectInputs('Compare Content Set', state, steps);
+    await collectInputs('Compare Tanium Server Sensors to Tanium Server Sensors', state, steps);
 
-    if (typeof state.leftFqdn === 'string') {
-        if (fqdns.indexOf(state.leftFqdn) === -1) {
-            fqdns.push(state.leftFqdn);
+    if (typeof state.leftFqdnQp === 'string') {
+        if (fqdns.indexOf(state.leftFqdnQp) === -1) {
+            fqdns.push(state.leftFqdnQp);
             config.update('fqdns', fqdns, ConfigurationTarget.Global);
         }
-        state.leftFqdnString = state.leftFqdn;
+        state.leftFqdn = state.leftFqdnQp;
     } else {
-        state.leftFqdnString = state.leftFqdn!.label;
+        state.leftFqdn = state.leftFqdnQp!.label;
     }
 
-    if (typeof state.leftUsername === 'string') {
-        if (usernames.indexOf(state.leftUsername) === -1) {
-            usernames.push(state.leftUsername);
+    if (typeof state.leftUsernameQp === 'string') {
+        if (usernames.indexOf(state.leftUsernameQp) === -1) {
+            usernames.push(state.leftUsernameQp);
             config.update('usernames', usernames, ConfigurationTarget.Global);
             }
-        state.leftUsernameString = state.leftUsername;
+        state.leftUsername = state.leftUsernameQp;
     } else {
-        state.leftUsernameString = state.leftUsername!.label;
+        state.leftUsername = state.leftUsernameQp!.label;
     }
 
-    if (typeof state.rightFqdn === 'string') {
-        if (fqdns.indexOf(state.rightFqdn) === -1) {
-            fqdns.push(state.rightFqdn);
+    if (typeof state.rightFqdnQp === 'string') {
+        if (fqdns.indexOf(state.rightFqdnQp) === -1) {
+            fqdns.push(state.rightFqdnQp);
             config.update('fqdns', fqdns, ConfigurationTarget.Global);
         }
-        state.rightFqdnString = state.rightFqdn;
+        state.rightFqdn = state.rightFqdnQp;
     } else {
-        state.rightFqdnString = state.rightFqdn!.label;
+        state.rightFqdn = state.rightFqdnQp!.label;
     }
 
-    if (typeof state.rightUsername === 'string') {
-        if (usernames.indexOf(state.rightUsername) === -1) {
-            usernames.push(state.rightUsername);
+    if (typeof state.rightUsernameQp === 'string') {
+        if (usernames.indexOf(state.rightUsernameQp) === -1) {
+            usernames.push(state.rightUsernameQp);
             config.update('usernames', usernames, ConfigurationTarget.Global);
             }
-        state.rightUsernameString = state.rightUsername;
+        state.rightUsername = state.rightUsernameQp;
     } else {
-        state.rightUsernameString = state.rightUsername!.label;
+        state.rightUsername = state.rightUsernameQp!.label;
     }
+
+    state.extractCommentWhitespace = state.extractCommentWhitespaceQp!.label === 'Yes';
 
     // store data
     return state as ServerServerSensorState;

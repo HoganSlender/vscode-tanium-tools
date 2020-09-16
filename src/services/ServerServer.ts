@@ -39,8 +39,8 @@ class ServerServer {
         const state = await collectServerServerMissingSensorInputs(config, context);
 
         // collect values
-        const leftFqdn: string = state.leftFqdnString;
-        const leftUsername: string = state.leftUsernameString;
+        const leftFqdn: string = state.leftFqdn;
+        const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
 
         const leftRestBase = `https://${leftFqdn}/api/v2`;
@@ -53,9 +53,6 @@ class ServerServer {
 
         const leftDir = left.fsPath;
         const rightDir = right.fsPath;
-
-        console.log(left.fsPath);
-        console.log(right.fsPath);
 
         // go through files on left and see if it exists on right
         const files: string[] = fs.readdirSync(leftDir);
@@ -153,11 +150,11 @@ class ServerServer {
         const state = await collectServerServerSensorInputs(config, context);
 
         // collect values
-        const leftFqdn: string = state.leftFqdnString;
-        const leftUsername: string = state.leftUsernameString;
+        const leftFqdn: string = state.leftFqdn;
+        const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
-        const rightFqdn: string = state.rightFqdnString;
-        const rightUsername: string = state.rightUsernameString;
+        const rightFqdn: string = state.rightFqdn;
+        const rightUsername: string = state.rightUsername;
         const rightPassword: string = state.rightPassword;
         const extractCommentWhitespace: boolean = state.extractCommentWhitespace;
 
@@ -172,7 +169,7 @@ class ServerServer {
         OutputChannelLogging.log(`right fqdn: ${rightFqdn}`);
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
-        OutputChannelLogging.log(`commentWhitespace: ${extractCommentWhitespace}`);
+        OutputChannelLogging.log(`commentWhitespace: ${extractCommentWhitespace.toString()}`);
 
         // create folders
         const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}`);

@@ -2,11 +2,11 @@ import { collectInputs, MyButton, Step, StepType } from "./multi-step-input";
 import { QuickPickItem, WorkspaceConfiguration, ExtensionContext, Uri, ConfigurationTarget } from "vscode";
 
 interface ServerServerMissingSensorState {
-    leftFqdn: QuickPickItem | string;
-    leftUsername: QuickPickItem | string;
+    leftFqdnQp: QuickPickItem | string;
+    leftUsernameQp: QuickPickItem | string;
     leftPassword: string;
-    leftFqdnString: string;
-    leftUsernameString: string;
+    leftFqdn: string;
+    leftUsername: string;
 }
 
 export async function collectServerServerMissingSensorInputs(config: WorkspaceConfiguration, context: ExtensionContext) {
@@ -33,13 +33,7 @@ export async function collectServerServerMissingSensorInputs(config: WorkspaceCo
             ],
             buttonTooltip: 'Add New FQDN',
             quickPickPlaceholder: 'Please choose the source Tanium server fqdn or click + upper right to add new',
-            activeItemPropertyName: 'leftFqdn',
-        },
-        {
-            stepType: StepType.inputBox,
-            step: 1,
-            totalSteps: 3,
-            activeItemPropertyName: 'leftFqdn',
+            activeItemPropertyName: 'leftFqdnQp',
             inputPrompt: 'Please enter the source Tanium server fqdn',
         },
         {
@@ -52,13 +46,7 @@ export async function collectServerServerMissingSensorInputs(config: WorkspaceCo
             ],
             buttonTooltip: 'Add New Username',
             quickPickPlaceholder: 'Please choose the source Tanium server username or click + upper right to add new',
-            activeItemPropertyName: 'leftUsername',
-        },
-        {
-            stepType: StepType.inputBox,
-            step: 2,
-            totalSteps: 3,
-            activeItemPropertyName: 'leftUsername',
+            activeItemPropertyName: 'leftUsernameQp',
             inputPrompt: 'Please enter the source Tanium server username',
         },
         {
@@ -74,24 +62,24 @@ export async function collectServerServerMissingSensorInputs(config: WorkspaceCo
     const state = {} as Partial<ServerServerMissingSensorState>;
     await collectInputs('Create Export File', state, steps);
 
-    if (typeof state.leftFqdn === 'string') {
-        if (fqdns.indexOf(state.leftFqdn) === -1) {
-            fqdns.push(state.leftFqdn);
+    if (typeof state.leftFqdnQp === 'string') {
+        if (fqdns.indexOf(state.leftFqdnQp) === -1) {
+            fqdns.push(state.leftFqdnQp);
             config.update('fqdns', fqdns, ConfigurationTarget.Global);
         }
-        state.leftFqdnString = state.leftFqdn;
+        state.leftFqdn = state.leftFqdnQp;
     } else {
-        state.leftFqdnString = state.leftFqdn!.label;
+        state.leftFqdn = state.leftFqdnQp!.label;
     }
 
-    if (typeof state.leftUsername === 'string') {
-        if (usernames.indexOf(state.leftUsername) === -1) {
-            usernames.push(state.leftUsername);
+    if (typeof state.leftUsernameQp === 'string') {
+        if (usernames.indexOf(state.leftUsernameQp) === -1) {
+            usernames.push(state.leftUsernameQp);
             config.update('usernames', usernames, ConfigurationTarget.Global);
         }
-        state.leftUsernameString = state.leftUsername;
+        state.leftUsername = state.leftUsernameQp;
     } else {
-        state.leftUsernameString = state.leftUsername!.label;
+        state.leftUsername = state.leftUsernameQp!.label;
     }
 
     // store data

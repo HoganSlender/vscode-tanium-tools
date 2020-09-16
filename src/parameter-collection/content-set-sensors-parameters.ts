@@ -3,11 +3,12 @@ import { QuickPickItem, WorkspaceConfiguration, ExtensionContext, Uri, Configura
 
 interface ContentSetSensorState {
     contentSetUrl: string;
-    fqdn: QuickPickItem | string;
-    username: QuickPickItem | string;
+    fqdnQp: QuickPickItem | string;
+    usernameQp: QuickPickItem | string;
+    extractCommentWhitespaceQp: QuickPickItem;
     password: string;
-    fqdnString: string;
-    usernameString: string;
+    fqdn: string;
+    username: string;
     extractCommentWhitespace: boolean;
 }
 
@@ -42,7 +43,7 @@ export async function collectContentSetSensorInputs(config: WorkspaceConfigurati
             totalSteps: 5,
             quickPickItems: ['Yes', 'No'].map(label => ({ label })),
             quickPickPlaceholder: 'Extract/group sensors with only comment and whitespace differences?',
-            activeItemPropertyName: 'extractCommentWhitespace',
+            activeItemPropertyName: 'extractCommentWhitespaceQp',
         },
         {
             stepType: StepType.quickPick,
@@ -54,7 +55,8 @@ export async function collectContentSetSensorInputs(config: WorkspaceConfigurati
             ],
             buttonTooltip: 'Add New FQDN',
             quickPickPlaceholder: 'Please choose the Tanium server fqdn or click + upper right to add new',
-            activeItemPropertyName: 'fqdn',
+            inputPrompt: 'Please enter the Tanium server fqdn',
+            activeItemPropertyName: 'fqdnQp',
         },
         {
             stepType: StepType.quickPick,
@@ -66,7 +68,8 @@ export async function collectContentSetSensorInputs(config: WorkspaceConfigurati
             ],
             buttonTooltip: 'Add New Username',
             quickPickPlaceholder: 'Please choose the Tanium server username or click + upper right to add new',
-            activeItemPropertyName: 'username',
+            inputPrompt: 'Please enter the Tanium server username',
+            activeItemPropertyName: 'usernameQp',
         },
         {
             stepType: StepType.inputBox,
@@ -80,25 +83,27 @@ export async function collectContentSetSensorInputs(config: WorkspaceConfigurati
 
     const state = {} as Partial<ContentSetSensorState>;
     state.contentSetUrl = lastUsedUrl;
-    await collectInputs('Compare Content Set', state, steps);
+    await collectInputs('Compare Content Set to Tanium Server Sensors', state, steps);
 
     context.globalState.update('hoganslender.tanium.contentset.url', state.contentSetUrl);
 
-    if (typeof state.fqdn === 'string') {
-        fqdns.push(state.fqdn);
+    if (typeof state.fqdnQp === 'string') {
+        fqdns.push(state.fqdnQp);
         config.update('fqdns', fqdns, ConfigurationTarget.Global);
-        state.fqdnString = state.fqdn;
+        state.fqdn = state.fqdnQp;
     } else {
-        state.fqdnString = state.fqdn!.label;
+        state.fqdn = state.fqdnQp!.label;
     }
 
-    if (typeof state.username === 'string') {
-        usernames.push(state.username);
+    if (typeof state.usernameQp === 'string') {
+        usernames.push(state.usernameQp);
         config.update('usernames', usernames, ConfigurationTarget.Global);
-        state.usernameString = state.username;
+        state.username = state.usernameQp;
     } else {
-        state.usernameString = state.username!.label;
+        state.username = state.usernameQp!.label;
     }
+
+    state.extractCommentWhitespace = state.extractCommentWhitespaceQp!.label === 'Yes';
 
     // store data
     return state as ContentSetSensorState;

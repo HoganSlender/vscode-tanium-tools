@@ -14,6 +14,7 @@ export interface Step {
 	stepType: StepType,
 	step: number,
 	totalSteps: number,
+	adjustedTotalSteps?: number,
 	quickPickItems?: QuickPickItem[],
 	quickPickButtons?: QuickInputButton[],
 	fileDialogButtons?: QuickInputButton[],
@@ -42,44 +43,54 @@ function stepTypeSelector(title: string, input: MultiStepInput, state: any, step
 		const step = steps[stepIndex];
 		switch (step.stepType) {
 			case StepType.quickPick:
-				if (step.quickPickItems?.length === 0) {
-					stepIndex++;
-					return (input: MultiStepInput) => stepTypeSelector(title, input, state, steps, stepIndex, 0);
-				} else {
-					return (input: MultiStepInput) => pickQuickPickItem(title, input, state, steps, stepIndex, 0);
-				}
+				return (input: MultiStepInput) => pickQuickPickItem(title, input, state, steps, stepIndex, stepModifier);
 
 			case StepType.inputBox:
-				return (input: MultiStepInput) => inputLabel(title, input, state, steps, stepIndex, 0);
+				return (input: MultiStepInput) => inputLabel(title, input, state, steps, stepIndex, stepModifier);
 
 			case StepType.fileDialog:
-				return (input: MultiStepInput) => pickFileDialog(title, input, state, steps, stepIndex, 0);
+				return (input: MultiStepInput) => pickFileDialog(title, input, state, steps, stepIndex, stepModifier);
 		}
 	}
 }
 
 async function pickQuickPickItem(title: string, input: MultiStepInput, state: any, steps: Step[], stepIndex: number, stepModifier: number) {
 	const step = steps[stepIndex];
-	const pick = await input.showQuickPick({
-		title: title,
-		step: step.step + stepModifier,
-		totalSteps: step.totalSteps + stepModifier,
-		placeholder: step.quickPickPlaceholder ?? '',
-		items: step.quickPickItems ?? [],
-		activeItem: typeof state[step.activeItemPropertyName] !== 'string' ? state[step.activeItemPropertyName] : undefined,
-		buttons: step.quickPickButtons,
-		shouldResume: shouldResume
-	});
-	if (pick instanceof MyButton) {
-		stepIndex++;
-		stepModifier++;
-		return (input: MultiStepInput) => stepTypeSelector(title, input, state, steps, stepIndex, stepModifier);
-	}
-	state[step.activeItemPropertyName] = pick;
 
-	if (step.step !== step.totalSteps) {
-		stepIndex++;
-		return (input: MultiStepInput) => stepTypeSelector(title, input, state, steps, stepIndex, stepModifier);
+	if (step.quickPickItems?.length === 0) {
+		// check to see if this is the only step. If it is, adjust total
+		adjustedTotalSteps(step);
+		return (input: MultiStepInput) => inputLabel(title, input, state, steps, stepIndex, stepModifier);
+	} else {
+		const pick = await input.showQuickPick({
+			title: title,
+			step: step.step + stepModifier,
+			totalSteps: step.totalSteps + stepModifier,
+			placeholder: step.quickPickPlaceholder ?? '',
+			items: step.quickPickItems ?? [],
+			activeItem: typeof state[step.activeItemPropertyName] !== 'string' ? state[step.activeItemPropertyName] : undefined,
+			buttons: step.quickPickButtons,
+			shouldResume: shouldResume
+		});
+		if (pick instanceof MyButton) {
+			adjustedTotalSteps(step);
+			stepModifier++;
+			return (input: MultiStepInput) => inputLabel(title, input, state, steps, stepIndex, stepModifier);
+		}
+		state[step.activeItemPropertyName] = pick;
+
+		if (step.step !== step.totalSteps) {
+			stepIndex++;
+			return (input: MultiStepInput) => stepTypeSelector(title, input, state, steps, stepIndex, stepModifier);
+		}
+	}
+}
+
+function adjustedTotalSteps(step: Step) {
+	if (step.step === step.totalSteps) {
+		if (step.adjustedTotalSteps !== undefined) {
+			step.totalSteps = step.adjustedTotalSteps;
+		}
 	}
 }
 

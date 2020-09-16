@@ -28,20 +28,15 @@ export async function collectSignContentFileInputs(config: WorkspaceConfiguratio
             stepType: StepType.quickPick,
             step: 1,
             totalSteps: 1,
+            adjustedTotalSteps: 3,
             quickPickItems: items.map((item: any) => ({ label: item.serverLabel })),
             quickPickButtons: [
                 addButton
             ],
             buttonTooltip: 'Add New Server Label',
             quickPickPlaceholder: 'Please choose the Server Label or click + upper right to add new',
+            inputPrompt: 'Please enter the Tanium server fqdn to use as a label',
             activeItemPropertyName: 'serverLabel',
-        },
-        {
-            stepType: StepType.inputBox,
-            step: 1,
-            totalSteps: 3,
-            activeItemPropertyName: 'serverLabel',
-            inputPrompt: 'Please enter the source Tanium server fqdn',
         },
         {
             stepType: StepType.fileDialog,

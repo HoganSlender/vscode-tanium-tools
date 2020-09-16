@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import { collectContentSetSensorInputs } from '../parameter-collection/content-set-sensors-parameters';
 import { OutputChannelLogging } from '../common/logging';
 import * as commands from '../common/commands';
+import { wrapOption } from '../common/requestOption';
 
 const diffMatchPatch = require('diff-match-patch');
 
@@ -34,14 +35,15 @@ class ContentSet {
 
 		// get configurations
 		const config = vscode.workspace.getConfiguration('hoganslender.tanium');
+		const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
 		const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
 
 		const state = await collectContentSetSensorInputs(config, context);
 
 		// collect values
 		const contentSet: string = state.contentSetUrl;
-		const fqdn: string = state.fqdnString;
-		const username: string = state.usernameString;
+		const fqdn: string = state.fqdn;
+		const username: string = state.username;
 		const password: string = state.password;
 		const extractCommentWhitespace: boolean = state.extractCommentWhitespace;
 
@@ -50,7 +52,7 @@ class ContentSet {
 		OutputChannelLogging.showClear();
 
 		OutputChannelLogging.log(`contentSet: ${contentSet}`);
-		OutputChannelLogging.log(`commentWhitespace: ${extractCommentWhitespace}`);
+		OutputChannelLogging.log(`commentWhitespace: ${extractCommentWhitespace.toString()}`);
 		OutputChannelLogging.log(`fqdn: ${fqdn}`);
 		OutputChannelLogging.log(`username: ${username}`);
 		OutputChannelLogging.log(`password: XXXXXXXX`);
@@ -207,7 +209,7 @@ class ContentSet {
 					// get session
 					var session: string;
 					try {
-						const { body } = await got.post(`${restBase}/session/login`, {
+						const options = wrapOption(allowSelfSignedCerts, {
 							json: {
 								username: username,
 								password: password,
@@ -215,6 +217,7 @@ class ContentSet {
 							responseType: 'json',
 							timeout: httpTimeout,
 						});
+						const { body } = await got.post(`${restBase}/session/login`, options);
 
 						session = body.data.session;
 					} catch (err) {
@@ -241,13 +244,14 @@ class ContentSet {
 							sensorInfo.forEach(async (sensorInfo: any) => {
 								try {
 									const hash = sensorInfo.hash;
-									const { body } = await got.get(`${restBase}/sensors/by-hash/${hash}`, {
+									const options = wrapOption(allowSelfSignedCerts, {
 										headers: {
 											session: session,
 										},
 										responseType: 'json',
 										timeout: httpTimeout,
 									});
+									const { body } = await got.get(`${restBase}/sensors/by-hash/${hash}`, options);
 
 									let sensor: any = body.data;
 									const name: string = sanitize(sensor.name);

@@ -65,26 +65,26 @@
 				"hoganslender.tanium.allowSelfSignedCerts": {
 					"type": "boolean",
 					"default": false,
-					"description": "Set to true if communicating with servers that are using a self signed certificate"
-				},
-				"hoganslender.tanium.httpTimeoutSeconds": {
-					"type": "number",
-					"default": 10,
-					"description": "Number of seconds for HTTP request timeout"
+					"description": "Set to true if communicating with servers that are using a self signed certificate."
 				},
 				"hoganslender.tanium.fqdns": {
 					"type": "array",
 					"default": [],
-					"description": "Tanium server fqdns/ip addresses that have been used"
+					"description": "List of recently used Tanium server FQDNs."
+				},
+				"hoganslender.tanium.httpTimeoutSeconds": {
+					"type": "number",
+					"default": 10,
+					"description": "Number of seconds for HTTP request timeout."
+				},
+				"hoganslender.tanium.signingPaths": {
+					"type": "array",
+					"description": "Path definitions for KeyUtility.exe and private key file"
 				},
 				"hoganslender.tanium.usernames": {
 					"type": "array",
 					"default": [],
-					"description": "usernames that have been used"
-				},
-				"hoganslender.tanium.signingPaths": {
-					"type":"array",
-					"description": "testing"
+					"description": "List of recently used Tanium usernames."
 				}
 			}
 		}

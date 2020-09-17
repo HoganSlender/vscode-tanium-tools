@@ -45,6 +45,16 @@
 			}
 		],
 		"menus": {
+			"commandPalette": [
+				{
+					"command": "hoganslendertanium.generateExportFileMissingSensors",
+					"when": "false"
+				},
+				{
+					"command": "hoganslendertanium.signContentFile",
+					"when": "false"
+				}
+			],
 			"explorer/context": [
 				{
 					"command": "hoganslendertanium.generateExportFileMissingSensors",

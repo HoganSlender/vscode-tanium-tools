@@ -21,12 +21,14 @@ Contains miscellaneous commands to work with Tanium servers in Visual Studio Cod
 ## Known Issues
 * none
 ## Release Notes
+### 0.0.3
+* Removed `Tanium: Sign Content` and `Tanium: Generate Export File for Missing Sensors` from command palette since they are context menu driven
+### 0.0.2
+* Moved Release notes from README to CHANGELOG
 ### 0.0.1
 * Release of `Tanium: Compare Content Set` command
 * Release of `Tanium: Compare Tanium Server Sensors` command
 * Release of `Tanium: Sign Content` context menu
 * Release of `Tanium: Generate Export File for Missing Sensors` context menu
-### 0.0.2
-* Moved Release notes from README to CHANGELOG
 ## Recommended Extensions
 - [Diff Folders](https://marketplace.visualstudio.com/items?itemName=L13RARY.l13-diff) - Extremely useful in comparing Tanium content

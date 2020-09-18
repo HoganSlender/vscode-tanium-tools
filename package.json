@@ -22,7 +22,8 @@
 		"onCommand:hoganslendertanium.compareContentSetSensors",
 		"onCommand:hoganslendertanium.compareServerServerSensors",
 		"onCommand:hoganslendertanium.generateExportFileMissingSensors",
-		"onCommand:hoganslendertanium.signContentFile"
+		"onCommand:hoganslendertanium.signContentFile",
+		"onCommand:hoganslendertanium.generateExportFileModifiedSensors"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
@@ -42,6 +43,10 @@
 			{
 				"command": "hoganslendertanium.signContentFile",
 				"title": "Tanium: Sign Content File"
+			},
+			{
+				"command": "hoganslendertanium.generateExportFileModifiedSensors",
+				"title": "Tanium: Generate Export File for Modified Sensors"
 			}
 		],
 		"menus": {
@@ -52,6 +57,10 @@
 				},
 				{
 					"command": "hoganslendertanium.signContentFile",
+					"when": "false"
+				},
+				{
+					"command": "hoganslendertanium.generateExportFileModifiedSensors",
 					"when": "false"
 				}
 			],
@@ -65,6 +74,11 @@
 					"command": "hoganslendertanium.signContentFile",
 					"group": "3_compare@1",
 					"when": "!explorerResourceIsFolder"
+				},
+				{
+					"command": "hoganslendertanium.generateExportFileModifiedSensors",
+					"group": "3_compare@1",
+					"when": "explorerResourceIsFolder && listDoubleSelection"
 				}
 			]
 		},

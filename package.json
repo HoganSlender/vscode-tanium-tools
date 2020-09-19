@@ -23,7 +23,9 @@
 		"onCommand:hoganslendertanium.compareServerServerSensors",
 		"onCommand:hoganslendertanium.generateExportFileMissingSensors",
 		"onCommand:hoganslendertanium.signContentFile",
-		"onCommand:hoganslendertanium.generateExportFileModifiedSensors"
+		"onCommand:hoganslendertanium.generateExportFileModifiedSensors",
+		"onCommand:hoganslendertanium.retrieveSensorByName",
+		"onCommand:hoganslendertanium.retrieveSensorByHash"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
@@ -47,6 +49,14 @@
 			{
 				"command": "hoganslendertanium.generateExportFileModifiedSensors",
 				"title": "Tanium: Generate Export File for Modified Sensors"
+			},
+			{
+				"command": "hoganslendertanium.retrieveSensorByName",
+				"title": "Tanium: Retrieve Sensor Data by Name"
+			},
+			{
+				"command": "hoganslendertanium.retrieveSensorByHash",
+				"title": "Tanium: Retrieve Sensor Data by Hash"
 			}
 		],
 		"menus": {

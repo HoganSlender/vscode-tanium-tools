@@ -387,6 +387,7 @@ class ServerServer {
                             const sensor: any = leftSensors[i];
 
                             if (sensor.category === 'Reserved') {
+                                leftSensorCounter++;
                                 continue;
                             }
 
@@ -488,6 +489,12 @@ class ServerServer {
 
                         for (var i = 0; i < rightSensors.length - 1; i++) {
                             const sensor = rightSensors[i];
+
+                            if (sensor.category === 'Reserved') {
+                                rightSensorCounter++;
+                                continue;
+                            }
+
                             const rightSensorName: string = sanitize(sensor.name);
 
                             try {

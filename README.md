@@ -6,6 +6,8 @@ Contains miscellaneous commands to work with Tanium servers in Visual Studio Cod
 * **Available Commands**
     * `Tanium: Compare Content Set` - allows you to download a content set xml file from Tanium support and compare it to the sensors on your server.    
     * `Tanium: Compare Tanium Server Sensors` - allows you to compare sensors from 2 different Tanium servers.
+    * `Tanium: Retrieve Sensor Data by Name` - allows you to retrieve a sensor by name from the Tanium server.
+    * `Tanium: Retrieve Sensor Data by Hash` - allows you to retrieve a sensor by hash value from the Tanium server.
 * **Available Settings**
     * `hoganslender.tanium.allowSelfSignedCerts` - Set to true if communicating with servers that are using a self signed certificate.
     * `hoganslender.tanium.fqdns` - List of recently used Tanium server FQDNs.
@@ -16,7 +18,8 @@ Contains miscellaneous commands to work with Tanium servers in Visual Studio Cod
     * **Visual Studio Code Explorer**
         * **Folders**
             * `Tanium: Generate Export File for Missing Sensors` - Generates an export file that contains the missing sensors from the right side of the two selected folders.
-        * ****Files****
+            * `Tanium: Generate Export File for Modified Sensors` - Generates an export file that contains the modified sensors from the two selected folders.
+        * **Files**
             * `Tanium: Sign Content` - Signs the selected file for importing into Tanium server.
 ## Known Issues
 * none

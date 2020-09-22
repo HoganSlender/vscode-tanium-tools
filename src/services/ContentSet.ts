@@ -65,24 +65,232 @@ class ContentSet {
 		// download the file
 		const contentSetFile = path.join(folderPath!, contentFilename);
 
-		const pipeline = promisify(stream.pipeline);
+		vscode.window.withProgress({
+			location: vscode.ProgressLocation.Notification,
+			title: 'Content Set Compare',
+			cancellable: false
+		}, async (progress, token) => {
+			progress.report({ increment: 0 });
 
-		(async () => {
+			// create folders
+			const contentDir = path.join(folderPath!, `1 - ${contentFilename.replace('.xml', '')}`);
+			const serverDir = path.join(folderPath!, `2 - ${sanitize(fqdn)}`);
+			const commentDir = path.join(folderPath!, 'Comments Only');
+			const commentContentDir = path.join(commentDir, `1 - ${contentFilename.replace('.xml', '')}`);
+			const commentServerDir = path.join(commentDir, `2 - ${sanitize(fqdn)}`);
+
+			if (!fs.existsSync(contentDir)) {
+				fs.mkdirSync(contentDir);
+			}
+
+			if (!fs.existsSync(serverDir)) {
+				fs.mkdirSync(serverDir);
+			}
+
+			if (extractCommentWhitespace) {
+				if (!fs.existsSync(commentDir)) {
+					fs.mkdirSync(commentDir);
+				}
+
+				if (!fs.existsSync(commentContentDir)) {
+					fs.mkdirSync(commentContentDir);
+				}
+
+				if (!fs.existsSync(commentServerDir)) {
+					fs.mkdirSync(commentServerDir);
+				}
+			}
+
+			const increment = extractCommentWhitespace ? 25 : 33;
+
+			// process sensors
+			var sensorInfo: any[] = [];
+
+			if (extractCommentWhitespace) {
+				progress.report({ increment: increment, message: `downloading ${contentSet}` });
+				await this.downloadContentSet(contentSet, httpTimeout, contentSetFile);
+				progress.report({ increment: increment, message: 'extracting sensors' });
+				await this.extractContentSetSensors(contentSetFile, contentDir, sensorInfo);
+				progress.report({ increment: increment, message: `retrieving sensors from ${fqdn}` });
+				await this.retrieveServerSensors(sensorInfo, restBase, allowSelfSignedCerts, httpTimeout, username, password, serverDir, fqdn);
+				progress.report({ increment: increment, message: 'Extracting sensors with comments/whitspaces changes only' });
+				await this.extractCommentWhitespaceSensors(contentDir, serverDir, commentContentDir, commentServerDir);
+                const p = new Promise(resolve => {
+                    setTimeout(() => {
+                        resolve();
+                    }, 3000);
+                });
+			} else {
+				progress.report({ increment: increment, message: `downloading ${contentSet}` });
+				await this.downloadContentSet(contentSet, httpTimeout, contentSetFile);
+				progress.report({ increment: increment, message: 'extracting sensors' });
+				await this.extractContentSetSensors(contentSetFile, contentDir, sensorInfo);
+				progress.report({ increment: increment, message: `retrieving sensors from ${fqdn}` });
+				await this.retrieveServerSensors(sensorInfo, restBase, allowSelfSignedCerts, httpTimeout, username, password, serverDir, fqdn);
+                const p = new Promise(resolve => {
+                    setTimeout(() => {
+                        resolve();
+                    }, 3000);
+                });
+			}
+		});
+	}
+
+	static extractCommentWhitespaceSensors(contentDir: string, serverDir: string, commentContentDir: string, commentServerDir: string) {
+		const p = new Promise(resolve => {
+			const files: string[] = fs.readdirSync(contentDir);
+			const fileTotal = files.length;
+			const fileIncrement = 100 / fileTotal;
+
+			var fileCounter = 0;
+			files.forEach(file => {
+				try {
+					// check files
+					const leftTarget = path.join(contentDir, file);
+					const rightTarget = leftTarget.replace(contentDir, serverDir);
+					if (fs.existsSync(rightTarget)) {
+						// read contents of each file
+						const leftContent = fs.readFileSync(leftTarget, 'utf-8');
+						const rightContent = fs.readFileSync(rightTarget, 'utf-8');
+
+						// do diff
+						const dmp = new diffMatchPatch();
+						const diffs = dmp.diff_main(leftContent, rightContent);
+						dmp.diff_cleanupSemantic(diffs);
+
+						var onlyComments = true;
+						var allEqual = true;
+
+						diffs.forEach((diff: any) => {
+							const operation: number = diff[0];
+							const text: string = diff[1];
+
+							if (operation !== diffMatchPatch.DIFF_EQUAL) {
+								allEqual = false;
+
+								// trim text
+								var test = text.trim();
+
+								if (test.length !== 0) {
+									var first = test.substr(0, 1);
+									if (first === '"') {
+										first = test.substr(1, 1);
+									}
+
+									if (first !== '#' && first !== "'" && first !== ',') {
+										onlyComments = false;
+									}
+								}
+							}
+						});
+
+						if (onlyComments && !allEqual) {
+							// move the files
+							fs.renameSync(leftTarget, path.join(commentContentDir, file));
+							fs.renameSync(rightTarget, path.join(commentServerDir, file));
+						}
+					}
+
+					fileCounter++;
+
+					if (fileTotal === fileCounter) {
+						resolve();
+					}
+				} catch (err) {
+					OutputChannelLogging.logError('error comparing files', err);
+
+					fileCounter++;
+
+					if (fileTotal === fileCounter) {
+						resolve();
+					}
+				}
+			});
+		});
+
+		return p;
+	}
+
+	static retrieveServerSensors(sensorInfo: any[], restBase: string, allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, serverDir: string, fqdn: string) {
+		const p = new Promise(async resolve => {
+			// get session
+			var session: string;
 			try {
-				await pipeline(
-					got.stream(contentSet, {
-						timeout: httpTimeout,
-					}),
-					fs.createWriteStream(contentSetFile)
-				);
+				const options = wrapOption(allowSelfSignedCerts, {
+					json: {
+						username: username,
+						password: password,
+					},
+					responseType: 'json',
+					timeout: httpTimeout,
+				});
+				const { body } = await got.post(`${restBase}/session/login`, options);
+
+				session = body.data.session;
 			} catch (err) {
-				OutputChannelLogging.logError(`error downloading ${contentSet}`, err);
+				OutputChannelLogging.logError('could not retrieve session', err);
 				return;
 			}
 
-			OutputChannelLogging.log(`download complete.`);
+			const sensorTotal = sensorInfo.length;
+			const sensorIncrement = 100 / sensorTotal;
 
-			fs.readFile(contentSetFile, 'utf8', async function (err, data) {
+			var sensorCounter = 0;
+
+			sensorInfo.forEach(async (sensorInfo: any) => {
+				try {
+					const hash = sensorInfo.hash;
+					const options = wrapOption(allowSelfSignedCerts, {
+						headers: {
+							session: session,
+						},
+						responseType: 'json',
+						timeout: httpTimeout,
+					});
+					const { body } = await got.get(`${restBase}/sensors/by-hash/${hash}`, options);
+
+					let sensor: any = body.data;
+					const name: string = sanitize(sensor.name);
+
+					try {
+						sensor = TransformSensor.transform(sensor);
+						const content: string = JSON.stringify(sensor, null, 2);
+
+						const serverFile = path.join(serverDir, name + '.json');
+						fs.writeFile(serverFile, content, (err) => {
+							if (err) {
+								OutputChannelLogging.logError(`could not write ${serverFile}`, err);
+							}
+
+							sensorCounter++;
+
+							if (sensorTotal === sensorCounter) {
+								resolve();
+							}
+						});
+					} catch (err) {
+						OutputChannelLogging.logError(`error processing server sensor - ${name}`, err);
+					}
+				} catch (err) {
+					if (!err.message.includes('404')) {
+						OutputChannelLogging.logError(`error retrieving ${sensorInfo.name} from ${fqdn}`, err);
+					}
+
+					sensorCounter++;
+
+					if (sensorTotal === sensorCounter) {
+						resolve();
+					}
+				}
+			});
+		});
+
+		return p;
+	}
+
+	static extractContentSetSensors(contentSetFile: string, contentDir: string, sensorInfo: any[]) {
+		const p = new Promise(resolve => {
+			fs.readFile(contentSetFile, 'utf8', function (err, data) {
 				if (err) {
 					OutputChannelLogging.logError(`could ot open '${contentSetFile}'`, err);
 					return;
@@ -109,302 +317,78 @@ class ContentSet {
 
 				if (parser.validate(data) === true) { //optional (it'll return an object in case it's not valid)
 					var jsonObj = parser.parse(data, options);
+					const jsonTotal = jsonObj.content.sensor.length;
+					const jsonIncrement = 100 / jsonTotal;
 
-					// create folders
-					const contentDir = path.join(folderPath!, `1 - ${contentFilename.replace('.xml', '')}`);
-					const serverDir = path.join(folderPath!, `2 - ${sanitize(fqdn)}`);
-					const commentDir = path.join(folderPath!, 'Comments Only');
-					const commentContentDir = path.join(commentDir, `1 - ${contentFilename.replace('.xml', '')}`);
-					const commentServerDir = path.join(commentDir, `2 - ${sanitize(fqdn)}`);
+					var jsonCounter = 0;
 
-					if (!fs.existsSync(contentDir)) {
-						fs.mkdirSync(contentDir);
-					}
+					jsonObj.content.sensor.forEach((sensor: any) => {
+						if (sensor.category === 'Reserved') {
+							jsonCounter++;
+							if (jsonTotal === jsonCounter) {
+								resolve();
+							}
+						} else {
+							sensorInfo.push({
+								name: sensor.name,
+								hash: `${sensor.what_hash}`
+							});
+							const name = sanitize(sensor.name);
 
-					if (!fs.existsSync(serverDir)) {
-						fs.mkdirSync(serverDir);
-					}
+							try {
+								const tmpSensor = TransformSensor.transformContentSet(sensor);
 
-					if (extractCommentWhitespace) {
-						if (!fs.existsSync(commentDir)) {
-							fs.mkdirSync(commentDir);
-						}
+								const content = JSON.stringify(tmpSensor, null, 2);
 
-						if (!fs.existsSync(commentContentDir)) {
-							fs.mkdirSync(commentContentDir);
-						}
-
-						if (!fs.existsSync(commentServerDir)) {
-							fs.mkdirSync(commentServerDir);
-						}
-					}
-
-					// process sensors
-					var sensorInfo: any[] = [];
-
-					const contentSetExtractionPromise = vscode.window.withProgress({
-						location: vscode.ProgressLocation.Notification,
-						title: "content set extraction",
-						cancellable: true
-					}, (progress, token) => {
-						token.onCancellationRequested(() => {
-							OutputChannelLogging.log("User canceled the long running operation");
-						});
-
-						const jsonTotal = jsonObj.content.sensor.length;
-						const jsonIncrement = 100 / jsonTotal;
-
-						var jsonCounter = 0;
-
-						const p = new Promise(resolve => {
-							progress.report({ increment: 0 });
-							jsonObj.content.sensor.forEach((sensor: any) => {
-								sensorInfo.push({
-									name: sensor.name,
-									hash: `${sensor.what_hash}`
-								});
-								const name = sanitize(sensor.name);
-
-								try {
-									const tmpSensor = TransformSensor.transformContentSet(sensor);
-
-									const content = JSON.stringify(tmpSensor, null, 2);
-
-									// write to file
-									const contentDirFile = path.join(contentDir, name + ".json");
-									fs.writeFile(contentDirFile, content, (err) => {
-										if (err) {
-											OutputChannelLogging.logError(`error writing ${contentDirFile}`, err);
-											return;
-										}
-
-										jsonCounter++;
-										progress.report({
-											increment: jsonCounter * jsonIncrement
-										});
-
-										if (jsonTotal === jsonCounter) {
-											resolve();
-
-										}
-									});
-								} catch (err) {
-									OutputChannelLogging.logError(`error processing content set - ${name}`, err);
+								// write to file
+								const contentDirFile = path.join(contentDir, name + ".json");
+								fs.writeFile(contentDirFile, content, (err) => {
+									if (err) {
+										OutputChannelLogging.logError(`error writing ${contentDirFile}`, err);
+										return;
+									}
 
 									jsonCounter++;
-									progress.report({
-										increment: jsonCounter * jsonIncrement
-									});
-
 									if (jsonTotal === jsonCounter) {
 										resolve();
 									}
-								}
-							});
-						});
-
-						return p;
-					});
-
-					// get session
-					var session: string;
-					try {
-						const options = wrapOption(allowSelfSignedCerts, {
-							json: {
-								username: username,
-								password: password,
-							},
-							responseType: 'json',
-							timeout: httpTimeout,
-						});
-						const { body } = await got.post(`${restBase}/session/login`, options);
-
-						session = body.data.session;
-					} catch (err) {
-						OutputChannelLogging.logError('could not retrieve session', err);
-						return;
-					}
-
-					const sensorRetrievalPromise = vscode.window.withProgress({
-						location: vscode.ProgressLocation.Notification,
-						title: `sensor retrieval from ${fqdn}`,
-						cancellable: true
-					}, (progress, token) => {
-						token.onCancellationRequested(() => {
-							OutputChannelLogging.log(`sensor retrieval from ${fqdn} cancelled`);
-						});
-
-						const sensorTotal = sensorInfo.length;
-						const sensorIncrement = 100 / sensorTotal;
-
-						var sensorCounter = 0;
-
-						const p = new Promise(resolve => {
-							progress.report({ increment: 0 });
-							sensorInfo.forEach(async (sensorInfo: any) => {
-								try {
-									const hash = sensorInfo.hash;
-									const options = wrapOption(allowSelfSignedCerts, {
-										headers: {
-											session: session,
-										},
-										responseType: 'json',
-										timeout: httpTimeout,
-									});
-									const { body } = await got.get(`${restBase}/sensors/by-hash/${hash}`, options);
-
-									let sensor: any = body.data;
-									const name: string = sanitize(sensor.name);
-
-									try {
-										sensor = TransformSensor.transform(sensor);
-										const content: string = JSON.stringify(sensor, null, 2);
-
-										const serverFile = path.join(serverDir, name + '.json');
-										fs.writeFile(serverFile, content, (err) => {
-											if (err) {
-												OutputChannelLogging.logError(`could not write ${serverFile}`, err);
-											}
-
-											sensorCounter++;
-											progress.report({
-												increment: sensorCounter * sensorIncrement
-											});
-
-											if (sensorTotal === sensorCounter) {
-												resolve();
-											}
-										});
-									} catch (err) {
-										OutputChannelLogging.logError(`error processing server sensor - ${name}`, err);
-									}
-								} catch (err) {
-									if (!err.message.includes('404')) {
-										OutputChannelLogging.logError(`error retrieving ${sensorInfo.name} from ${fqdn}`, err);
-									}
-
-									sensorCounter++;
-									progress.report({
-										increment: sensorCounter * sensorIncrement
-									});
-
-									if (sensorTotal === sensorCounter) {
-										resolve();
-									}
-								}
-							});
-
-						});
-
-						return p;
-					});
-
-					await Promise.all([contentSetExtractionPromise, sensorRetrievalPromise]);
-
-					if (extractCommentWhitespace) {
-						const files: string[] = fs.readdirSync(contentDir);
-						await vscode.window.withProgress({
-							location: vscode.ProgressLocation.Notification,
-							title: 'Extracting sensors with comments/whitspaces changes only',
-							cancellable: true
-						}, (progress, token) => {
-							token.onCancellationRequested(() => {
-								OutputChannelLogging.log('Extracting sensors with comments/whitspaces changes only');
-							});
-
-							const fileTotal = files.length;
-							const fileIncrement = 100 / fileTotal;
-
-							var fileCounter = 0;
-
-							const p = new Promise(resolve => {
-								progress.report({ increment: 0 });
-								files.forEach(file => {
-									try {
-										// check files
-										const leftTarget = path.join(contentDir, file);
-										const rightTarget = leftTarget.replace(contentDir, serverDir);
-										if (fs.existsSync(rightTarget)) {
-											// read contents of each file
-											const leftContent = fs.readFileSync(leftTarget, 'utf-8');
-											const rightContent = fs.readFileSync(rightTarget, 'utf-8');
-
-											// do diff
-											const dmp = new diffMatchPatch();
-											const diffs = dmp.diff_main(leftContent, rightContent);
-											dmp.diff_cleanupSemantic(diffs);
-
-											var onlyComments = true;
-											var allEqual = true;
-
-											diffs.forEach((diff: any) => {
-												const operation: number = diff[0];
-												const text: string = diff[1];
-
-												if (operation !== diffMatchPatch.DIFF_EQUAL) {
-													allEqual = false;
-
-													// trim text
-													var test = text.trim();
-
-													if (test.length !== 0) {
-														var first = test.substr(0, 1);
-														if (first === '"') {
-															first = test.substr(1, 1);
-														}
-
-														if (first !== '#' && first !== "'" && first !== ',') {
-															onlyComments = false;
-														}
-													}
-												}
-											});
-
-											if (onlyComments && !allEqual) {
-												// move the files
-												fs.renameSync(leftTarget, path.join(commentContentDir, file));
-												fs.renameSync(rightTarget, path.join(commentServerDir, file));
-											}
-										}
-
-										fileCounter++;
-										progress.report({
-											increment: fileCounter * fileIncrement
-										});
-
-										if (fileTotal === fileCounter) {
-											resolve();
-										}
-									} catch (err) {
-										OutputChannelLogging.logError('error comparing files', err);
-									}
 								});
-							});
+							} catch (err) {
+								OutputChannelLogging.logError(`error processing content set - ${name}`, err);
 
-							return p;
-						});
-					}
-
-					vscode.window.withProgress({
-						location: vscode.ProgressLocation.Notification,
-						title: "Processing Complete!",
-						cancellable: false
-					}, (progress, token) => {
-						progress.report({
-							increment: 100,
-							message: 'Processing is complete',
-						});
-
-						const p = new Promise(resolve => {
-							setTimeout(() => {
-								resolve();
-							}, 5000);
-						});
-
-						return p;
+								jsonCounter++;
+								if (jsonTotal === jsonCounter) {
+									resolve();
+								}
+							}
+						}
 					});
 				}
 			});
-		})();
+		});
+
+		return p;
+	}
+
+	static async downloadContentSet(contentSet: string, httpTimeout: number, contentSetFile: string) {
+		const p = new Promise(async resolve => {
+			const pipeline = promisify(stream.pipeline);
+			try {
+				await pipeline(
+					got.stream(contentSet, {
+						timeout: httpTimeout,
+					}),
+					fs.createWriteStream(contentSetFile)
+				);
+			} catch (err) {
+				OutputChannelLogging.logError(`error downloading ${contentSet}`, err);
+				return;
+			}
+
+			OutputChannelLogging.log(`download complete.`);
+			resolve();
+		});
+
+		return p;
 	}
 }

@@ -335,13 +335,9 @@ class ServerServer {
 
         vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: `Sensor Compare`,
+            title: 'Sensor Compare',
             cancellable: false
         }, async (progress, token) => {
-            token.onCancellationRequested(() => {
-                OutputChannelLogging.log(`sensor retrieval from ${leftFqdn} cancelled`);
-            });
-
             progress.report({ increment: 0 });
 
             const increment = extractCommentWhitespaceBoolean ? 33 : 50;
@@ -352,7 +348,7 @@ class ServerServer {
                 progress.report({ increment: increment, message: `sensor retrieval from ${rightFqdn}` });
                 await this.processServerSensors(allowSelfSignedCerts, httpTimeout, rightRestBase, rightUsername, rightPassword, rightDir, 'right');
                 progress.report({ increment: increment, message: 'extracting comments/whitespace only differences' });
-                this.extractCommentWhitespace(leftDir, rightDir, commentLeftDir, commentRightDir);
+                this.extractCommentWhitespaceSensors(leftDir, rightDir, commentLeftDir, commentRightDir);
                 const p = new Promise(resolve => {
                     setTimeout(() => {
                         resolve();
@@ -419,6 +415,11 @@ class ServerServer {
 
                         if (sensor.category === 'Reserved') {
                             sensorCounter++;
+
+                            if (sensorTotal === sensorCounter) {
+                                OutputChannelLogging.log(`processed ${sensorTotal} sensors`);
+                                resolve();
+                            }
                             continue;
                         }
 
@@ -461,84 +462,88 @@ class ServerServer {
         return p;
     }
 
-    static extractCommentWhitespace(leftDir: string, rightDir: string, commentLeftDir: string, commentRightDir: string) {
-        var files: string[];
-        files = fs.readdirSync(leftDir);
+    static extractCommentWhitespaceSensors(leftDir: string, rightDir: string, commentLeftDir: string, commentRightDir: string) {
+        const p = new Promise(resolve => {
+            var files: string[];
+            files = fs.readdirSync(leftDir);
 
-        const fileTotal = files.length;
-        const fileIncrement = 100 / fileTotal;
+            const fileTotal = files.length;
+            const fileIncrement = 100 / fileTotal;
 
-        var fileCounter = 0;
-        var commentsCounter = 0;
+            var fileCounter = 0;
+            var commentsCounter = 0;
 
-        files.forEach(file => {
-            try {
-                // check files
-                const leftTarget = path.join(leftDir, file);
-                const rightTarget = leftTarget.replace(leftDir, rightDir);
-                if (fs.existsSync(rightTarget)) {
-                    // read contents of each file
-                    const leftContent = fs.readFileSync(leftTarget, 'utf-8');
-                    const rightContent = fs.readFileSync(rightTarget, 'utf-8');
+            files.forEach(file => {
+                try {
+                    // check files
+                    const leftTarget = path.join(leftDir, file);
+                    const rightTarget = leftTarget.replace(leftDir, rightDir);
+                    if (fs.existsSync(rightTarget)) {
+                        // read contents of each file
+                        const leftContent = fs.readFileSync(leftTarget, 'utf-8');
+                        const rightContent = fs.readFileSync(rightTarget, 'utf-8');
 
-                    // do diff
-                    const dmp = new diffMatchPatch();
-                    const diffs = dmp.diff_main(leftContent, rightContent);
-                    dmp.diff_cleanupSemantic(diffs);
+                        // do diff
+                        const dmp = new diffMatchPatch();
+                        const diffs = dmp.diff_main(leftContent, rightContent);
+                        dmp.diff_cleanupSemantic(diffs);
 
-                    var onlyComments = true;
-                    var allEqual = true;
+                        var onlyComments = true;
+                        var allEqual = true;
 
-                    diffs.forEach((diff: any) => {
-                        const operation: number = diff[0];
-                        const text: string = diff[1];
+                        diffs.forEach((diff: any) => {
+                            const operation: number = diff[0];
+                            const text: string = diff[1];
 
-                        if (operation !== diffMatchPatch.DIFF_EQUAL) {
-                            allEqual = false;
+                            if (operation !== diffMatchPatch.DIFF_EQUAL) {
+                                allEqual = false;
 
-                            // trim text
-                            var test = text.trim();
+                                // trim text
+                                var test = text.trim();
 
-                            if (test.length !== 0) {
-                                var first = test.substr(0, 1);
-                                if (first === '"') {
-                                    first = test.substr(1, 1);
-                                }
+                                if (test.length !== 0) {
+                                    var first = test.substr(0, 1);
+                                    if (first === '"') {
+                                        first = test.substr(1, 1);
+                                    }
 
-                                if (first !== '#' && first !== "'" && first !== ',') {
-                                    // last check, strip " and ,
-                                    test = test.replace(/\"/g, '').replace(/\,/g, '');
-                                    if (test.length !== 0) {
-                                        onlyComments = false;
+                                    if (first !== '#' && first !== "'" && first !== ',') {
+                                        // last check, strip " and ,
+                                        test = test.replace(/\"/g, '').replace(/\,/g, '');
+                                        if (test.length !== 0) {
+                                            onlyComments = false;
+                                        }
                                     }
                                 }
                             }
+                        });
+
+                        if (onlyComments && !allEqual) {
+                            commentsCounter++;
+
+                            // move the files
+                            fs.renameSync(leftTarget, path.join(commentLeftDir, file));
+                            fs.renameSync(rightTarget, path.join(commentRightDir, file));
                         }
-                    });
+                    }
 
-                    if (onlyComments && !allEqual) {
-                        commentsCounter++;
+                    fileCounter++;
 
-                        // move the files
-                        fs.renameSync(leftTarget, path.join(commentLeftDir, file));
-                        fs.renameSync(rightTarget, path.join(commentRightDir, file));
+                    if (fileTotal === fileCounter) {
+                        OutputChannelLogging.log(`${commentsCounter} whitespace/comments only`);
+                    }
+                } catch (err) {
+                    OutputChannelLogging.logError('error comparing files', err);
+
+                    fileCounter++;
+
+                    if (fileTotal === fileCounter) {
+                        OutputChannelLogging.log(`${commentsCounter} whitespace/comments only`);
                     }
                 }
-
-                fileCounter++;
-
-                if (fileTotal === fileCounter) {
-                    OutputChannelLogging.log(`${commentsCounter} whitespace/comments only`);
-                }
-            } catch (err) {
-                OutputChannelLogging.logError('error comparing files', err);
-
-                fileCounter++;
-
-                if (fileTotal === fileCounter) {
-                    OutputChannelLogging.log(`${commentsCounter} whitespace/comments only`);
-                }
-            }
+            });
         });
+
+        return p;
     }
 }

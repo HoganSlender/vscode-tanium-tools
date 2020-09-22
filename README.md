@@ -24,6 +24,11 @@ Contains miscellaneous commands to work with Tanium servers in Visual Studio Cod
 ## Known Issues
 * none
 ## Release Notes
+### 0.0.4
+* Added `Tanium: Retrieve Sensor Data by Name` command
+* Added `Tanium: Retrieve Sensor Data by Hash` command
+* Added `Tanium: Generate Export File for Modified Sensors` command
+* Adjusted progress indicators
 ### 0.0.3
 * Removed `Tanium: Sign Content` and `Tanium: Generate Export File for Missing Sensors` from command palette since they are context menu driven
 ### 0.0.2

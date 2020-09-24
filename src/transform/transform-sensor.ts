@@ -2,8 +2,6 @@
 import lodash = require('lodash');
 import { TransformParameter } from './transform-parameter';
 import { TransformMetadataItem } from './transform-metadata-item';
-import got = require('got');
-import { values } from 'lodash';
 
 export class TransformSensor {
     public static transform(sensor: any): any {

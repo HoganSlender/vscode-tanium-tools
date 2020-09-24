@@ -10,6 +10,7 @@ import { TransformSensor } from '../transform/transform-sensor';
 import { wrapOption } from '../common/requestOption';
 import { collectServerServerMissingSensorInputs } from '../parameter-collection/server-server-missing-sensors-parameters';
 import { collectServerServerModifiedSensorInputs } from '../parameter-collection/server-server-modified-sensors-parameters';
+import { collectServerServerPackageInputs } from '../parameter-collection/server-server-package-parameters';
 
 const diffMatchPatch = require('diff-match-patch');
 
@@ -23,11 +24,193 @@ export function activate(context: vscode.ExtensionContext) {
         },
         'hoganslendertanium.generateExportFileModifiedSensors': (uri: vscode.Uri, uris: vscode.Uri[]) => {
             ServerServer.processModifiedSensors(uris[0], uris[1], context);
+        },
+        'hoganslendertanium.compareServerServerPackages': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+            ServerServer.processPackages(context);
         }
     });
 }
 
 class ServerServer {
+    static async processPackages(context: vscode.ExtensionContext) {
+        // get the current folder
+        const folderPath = vscode.workspace.rootPath;
+
+        // define output channel
+        OutputChannelLogging.initialize();
+
+        // get configurations
+        const config = vscode.workspace.getConfiguration('hoganslender.tanium');
+        const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
+        const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
+
+        const state = await collectServerServerPackageInputs(config, context);
+
+        // collect values
+        const leftFqdn: string = state.leftFqdn;
+        const leftUsername: string = state.leftUsername;
+        const leftPassword: string = state.leftPassword;
+        const rightFqdn: string = state.rightFqdn;
+        const rightUsername: string = state.rightUsername;
+        const rightPassword: string = state.rightPassword;
+
+        OutputChannelLogging.showClear();
+
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left username: ${leftUsername}`);
+        OutputChannelLogging.log(`left password: XXXXXXXX`);
+        OutputChannelLogging.log(`right fqdn: ${rightFqdn}`);
+        OutputChannelLogging.log(`right username: ${rightUsername}`);
+        OutputChannelLogging.log(`right password: XXXXXXXX`);
+
+        // create folders
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}`);
+        const commentDir = path.join(folderPath!, 'Comments Only');
+        const commentLeftDir = path.join(commentDir, `1 - ${sanitize(leftFqdn)}`);
+        const commentRightDir = path.join(commentDir, `2 - ${sanitize(rightFqdn)}`);
+
+        if (!fs.existsSync(leftDir)) {
+            fs.mkdirSync(leftDir);
+        }
+
+        if (!fs.existsSync(rightDir)) {
+            fs.mkdirSync(rightDir);
+        }
+
+        vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Package Compare',
+            cancellable: false
+        }, async (progress) => {
+            progress.report({ increment: 0 });
+
+            const increment = 50;
+
+            progress.report({ increment: increment, message: `package retrieval from ${leftFqdn}` });
+            await this.processServerPackages(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
+            progress.report({ increment: increment, message: `package retrieval from ${rightFqdn}` });
+            await this.processServerPackages(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
+            const p = new Promise(resolve => {
+                setTimeout(() => {
+                    resolve();
+                }, 3000);
+            });
+
+            return p;
+        });
+    }
+
+    static processServerPackages(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
+        const restBase = `https://${fqdn}/api/v2`;
+
+        const p = new Promise(async (resolve, reject) => {
+            try {
+                // get session
+                var session: string;
+                try {
+                    const options = wrapOption(allowSelfSignedCerts, {
+                        json: {
+                            username: username,
+                            password: password,
+                        },
+                        responseType: 'json',
+                        timeout: httpTimeout,
+                    });
+
+                    const { body } = await got.post(`${restBase}/session/login`, options);
+
+                    session = body.data.session;
+                } catch (err) {
+                    OutputChannelLogging.logError(`could not retrieve session from ${fqdn}`, err);
+                    return reject(`could not retrieve session from ${fqdn}`);
+                }
+
+                (async () => {
+                    OutputChannelLogging.log(`package retrieval - initialized for ${fqdn}`);
+                    const options = wrapOption(allowSelfSignedCerts, {
+                        headers: {
+                            session: session,
+                        },
+                        json: {
+                            // eslint-disable-next-line @typescript-eslint/naming-convention
+                            package_specs: {
+                                // eslint-disable-next-line @typescript-eslint/naming-convention
+                                include_all: true
+                            }
+                        },
+                        responseType: 'json',
+                        timeout: httpTimeout,
+                    });
+
+                    var packages: [any];
+
+                    try {
+                        const { body } = await got.post(`${restBase}/export`, options);
+                        OutputChannelLogging.log(`package retrieval - complete for ${fqdn}`);
+
+                        packages = body.data.object_list.package_specs;
+                    } catch (err) {
+                        OutputChannelLogging.logError(`retrieving packages from ${fqdn}`, err);
+                        return reject(`retrieving packages from ${fqdn}`);
+                    }
+
+                    const packageTotal = packages.length;
+                    OutputChannelLogging.log(`packages retrieved from ${fqdn} - ${packageTotal}`);
+                    var packageCounter = 0;
+
+                    for (var i = 0; i < packages.length; i++) {
+                        const taniumPackage: any = packages[i];
+
+                        if (taniumPackage?.content_set?.name === 'Reserved') {
+                            packageCounter++;
+
+                            if (packageTotal === packageCounter) {
+                                OutputChannelLogging.log(`processed ${packageTotal} packages from ${fqdn}`);
+                                resolve();
+                            }
+                            continue;
+                        }
+
+                        const packageName: string = sanitize(taniumPackage.name);
+
+                        try {
+                            const content: string = JSON.stringify(taniumPackage, null, 2);
+
+                            const packageFile = path.join(directory, packageName + '.json');
+                            fs.writeFile(packageFile, content, (err) => {
+                                if (err) {
+                                    OutputChannelLogging.logError(`could not write ${packageFile}`, err);
+                                }
+
+                                packageCounter++;
+
+                                if (packageTotal === packageCounter) {
+                                    OutputChannelLogging.log(`processed ${packageTotal} packages from ${fqdn}`);
+                                    return resolve();
+                                }
+                            });
+                        } catch (err) {
+                            OutputChannelLogging.logError(`error processing ${label} package ${packageName}`, err);
+
+                            packageCounter++;
+
+                            if (packageTotal === packageCounter) {
+                                OutputChannelLogging.log(`processed ${packageTotal} packages`);
+                                return resolve();
+                            }
+                        }
+                    }
+                })();
+            } catch (err) {
+                OutputChannelLogging.logError(`error downloading packages from ${restBase}`, err);
+                return reject(`error downloading packages from ${restBase}`);
+            }
+        });
+
+        return p;
+    }
+
     public static async processModifiedSensors(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
         // get the current folder
         const folderPath = vscode.workspace.rootPath;

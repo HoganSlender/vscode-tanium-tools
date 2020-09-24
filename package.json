@@ -25,7 +25,8 @@
 		"onCommand:hoganslendertanium.signContentFile",
 		"onCommand:hoganslendertanium.generateExportFileModifiedSensors",
 		"onCommand:hoganslendertanium.retrieveSensorByName",
-		"onCommand:hoganslendertanium.retrieveSensorByHash"
+		"onCommand:hoganslendertanium.retrieveSensorByHash",
+		"onCommand:hoganslendertanium.compareServerServerPackages"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
@@ -57,6 +58,10 @@
 			{
 				"command": "hoganslendertanium.retrieveSensorByHash",
 				"title": "Tanium: Retrieve Sensor Data by Hash"
+			},
+			{
+				"command": "hoganslendertanium.compareServerServerPackages",
+				"title": "Tanium: Compare Tanium Server Packages"
 			}
 		],
 		"menus": {

@@ -3,6 +3,7 @@ import * as contentset from './services/ContentSet';
 import * as serverServer from './services/ServerServer';
 import * as signContentFile from './services/SignContentFile';
 import * as sensor from './services/Sensor';
+import * as packages from './services/Packages';
 import { OutputChannelLogging } from './common/logging';
 
 // this method is called when your extension is activated
@@ -14,7 +15,7 @@ export function activate(context: ExtensionContext) {
 	serverServer.activate(context);
 	signContentFile.activate(context);
 	sensor.activate(context);
-	
+	packages.activate(context);
 }
 
 // this method is called when your extension is deactivated

@@ -26,7 +26,8 @@
 		"onCommand:hoganslendertanium.generateExportFileModifiedSensors",
 		"onCommand:hoganslendertanium.retrieveSensorByName",
 		"onCommand:hoganslendertanium.retrieveSensorByHash",
-		"onCommand:hoganslendertanium.compareServerServerPackages"
+		"onCommand:hoganslendertanium.compareServerServerPackages",
+		"onCommand:hoganslendertanium.generateMissingPackages"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
@@ -62,6 +63,10 @@
 			{
 				"command": "hoganslendertanium.compareServerServerPackages",
 				"title": "Tanium: Compare Tanium Server Packages"
+			},
+			{
+				"command": "hoganslendertanium.generateMissingPackages",
+				"title": "Tanium: Process Missing Packages"
 			}
 		],
 		"menus": {
@@ -76,6 +81,10 @@
 				},
 				{
 					"command": "hoganslendertanium.generateExportFileModifiedSensors",
+					"when": "false"
+				},
+				{
+					"command": "hoganslendertanium.generateMissingPackages",
 					"when": "false"
 				}
 			],
@@ -92,6 +101,11 @@
 				},
 				{
 					"command": "hoganslendertanium.generateExportFileModifiedSensors",
+					"group": "3_compare@1",
+					"when": "explorerResourceIsFolder && listDoubleSelection"
+				},
+				{
+					"command": "hoganslendertanium.generateMissingPackages",
 					"group": "3_compare@1",
 					"when": "explorerResourceIsFolder && listDoubleSelection"
 				}

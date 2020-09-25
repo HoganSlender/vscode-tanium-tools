@@ -66,9 +66,6 @@ class ServerServer {
         // create folders
         const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}`);
         const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}`);
-        const commentDir = path.join(folderPath!, 'Comments Only');
-        const commentLeftDir = path.join(commentDir, `1 - ${sanitize(leftFqdn)}`);
-        const commentRightDir = path.join(commentDir, `2 - ${sanitize(rightFqdn)}`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);

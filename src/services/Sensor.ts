@@ -2,10 +2,9 @@ import * as commands from '../common/commands';
 import * as vscode from 'vscode';
 import { OutputChannelLogging } from '../common/logging';
 import { collectSensorByNameInputs, SensorByNameState } from '../parameter-collection/sensor-by-name-parameters';
-import { wrapOption } from '../common/requestOption';
 import { collectSensorByHashInputs, SensorByHashState } from '../parameter-collection/sensor-by-hash-parameters';
-
-const got = require('got');
+import { Session } from '../common/session';
+import { RestClient } from '../common/restClient';
 
 export function activate(context: vscode.ExtensionContext) {
     const myScheme = 'hoganslender';
@@ -59,36 +58,16 @@ class Sensor implements vscode.TextDocumentContentProvider {
         OutputChannelLogging.log(`sensor name: ${sensorHash}`);
 
         // get session
-        var leftSession: string;
-        try {
-            const options = wrapOption(allowSelfSignedCerts, {
-                json: {
-                    username: username,
-                    password: password,
-                },
-                responseType: 'json',
-                timeout: httpTimeout,
-            });
-
-            const { body } = await got.post(`${leftRestBase}/session/login`, options);
-
-            leftSession = body.data.session;
-        } catch (err) {
-            OutputChannelLogging.logError('could not retrieve left session', err);
-            return;
-        }
+        var leftSession: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
         // get sensor
         try {
-            const options = wrapOption(allowSelfSignedCerts, {
+            const body = await RestClient.get(`${leftRestBase}/sensors/by-hash/${sensorHash}`, {
                 headers: {
                     session: leftSession,
                 },
                 responseType: 'json',
-                timeout: httpTimeout,
-            });
-
-            const { body } = await got.get(`${leftRestBase}/sensors/by-hash/${sensorHash}`, options);
+            }, allowSelfSignedCerts, httpTimeout);
 
             const sensor = body.data;
             const sensorName = sensor.name;
@@ -137,16 +116,13 @@ class Sensor implements vscode.TextDocumentContentProvider {
         // get session
         var leftSession: string;
         try {
-            const options = wrapOption(allowSelfSignedCerts, {
+            const body = await RestClient.post(`${leftRestBase}/session/login`, {
                 json: {
                     username: username,
                     password: password,
                 },
                 responseType: 'json',
-                timeout: httpTimeout,
-            });
-
-            const { body } = await got.post(`${leftRestBase}/session/login`, options);
+            }, allowSelfSignedCerts, httpTimeout);
 
             leftSession = body.data.session;
         } catch (err) {
@@ -156,15 +132,12 @@ class Sensor implements vscode.TextDocumentContentProvider {
 
         // get sensor
         try {
-            const options = wrapOption(allowSelfSignedCerts, {
+            const body = await RestClient.get(`${leftRestBase}/sensors/by-name/${sensorName}`, {
                 headers: {
                     session: leftSession,
                 },
                 responseType: 'json',
-                timeout: httpTimeout,
-            });
-
-            const { body } = await got.get(`${leftRestBase}/sensors/by-name/${sensorName}`, options);
+            }, allowSelfSignedCerts, httpTimeout);
 
             const sensor = body.data;
 

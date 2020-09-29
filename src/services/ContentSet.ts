@@ -9,13 +9,10 @@ import * as vscode from 'vscode';
 import { collectContentSetSensorInputs } from '../parameter-collection/content-set-sensors-parameters';
 import { OutputChannelLogging } from '../common/logging';
 import * as commands from '../common/commands';
-import { wrapOption } from '../common/requestOption';
+import { Session } from '../common/session';
+import { RestClient } from '../common/restClient';
 
 const diffMatchPatch = require('diff-match-patch');
-
-const got = require('got');
-const { promisify } = require('util');
-const stream = require('stream');
 
 export function activate(context: vscode.ExtensionContext) {
 	commands.register(context, {
@@ -108,11 +105,11 @@ class ContentSet {
 
 			if (extractCommentWhitespace) {
 				progress.report({ increment: increment, message: `downloading ${contentSet}` });
-				await this.downloadContentSet(contentSet, httpTimeout, contentSetFile);
+				await RestClient.downloadFile(contentSet, contentSetFile, {}, allowSelfSignedCerts, httpTimeout);
 				progress.report({ increment: increment, message: 'extracting sensors' });
 				await this.extractContentSetSensors(contentSetFile, contentDir, sensorInfo);
 				progress.report({ increment: increment, message: `retrieving sensors from ${fqdn}` });
-				await this.retrieveServerSensors(sensorInfo, restBase, allowSelfSignedCerts, httpTimeout, username, password, serverDir, fqdn);
+				await this.retrieveServerSensors(sensorInfo, allowSelfSignedCerts, httpTimeout, username, password, serverDir, fqdn);
 				progress.report({ increment: increment, message: 'Extracting sensors with comments/whitspaces changes only' });
 				await this.extractCommentWhitespaceSensors(contentDir, serverDir, commentContentDir, commentServerDir);
                 const p = new Promise(resolve => {
@@ -122,11 +119,11 @@ class ContentSet {
                 });
 			} else {
 				progress.report({ increment: increment, message: `downloading ${contentSet}` });
-				await this.downloadContentSet(contentSet, httpTimeout, contentSetFile);
+				await RestClient.downloadFile(contentSet, contentSetFile, {}, allowSelfSignedCerts, httpTimeout);
 				progress.report({ increment: increment, message: 'extracting sensors' });
 				await this.extractContentSetSensors(contentSetFile, contentDir, sensorInfo);
 				progress.report({ increment: increment, message: `retrieving sensors from ${fqdn}` });
-				await this.retrieveServerSensors(sensorInfo, restBase, allowSelfSignedCerts, httpTimeout, username, password, serverDir, fqdn);
+				await this.retrieveServerSensors(sensorInfo, allowSelfSignedCerts, httpTimeout, username, password, serverDir, fqdn);
                 const p = new Promise(resolve => {
                     setTimeout(() => {
                         resolve();
@@ -140,7 +137,6 @@ class ContentSet {
 		const p = new Promise(resolve => {
 			const files: string[] = fs.readdirSync(contentDir);
 			const fileTotal = files.length;
-			const fileIncrement = 100 / fileTotal;
 
 			var fileCounter = 0;
 			files.forEach(file => {
@@ -211,43 +207,26 @@ class ContentSet {
 		return p;
 	}
 
-	static retrieveServerSensors(sensorInfo: any[], restBase: string, allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, serverDir: string, fqdn: string) {
+	static retrieveServerSensors(sensorInfo: any[], allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, serverDir: string, fqdn: string) {
 		const p = new Promise(async resolve => {
 			// get session
-			var session: string;
-			try {
-				const options = wrapOption(allowSelfSignedCerts, {
-					json: {
-						username: username,
-						password: password,
-					},
-					responseType: 'json',
-					timeout: httpTimeout,
-				});
-				const { body } = await got.post(`${restBase}/session/login`, options);
-
-				session = body.data.session;
-			} catch (err) {
-				OutputChannelLogging.logError('could not retrieve session', err);
-				return;
-			}
+			var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
 			const sensorTotal = sensorInfo.length;
-			const sensorIncrement = 100 / sensorTotal;
 
 			var sensorCounter = 0;
 
 			sensorInfo.forEach(async (sensorInfo: any) => {
 				try {
 					const hash = sensorInfo.hash;
-					const options = wrapOption(allowSelfSignedCerts, {
+					const options = {
 						headers: {
 							session: session,
 						},
 						responseType: 'json',
-						timeout: httpTimeout,
-					});
-					const { body } = await got.get(`${restBase}/sensors/by-hash/${hash}`, options);
+					};
+
+					const body = await RestClient.get(`https://${fqdn}/api/v2/sensors/by-hash/${hash}`, options, allowSelfSignedCerts, httpTimeout);
 
 					let sensor: any = body.data;
 					const name: string = sanitize(sensor.name);
@@ -365,28 +344,6 @@ class ContentSet {
 					});
 				}
 			});
-		});
-
-		return p;
-	}
-
-	static async downloadContentSet(contentSet: string, httpTimeout: number, contentSetFile: string) {
-		const p = new Promise(async resolve => {
-			const pipeline = promisify(stream.pipeline);
-			try {
-				await pipeline(
-					got.stream(contentSet, {
-						timeout: httpTimeout,
-					}),
-					fs.createWriteStream(contentSetFile)
-				);
-			} catch (err) {
-				OutputChannelLogging.logError(`error downloading ${contentSet}`, err);
-				return;
-			}
-
-			OutputChannelLogging.log(`download complete.`);
-			resolve();
 		});
 
 		return p;

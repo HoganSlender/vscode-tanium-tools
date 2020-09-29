@@ -9,6 +9,7 @@ import { SignContentFile } from './SignContentFile';
 import { OutputChannelLogging } from '../common/logging';
 import { SigningKey } from '../types/signingKey';
 import { RestClient } from '../common/restClient';
+import { Session } from '../common/session';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -116,7 +117,7 @@ class Packages {
 
         try {
             // get session
-            const session = await this.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
+            const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
 
             // import package
             OutputChannelLogging.log(`importing ${packageName} into ${destFqdn}`);
@@ -172,30 +173,6 @@ class Packages {
         }
     }
 
-    static getSession(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string): Promise<string> {
-        const p: Promise<string> = new Promise(async (resolve, reject) => {
-            try {
-                const destRestBase = `https://${fqdn}/api/v2`;
-                const options = {
-                    json: {
-                        username: username,
-                        password: password,
-                    },
-                    responseType: 'json',
-                };
-
-                const body = await RestClient.post(`${destRestBase}/session/login`, options, allowSelfSignedCerts, httpTimeout);
-
-                return resolve(body.data.session);
-            } catch (err) {
-                OutputChannelLogging.logError(`could not retrieve session from ${fqdn}`, err);
-                return reject();
-            }
-        });
-
-        return p;
-    }
-
     static async uploadFile(destFqdn: string, allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, tempFilePath: string, packageFileName: string) {
         const constPartSize = 524288;
 
@@ -237,7 +214,7 @@ class Packages {
     static uploadFileTotal(destFqdn: string, allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, bytes: Buffer): Promise<any> {
         const p: Promise<any> = new Promise(async (resolve, reject) => {
             // get session
-            const session = await this.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
+            const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
 
             var uploadFileJson = {
                 file_size: bytes.length,
@@ -267,7 +244,7 @@ class Packages {
     static uploadFileBits(destFqdn: string, allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, uploadId: number, base64: string, fileSize: number, startPos: number, partSize: number): Promise<any> {
         const p: Promise<any> = new Promise(async (resolve, reject) => {
             // get session
-            const session = await this.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
+            const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
 
             var uploadFileJson: any;
 

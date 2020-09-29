@@ -61,14 +61,14 @@ export class RestClient {
         return p;
     }
 
-    static downloadFile(url: string, tempFilePath: string, options: any, allowSelfSignedCerts: boolean, httpTimeout: number) {
+    static downloadFile(url: string, filePath: string, options: any, allowSelfSignedCerts: boolean, httpTimeout: number) {
         const p = new Promise(async (resolve, reject) => {
             const pipeline = promisify(stream.pipeline);
             try {
                 options = this._wrapOption(allowSelfSignedCerts, httpTimeout, options);
                 await pipeline(
                     got.stream(url, options),
-                    fs.createWriteStream(tempFilePath)
+                    fs.createWriteStream(filePath)
                 );
             } catch (err) {
                 return reject(err);

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import * as commands from '../common/commands';
 import * as vscode from 'vscode';
 import { OutputChannelLogging } from '../common/logging';
@@ -5,12 +6,12 @@ import { collectServerServerSensorInputs } from '../parameter-collection/server-
 import path = require('path');
 import { sanitize } from 'sanitize-filename-ts';
 import * as fs from 'fs';
-const got = require('got');
 import { TransformSensor } from '../transform/transform-sensor';
-import { wrapOption } from '../common/requestOption';
 import { collectServerServerMissingSensorInputs } from '../parameter-collection/server-server-missing-sensors-parameters';
 import { collectServerServerModifiedSensorInputs } from '../parameter-collection/server-server-modified-sensors-parameters';
 import { collectServerServerPackageInputs } from '../parameter-collection/server-server-package-parameters';
+import { Session } from '../common/session';
+import { RestClient } from '../common/restClient';
 
 const diffMatchPatch = require('diff-match-patch');
 
@@ -104,46 +105,25 @@ class ServerServer {
         const p = new Promise(async (resolve, reject) => {
             try {
                 // get session
-                var session: string;
-                try {
-                    const options = wrapOption(allowSelfSignedCerts, {
-                        json: {
-                            username: username,
-                            password: password,
-                        },
-                        responseType: 'json',
-                        timeout: httpTimeout,
-                    });
-
-                    const { body } = await got.post(`${restBase}/session/login`, options);
-
-                    session = body.data.session;
-                } catch (err) {
-                    OutputChannelLogging.logError(`could not retrieve session from ${fqdn}`, err);
-                    return reject(`could not retrieve session from ${fqdn}`);
-                }
+                var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
                 (async () => {
                     OutputChannelLogging.log(`package retrieval - initialized for ${fqdn}`);
-                    const options = wrapOption(allowSelfSignedCerts, {
-                        headers: {
-                            session: session,
-                        },
-                        json: {
-                            // eslint-disable-next-line @typescript-eslint/naming-convention
-                            package_specs: {
-                                // eslint-disable-next-line @typescript-eslint/naming-convention
-                                include_all: true
-                            }
-                        },
-                        responseType: 'json',
-                        timeout: httpTimeout,
-                    });
-
                     var packages: [any];
 
                     try {
-                        const { body } = await got.post(`${restBase}/export`, options);
+                        const body = await RestClient.post(`${restBase}/export`, {
+                            headers: {
+                                session: session,
+                            },
+                            json: {
+                                package_specs: {
+                                    include_all: true
+                                }
+                            },
+                            responseType: 'json',
+                        }, allowSelfSignedCerts, httpTimeout);
+
                         OutputChannelLogging.log(`package retrieval - complete for ${fqdn}`);
 
                         packages = body.data.object_list.package_specs;
@@ -284,38 +264,18 @@ class ServerServer {
             OutputChannelLogging.log(`exporting ${exportSensorObj.sensors.include.length} sensors from ${leftFqdn}`);
             OutputChannelLogging.log(`retrieving session`);
 
-            var leftSession: string;
-            try {
-                const options = wrapOption(allowSelfSignedCerts, {
-                    json: {
-                        username: leftUsername,
-                        password: leftPassword,
-                    },
-                    responseType: 'json',
-                    timeout: httpTimeout,
-                });
-
-                const { body } = await got.post(`${leftRestBase}/session/login`, options);
-
-                leftSession = body.data.session;
-            } catch (err) {
-                OutputChannelLogging.logError('could not retrieve left session', err);
-                return;
-            }
+            var leftSession: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword);
 
             // get export output
             OutputChannelLogging.log(`retrieving export data from ${leftFqdn}`);
             try {
-                const options = wrapOption(allowSelfSignedCerts, {
+                const body = await RestClient.post(`${leftRestBase}/export`, {
                     headers: {
                         session: leftSession,
                     },
                     json: exportSensorObj,
                     responseType: 'json',
-                    timeout: httpTimeout,
-                });
-
-                const { body } = await got.post(`${leftRestBase}/export`, options);
+                }, allowSelfSignedCerts, httpTimeout);
                 OutputChannelLogging.log(`export data retrieved`);
 
                 const exportContent = JSON.stringify(body.data, null, 2);
@@ -395,18 +355,15 @@ class ServerServer {
             OutputChannelLogging.log(`exporting ${exportSensorObj.sensors.include.length} sensors from ${leftFqdn}`);
             OutputChannelLogging.log(`retrieving session`);
 
-            var leftSession: string;
+            var leftSession: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword);
             try {
-                const options = wrapOption(allowSelfSignedCerts, {
+                const body = await RestClient.post(`${leftRestBase}/session/login`, {
                     json: {
                         username: leftUsername,
                         password: leftPassword,
                     },
                     responseType: 'json',
-                    timeout: httpTimeout,
-                });
-
-                const { body } = await got.post(`${leftRestBase}/session/login`, options);
+                }, allowSelfSignedCerts, httpTimeout);
 
                 leftSession = body.data.session;
             } catch (err) {
@@ -417,16 +374,13 @@ class ServerServer {
             // get export output
             OutputChannelLogging.log(`retrieving export data from ${leftFqdn}`);
             try {
-                const options = wrapOption(allowSelfSignedCerts, {
+                const body = await RestClient.post(`${leftRestBase}/export`, {
                     headers: {
                         session: leftSession,
                     },
                     json: exportSensorObj,
                     responseType: 'json',
-                    timeout: httpTimeout,
-                });
-
-                const { body } = await got.post(`${leftRestBase}/export`, options);
+                }, allowSelfSignedCerts, httpTimeout);
                 OutputChannelLogging.log(`export data retrieved`);
 
                 const exportContent = JSON.stringify(body.data, null, 2);
@@ -524,9 +478,9 @@ class ServerServer {
 
             if (extractCommentWhitespaceBoolean) {
                 progress.report({ increment: increment, message: `sensor retrieval from ${leftFqdn}` });
-                await this.processServerSensors(allowSelfSignedCerts, httpTimeout, leftRestBase, leftUsername, leftPassword, leftDir, 'left');
+                await this.processServerSensors(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
                 progress.report({ increment: increment, message: `sensor retrieval from ${rightFqdn}` });
-                await this.processServerSensors(allowSelfSignedCerts, httpTimeout, rightRestBase, rightUsername, rightPassword, rightDir, 'right');
+                await this.processServerSensors(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
                 progress.report({ increment: increment, message: 'extracting comments/whitespace only differences' });
                 this.extractCommentWhitespaceSensors(leftDir, rightDir, commentLeftDir, commentRightDir);
                 const p = new Promise(resolve => {
@@ -538,9 +492,9 @@ class ServerServer {
                 return p;
             } else {
                 progress.report({ increment: increment, message: `sensor retrieval from ${leftFqdn}` });
-                await this.processServerSensors(allowSelfSignedCerts, httpTimeout, leftRestBase, leftUsername, leftPassword, leftDir, 'left');
+                await this.processServerSensors(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
                 progress.report({ increment: increment, message: `sensor retrieval from ${rightFqdn}` });
-                await this.processServerSensors(allowSelfSignedCerts, httpTimeout, rightRestBase, rightUsername, rightPassword, rightDir, 'right');
+                await this.processServerSensors(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
                 const p = new Promise(resolve => {
                     setTimeout(() => {
                         resolve();
@@ -552,39 +506,19 @@ class ServerServer {
         });
     }
 
-    static processServerSensors(allowSelfSignedCerts: boolean, httpTimeout: number, restBase: string, username: string, password: string, directory: string, label: string) {
+    static processServerSensors(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
         const p = new Promise(async resolve => {
             try {
                 // get session
-                var session: string;
-                try {
-                    const options = wrapOption(allowSelfSignedCerts, {
-                        json: {
-                            username: username,
-                            password: password,
-                        },
-                        responseType: 'json',
-                        timeout: httpTimeout,
-                    });
-
-                    const { body } = await got.post(`${restBase}/session/login`, options);
-
-                    session = body.data.session;
-                } catch (err) {
-                    OutputChannelLogging.logError('could not retrieve left session', err);
-                    return;
-                }
+                var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
                 (async () => {
-                    const options = wrapOption(allowSelfSignedCerts, {
+                    const body = await RestClient.get(`https://${fqdn}/api/v2/sensors`, {
                         headers: {
                             session: session,
                         },
                         responseType: 'json',
-                        timeout: httpTimeout,
-                    });
-
-                    const { body } = await got.get(`${restBase}/sensors`, options);
+                    }, allowSelfSignedCerts, httpTimeout);
 
                     const sensors: [any] = body.data;
                     const sensorTotal = sensors.length - 1;
@@ -635,7 +569,7 @@ class ServerServer {
                     }
                 })();
             } catch (err) {
-                OutputChannelLogging.logError(`error downloading sensors from ${restBase}`, err);
+                OutputChannelLogging.logError(`error downloading sensors from ${fqdn}`, err);
             }
         });
 
@@ -648,7 +582,6 @@ class ServerServer {
             files = fs.readdirSync(leftDir);
 
             const fileTotal = files.length;
-            const fileIncrement = 100 / fileTotal;
 
             var fileCounter = 0;
             var commentsCounter = 0;

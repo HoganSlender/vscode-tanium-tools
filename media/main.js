@@ -1,3 +1,5 @@
+const vscode = acquireVsCodeApi();
+
 var addButton = document.getElementById("addButton");
 var removeButton = document.getElementById("removeButton");
 var processButton = document.getElementById("processButton");
@@ -14,8 +16,13 @@ var divFqdns = document.getElementById("divFqdns");
 console.log(divFqdns);
 var divUsernames = document.getElementById("divUsernames");
 console.log(divUsernames);
-var divFqdn = document.getElementById("divFqdn");
+var divSigningKeys = document.getElementById("divSigningKeys");
+console.log(divSigningKeys);
+
+var divSourceFqdn = document.getElementById("divSourceFqdn");
+var divDestFqdn = document.getElementById("divDestFqdn");
 var divUsername = document.getElementById("divUsername");
+var divSigningKey = document.getElementById("divSigningKey");
 
 var fqdnsText = divFqdns.innerHTML;
 console.log(`fqdnsText: ${fqdnsText}`);
@@ -29,19 +36,43 @@ console.log(`usernamesText: ${usernamesText}`);
 var usernames = usernamesText.split(',');
 console.log(`usernames: ${usernames}`);
 
-processInput(fqdns, divFqdn, 'taniumServerFqdn');
-processInput(usernames, divUsername, 'taniumServerUsername');
+var signingKeysText = divSigningKeys.innerHTML;
+console.log(signingKeysText);
 
-var taniumServerFqdn = document.getElementById("taniumServerFqdn");
+var signingKeys = signingKeysText.split(',');
+
+processInput(fqdns, divSourceFqdn, 'taniumSourceServerFqdn', false);
+processInput(fqdns, divDestFqdn, 'taniumDestServerFqdn', true);
+processInput(usernames, divUsername, 'taniumServerUsername', true);
+processInput(signingKeys, divSigningKey, 'taniumSigningKey', true);
+
+var taniumSourceServerFqdn = document.getElementById("taniumSourceServerFqdn");
+var taniumDestServerFqdn = document.getElementById("taniumDestServerFqdn");
 var taniumServerUsername = document.getElementById("taniumServerUsername");
 var taniumServerPassword = document.getElementById("taniumServerPassword");
+var taniumSigningKey = document.getElementById("taniumSigningKey");
 
-var taniumServerFqdnSelect = document.getElementById("taniumServerFqdnSelect");
+var taniumSourceServerFqdnSelect = document.getElementById("taniumSourceServerFqdnSelect");
+var taniumDestServerFqdnSelect = document.getElementById("taniumDestServerFqdnSelect");
 var taniumServerUsernameSelect = document.getElementById("taniumServerUsernameSelect");
+var taniumSigningKeySelect = document.getElementById("taniumSigningKeySelect");
 
 taniumServerPassword.addEventListener("input", enableProcessPackage);
 
-function processInput(inputArray, targetDiv, targetId) {
+// handle messages from extension to webview
+window.addEventListener('message', event => {
+    const message = event.data; // The json data that the extension sent
+    switch (message.command) {
+        case 'completePackage':
+            // remove first item
+            spackages.options[0] = null;
+
+            processPackages();
+            break;
+    }
+});
+
+function processInput(inputArray, targetDiv, targetId, isLast) {
     if (inputArray.length === 1) {
         // add input element
         var tag = document.createElement("input");
@@ -65,12 +96,14 @@ function processInput(inputArray, targetDiv, targetId) {
         }
 
         // set selected index
-        tag.selectedIndex = inputArray.length - 1;
+        if (isLast) {
+            tag.selectedIndex = inputArray.length - 1;
+        }
     }
 }
 
 function enableProcessPackage() {
-    var hasNoData = taniumServerFqdn?.value.trim().length === 0 || taniumServerUsername?.value.trim().length === 0 || taniumServerPassword.value.trim().length === 0;
+    var hasNoData = taniumDestServerFqdn?.value.trim().length === 0 || taniumServerUsername?.value.trim().length === 0 || taniumServerPassword.value.trim().length === 0;
     processButton.disabled = hasNoData;
 }
 
@@ -97,23 +130,32 @@ function moveItems(from, to) {
 }
 
 function processPackages() {
-    const vscode = acquireVsCodeApi();
+    processButton.disabled = true;
 
-    console.log(`select: ${taniumServerFqdnSelect.value}`);
-
-    const fqdn = taniumServerFqdn === null ? taniumServerFqdnSelect.value : taniumServerFqdn.value;
+    const sourceFqdn = taniumSourceServerFqdn === null ? taniumSourceServerFqdnSelect.value : taniumSourceServerFqdn.value;
+    const destFqdn = taniumDestServerFqdn === null ? taniumDestServerFqdnSelect.value : taniumDestServerFqdn.value;
     const username = taniumServerUsername === null ? taniumServerUsernameSelect.value : taniumServerUsername.value;
+    const signingKey = taniumSigningKey === null ? taniumSigningKeySelect.value : taniumSigningKey.value;
 
-    console.log(`fqdn: ${fqdn}`);
+    // process first item
+    if (spackages.options.length !== 0) {
+        var option = spackages.options[0];
 
-    // process all items
-    for (var i = 0; i < spackages.options.length; i++) {
         // send message
         vscode.postMessage({
             command: 'transferPackage',
-            fqdn: fqdn,
+            sourceFqdn: sourceFqdn,
+            destFqdn: destFqdn,
             username: username,
             password: taniumServerPassword.value,
+            path: option.value,
+            packageName: option.text,
+            signingServerLabel: signingKey,
         });
+    } else {
+        vscode.postMessage({
+            command: 'completeProcess'
+        });
+        processButton.disabled = false;
     }
 }

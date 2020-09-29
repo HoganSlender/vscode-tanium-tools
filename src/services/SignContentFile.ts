@@ -13,7 +13,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-class SignContentFile {
+export class SignContentFile {
     public static async signContentFile(target: vscode.Uri, context: vscode.ExtensionContext) {
         // define output channel
         OutputChannelLogging.initialize();
@@ -39,20 +39,31 @@ class SignContentFile {
         OutputChannelLogging.log(`private key file path: ${privateKeyFilePath}`);
         OutputChannelLogging.log(`file to sign: ${targetPath}`);
 
-        const commandline = `${keyUtilityPath} signcontent ${privateKeyFilePath} ${targetPath}`;
+        this.signContent(keyUtilityPath, privateKeyFilePath, targetPath);
+    }
 
-        OutputChannelLogging.log(`executing - ${commandline}`);
+    public static signContent(keyUtilityPath: string, privateKeyFilePath: string, targetPath: string) {
+        const p = new Promise((resolve, reject) => {
+            const commandline = `${keyUtilityPath} signcontent ${privateKeyFilePath} ${targetPath}`;
 
-        exec(commandline, (error, stdout, stderr) => {
-            if (error) {
-                OutputChannelLogging.logError(`error executing command`, error);
-            }
+            OutputChannelLogging.log(`executing - ${commandline}`);
 
-            if (stderr) {
-                OutputChannelLogging.log(`error executing command - ${stderr}`);
-            }
+            exec(commandline, (error, stdout, stderr) => {
+                if (error) {
+                    OutputChannelLogging.logError(`error executing command`, error);
+                    return reject();
+                }
 
-            OutputChannelLogging.log(`commmand output: ${stdout}`);
+                if (stderr) {
+                    OutputChannelLogging.log(`error executing command - ${stderr}`);
+                    return reject();
+                }
+
+                OutputChannelLogging.log(`commmand output: ${stdout}`);
+                return resolve();
+            });
         });
+
+        return p;
     }
 }

@@ -27,7 +27,8 @@
 		"onCommand:hoganslendertanium.retrieveSensorByName",
 		"onCommand:hoganslendertanium.retrieveSensorByHash",
 		"onCommand:hoganslendertanium.compareServerServerPackages",
-		"onCommand:hoganslendertanium.generateMissingPackages"
+		"onCommand:hoganslendertanium.generateMissingPackages",
+		"onCommand:hoganslendertanium.downloadPackageFiles"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
@@ -67,6 +68,10 @@
 			{
 				"command": "hoganslendertanium.generateMissingPackages",
 				"title": "Tanium: Process Missing Packages"
+			},
+			{
+				"command": "hoganslendertanium.downloadPackageFiles",
+				"title": "Tanium: Download Package Files"
 			}
 		],
 		"menus": {

@@ -10,16 +10,84 @@ import { OutputChannelLogging } from '../common/logging';
 import { SigningKey } from '../types/signingKey';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
+import { collectPackageFilesInputs } from '../parameter-collection/package-download-files-parameters';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
         'hoganslendertanium.generateMissingPackages': (uri: vscode.Uri, uris: vscode.Uri[]) => {
             Packages.missingPackages(uris[0], uris[1], context);
         },
+        'hoganslendertanium.downloadPackageFiles': () => {
+            Packages.downloadPackageFiles(context);
+        }
     });
 }
 
 class Packages {
+    static async downloadPackageFiles(context: vscode.ExtensionContext) {
+        // get the current folder
+        const folderPath = vscode.workspace.rootPath;
+
+        // define output channel
+        OutputChannelLogging.initialize();
+
+        // get configurations
+        const config = vscode.workspace.getConfiguration('hoganslender.tanium');
+        const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
+        const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
+
+        const state = await collectPackageFilesInputs(config, context);
+
+        // collect values
+        const leftFqdn: string = state.leftFqdn;
+        const leftUsername: string = state.leftUsername;
+        const leftPassword: string = state.leftPassword;
+        OutputChannelLogging.showClear();
+
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left username: ${leftUsername}`);
+        OutputChannelLogging.log(`left password: XXXXXXXX`);
+
+        const restBase = `https://${leftFqdn}/api/v2`;
+
+        // get session
+        var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword);
+
+        OutputChannelLogging.log(`package retrieval - initialized for ${leftFqdn}`);
+
+        try {
+            const body = await RestClient.get(`${restBase}/packages`, {
+                headers: {
+                    session: session,
+                },
+                responseType: 'json'
+            }, allowSelfSignedCerts, httpTimeout);
+            OutputChannelLogging.log(`package retrieval - complete for ${leftFqdn}`);
+
+            const packageSpecs: any[] = body.data;
+
+            for (var i = 0; i < packageSpecs.length; i++) {
+                const packageSpec = packageSpecs[i];
+
+                OutputChannelLogging.log(`processing ${i + 1} of ${packageSpecs.length}: ${packageSpec.name} files`);
+
+                // iterate through files
+                for (var j = 0; j < packageSpec?.files?.length; j++) {
+                    const packageFile = packageSpec.files[j];
+
+                    if (packageFile.source.length === 0) {
+                        OutputChannelLogging.log(`\tprocessing ${j + 1} of ${packageSpec.files.length}: ${packageFile.name}`);
+                        // download the file
+                        await RestClient.downloadFile(`https://${leftFqdn}/cache/${packageFile.hash}`, path.join(folderPath!, packageFile.name), {}, allowSelfSignedCerts, httpTimeout);
+                        OutputChannelLogging.log(`\tdownloaded ${packageFile.name}`);
+                    }
+                }
+            }
+        } catch (err) {
+            OutputChannelLogging.logError(`processing packages from ${leftFqdn}`, err);
+        }
+    }
+
     static async missingPackages(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
         const panel = vscode.window.createWebviewPanel(
             'hoganslenderMissingPackages',

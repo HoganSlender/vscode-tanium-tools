@@ -3,6 +3,7 @@ import * as commands from '../common/commands';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
+import * as pug from 'pug';
 import { v4 as uuidv4 } from 'uuid';
 import path = require('path');
 import { SignContentFile } from './SignContentFile';
@@ -14,8 +15,8 @@ import { collectPackageFilesInputs } from '../parameter-collection/package-downl
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.generateMissingPackages': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            Packages.missingPackages(uris[0], uris[1], context);
+        'hoganslendertanium.analyzePackages': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+            Packages.analyzePackages(uris[0], uris[1], context);
         },
         'hoganslendertanium.downloadPackageFiles': () => {
             Packages.downloadPackageFiles(context);
@@ -23,7 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-class Packages {
+export class Packages {
     static async downloadPackageFiles(context: vscode.ExtensionContext) {
         // get the current folder
         const folderPath = vscode.workspace.rootPath;
@@ -88,19 +89,49 @@ class Packages {
         }
     }
 
-    static async missingPackages(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
-        const panel = vscode.window.createWebviewPanel(
+    static async analyzePackages(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
+        const panelMissing = vscode.window.createWebviewPanel(
             'hoganslenderMissingPackages',
             'Missing Packages',
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        const panelModified = vscode.window.createWebviewPanel(
+            'hoganslenderModifiedPackages',
+            'Modified Packages',
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        const panelCreated = vscode.window.createWebviewPanel(
+            'hoganslenderCreatedPackages',
+            'Created Packages',
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        const panelUnchanged = vscode.window.createWebviewPanel(
+            'hoganslenderUnchangedPackages',
+            'Unchanged Packages',
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
             }
         );
 
         // define output channel
         OutputChannelLogging.initialize();
-        OutputChannelLogging.showClear();
 
         // get configurations
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');
@@ -111,21 +142,55 @@ class Packages {
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
         const missingPackages = await this.getMissingPackages(left.fsPath, right.fsPath);
+        const modifiedPackages = await this.getModifiedPackages(left.fsPath, right.fsPath);
+        const createdPackages = await this.getCreatedPackages(left.fsPath, right.fsPath);
+        const unchangedPackages = await this.getUnchangedPackages(left.fsPath, right.fsPath);
 
-        panel.webview.html = this.getWebContent(missingPackages, panel, context, config);
+        OutputChannelLogging.log(`missing packages: ${missingPackages.length}`);
+        OutputChannelLogging.log(`modified packages: ${modifiedPackages.length}`);
+        OutputChannelLogging.log(`created packages: ${createdPackages.length}`);
+        OutputChannelLogging.log(`unchanged packages: ${unchangedPackages.length}`);
 
-        panel.webview.onDidReceiveMessage(async message => {
+        panelMissing.webview.html = this.getMissingWebContent(missingPackages, panelMissing, context, config);
+        panelModified.webview.html = this.getModifiedWebContent(modifiedPackages, panelModified, context, config);
+        panelCreated.webview.html = this.getCreatedWebContent(createdPackages, panelCreated, context, config);
+        panelUnchanged.webview.html = this.getUnchangedWebContent(unchangedPackages, panelUnchanged, context, config);
+
+        panelUnchanged.webview.onDidReceiveMessage(async message => {
+            try {
+                switch (message.command) {
+                    case "openDiff":
+                        var items = message.path.split('~');
+                        var lPath = items[0];
+                        var rPath = items[2];
+                        var title = `${message.name}.json (${this.getPath(lPath)} ↔ ${this.getPath(rPath)})`;
+                        vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(lPath), vscode.Uri.file(rPath), title, {
+                            preview: false,
+                            viewColumn: vscode.ViewColumn.Active
+                        });
+                        break;
+                }
+            } catch (err) {
+                OutputChannelLogging.logError('error processing message', err);
+            }
+        });
+
+        panelModified.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'completeProcess':
                         vscode.window.showInformationMessage("Selected packages have been migrated");
                         break;
 
-                    case 'transferPackage':
+                    case 'transferItem':
                         // get signing keys
                         const signingKeys: SigningKey[] = config.get<any>('signingPaths', []);
 
                         const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
+
+                        const items = message.path.split('~');
+                        var path = items[0];
+                        var targetPath = items[2];
 
                         await this.transferPackage(
                             allowSelfSignedCerts,
@@ -134,15 +199,90 @@ class Packages {
                             message.destFqdn,
                             message.username,
                             message.password,
-                            message.path,
+                            path,
+                            targetPath,
                             signingKey!,
-                            message.packageName,
-                            panel,
+                            message.name,
                         );
 
                         // send message back
-                        panel.webview.postMessage({
-                            command: 'completePackage',
+                        panelModified.webview.postMessage({
+                            command: 'complete',
+                        });
+                        break;
+
+                    case "openDiff":
+                        var diffItems = message.path.split('~');
+                        var lPath = diffItems[0];
+                        var rPath = diffItems[2];
+                        var title = `${message.name}.json (${this.getPath(lPath)} ↔ ${this.getPath(rPath)})`;
+                        vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(lPath), vscode.Uri.file(rPath), title, {
+                            preview: false,
+                            viewColumn: vscode.ViewColumn.Active
+                        });
+                        break;
+                }
+            } catch (err) {
+                OutputChannelLogging.logError('error processing message', err);
+            }
+        });
+
+        panelMissing.webview.onDidReceiveMessage(async message => {
+            try {
+                switch (message.command) {
+                    case 'completeProcess':
+                        vscode.window.showInformationMessage("Selected packages have been migrated");
+                        break;
+
+                    case 'transferItem':
+                        // get signing keys
+                        const signingKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
+
+                        const items = message.path.split('~');
+                        var path = items[0];
+                        var targetPath = items[2];
+
+                        await this.transferPackage(
+                            allowSelfSignedCerts,
+                            httpTimeout,
+                            message.sourceFqdn,
+                            message.destFqdn,
+                            message.username,
+                            message.password,
+                            path,
+                            targetPath,
+                            signingKey!,
+                            message.packageName,
+                        );
+
+                        // send message back
+                        panelMissing.webview.postMessage({
+                            command: 'complete',
+                        });
+                        break;
+
+                    case "openFile":
+                        var lPath = message.path.split('~')[0];
+                        vscode.commands.executeCommand('vscode.open', vscode.Uri.file(lPath), {
+                            preview: false,
+                            viewColumn: vscode.ViewColumn.Active
+                        });
+                        break;
+                }
+            } catch (err) {
+                OutputChannelLogging.logError('error processing message', err);
+            }
+        });
+
+        panelCreated.webview.onDidReceiveMessage(async message => {
+            try {
+                switch (message.command) {
+                    case "openFile":
+                        vscode.commands.executeCommand('vscode.open', vscode.Uri.file(message.path), {
+                            preview: false,
+                            viewColumn: vscode.ViewColumn.Active
                         });
                         break;
                 }
@@ -152,7 +292,13 @@ class Packages {
         });
     }
 
-    static async transferPackage(allowSelfSignedCerts: boolean, httpTimeout: number, sourceFqdn: string, destFqdn: string, username: string, password: string, filePath: string, signingKey: SigningKey, packageName: string, panel: vscode.WebviewPanel) {
+    static getPath(input: string): string {
+        var items = input.split(path.sep);
+
+        return input.replace(path.sep + items[items.length - 1], '');
+    }
+
+    static async transferPackage(allowSelfSignedCerts: boolean, httpTimeout: number, sourceFqdn: string, destFqdn: string, username: string, password: string, filePath: string, targetFilePath: string, signingKey: SigningKey, packageName: string) {
         OutputChannelLogging.initialize();
 
         // get package data from file
@@ -160,11 +306,7 @@ class Packages {
 
         // generate import json
         const importJson = {
-            object_list: {
-                package_specs: [
-                    packageSpecFromFile
-                ]
-            },
+            object_list: packageSpecFromFile,
             version: 2
         };
 
@@ -186,6 +328,32 @@ class Packages {
         try {
             // get session
             const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
+
+            // check for existing package; if exists then delete it
+            const restBase = `https://${destFqdn}/api/v2`;
+            try {
+                const body = await RestClient.get(`${restBase}/packages/by-name/${packageSpecFromFile.package_specs[0].name}`, {
+                    headers: {
+                        session: session,
+                    },
+                    responseType: 'json',
+                }, allowSelfSignedCerts, httpTimeout);
+
+                const foundId = body.data.id;
+
+                // delete package
+                const deleteBody = await RestClient.delete(`${restBase}/packages/${foundId}`, {
+                    headers: {
+                        session: session,
+                    },
+                    responseType: 'json',
+                }, allowSelfSignedCerts, httpTimeout);
+                console.log(JSON.stringify(deleteBody));
+
+            } catch (err) {
+                // ignore, package doesn't exist
+                console.log(err);
+            }
 
             // import package
             OutputChannelLogging.log(`importing ${packageName} into ${destFqdn}`);
@@ -210,7 +378,7 @@ class Packages {
             OutputChannelLogging.log(`importing ${packageName} complete`);
 
             // process package files
-            const packageSpec = packageSpecFromFile;
+            const packageSpec = packageSpecFromFile.package_specs[0];
 
             for (var i = 0; i < packageSpec.files.length; i++) {
                 var packageFile = packageSpec.files[i];
@@ -236,6 +404,10 @@ class Packages {
 
             // delete package temp file
             fs.unlinkSync(tempPath);
+
+            // create the missing file
+            const targetContents = fs.readFileSync(filePath, 'utf-8');
+            fs.writeFileSync(targetFilePath, targetContents);
         } catch (err) {
             OutputChannelLogging.logError('error retrieving session', err);
         }
@@ -353,6 +525,96 @@ class Packages {
         return p;
     }
 
+    static getUnchangedPackages(leftDir: string, rightDir: string): Promise<any[]> {
+        const p: Promise<string[]> = new Promise((resolve, reject) => {
+            const files: string[] = fs.readdirSync(leftDir);
+            var unchanged: any[] = [];
+
+            for (var i = 0; i < files.length; i++) {
+                const file = files[i];
+                const leftTarget = path.join(leftDir, file);
+                const rightTarget = leftTarget.replace(leftDir, rightDir);
+
+                if (fs.existsSync(rightTarget)) {
+                    // compare left and right contents
+                    var lContents = fs.readFileSync(leftTarget, 'utf-8');
+                    var rContents = fs.readFileSync(rightTarget, 'utf-8');
+
+                    if (lContents === rContents) {
+                        unchanged.push({
+                            name: file.replace('.json', ''),
+                            path: leftTarget + '~~' + rightTarget,
+                        });
+                    }
+                }
+
+                if (i === files.length - 1) {
+                    resolve(unchanged);
+                }
+            }
+        });
+
+        return p;
+    }
+
+    static getModifiedPackages(leftDir: string, rightDir: string): Promise<any[]> {
+        const p: Promise<string[]> = new Promise((resolve, reject) => {
+            const files: string[] = fs.readdirSync(leftDir);
+            var modified: any[] = [];
+
+            for (var i = 0; i < files.length; i++) {
+                const file = files[i];
+                const leftTarget = path.join(leftDir, file);
+                const rightTarget = leftTarget.replace(leftDir, rightDir);
+
+                if (fs.existsSync(rightTarget)) {
+                    // compare left and right contents
+                    var lContents = fs.readFileSync(leftTarget, 'utf-8');
+                    var rContents = fs.readFileSync(rightTarget, 'utf-8');
+
+                    if (lContents !== rContents) {
+                        modified.push({
+                            name: file.replace('.json', ''),
+                            path: leftTarget + '~~' + rightTarget,
+                        });
+                    }
+                }
+
+                if (i === files.length - 1) {
+                    resolve(modified);
+                }
+            }
+        });
+
+        return p;
+    }
+
+    static getCreatedPackages(leftDir: string, rightDir: string): Promise<any[]> {
+        const p: Promise<string[]> = new Promise((resolve, reject) => {
+            const files: string[] = fs.readdirSync(rightDir);
+            var created: any[] = [];
+
+            for (var i = 0; i < files.length; i++) {
+                const file = files[i];
+                const rightTarget = path.join(rightDir, file);
+                const leftTarget = rightTarget.replace(rightDir, leftDir);
+
+                if (!fs.existsSync(leftTarget)) {
+                    created.push({
+                        name: file.replace('.json', ''),
+                        path: rightTarget
+                    });
+                }
+
+                if (i === files.length - 1) {
+                    resolve(created);
+                }
+            }
+        });
+
+        return p;
+    }
+
     static getMissingPackages(leftDir: string, rightDir: string): Promise<any[]> {
         const p: Promise<string[]> = new Promise((resolve, reject) => {
             const files: string[] = fs.readdirSync(leftDir);
@@ -366,11 +628,11 @@ class Packages {
                 if (!fs.existsSync(rightTarget)) {
                     missing.push({
                         name: file.replace('.json', ''),
-                        path: leftTarget
+                        path: leftTarget + '~~' + rightTarget,
                     });
                 }
 
-                if (i === file.length - 1) {
+                if (i === files.length - 1) {
                     resolve(missing);
                 }
             }
@@ -388,18 +650,10 @@ class Packages {
         return text;
     }
 
-    static getWebContent(missingPackages: any[], panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
-        // get fqdns
-        const fqdns: string[] = config.get('fqdns', []);
-
-        // get usernames
-        const usernames: string[] = config.get('usernames', []);
-
-        // get signing keys
-        const signingKeys = config.get<any>('signingPaths', []);
-
+    static getUnchangedWebContent(unchangedPackages: any[], panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
         // Local path to main script run in the webview
-        const scriptPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'main.js');
+        const scriptPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'unchanged.js');
+        const pugPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'unchanged.pug');
 
         // And the uri we use to load this script in the webview
         const scriptUri = panel.webview.asWebviewUri(scriptPathOnDisk);
@@ -407,113 +661,135 @@ class Packages {
         // Use a nonce to only allow specific scripts to be run
         const nonce = this.getNonce();
 
-        let html: string = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Missing Packages</title>
-    <meta
-    http-equiv="Content-Security-Policy"
-    content="default-src 'none'; img-src ${panel.webview.cspSource} https:; script-src 'nonce-${nonce}'; style-src 'unsafe-inline';"
-  />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body>
-<table style="border: 1px solid black;">
-        <tr>
-            <td><b>Missing Packages</b></td>
-            <td></td>
-            <td><b>Selected Packages</b></td>
-        </tr>
-        <tr>
-            <td>
-                <select id="mpackages" name="mpackages" multiple="multiple" size="40" style="min-width: 600px;min-height: 800px;">`;
-        for (var i = 0; i < missingPackages.length; i++) {
-            html = html + `<option value="${missingPackages[i].path}">${missingPackages[i].name}</option>`;
-        }
+        const compiledFunction = pug.compileFile(pugPathOnDisk.fsPath, {
+            pretty: true
+        });
 
+        const html = compiledFunction({
+            myTitle: 'Packages',
+            panelWebviewCspSource: panel.webview.cspSource,
+            nonce: nonce,
+            unchangedItems: unchangedPackages,
+            scriptUri: scriptUri
+        });
 
-        html = html + `</select></td>
-        <td><button type="button" id="addButton">></button><br/><br/><button type="button" id="removeButton"><</button></td>
-        <td><select id="spackages" name="spackages" multiple="multiple" size="40" style="min-width: 600px;min-height: 800px;"/></td>
-        </tr>
-        <tr>
-            <td colspan="3" align="right">
-                <table>
-                    <tr>
-                        <td>Source Tanium Server FQDN</td>
-                        <td><div id="divSourceFqdn"/></td>
-                    </tr>
-                    <tr>
-                        <td>Destination Tanium Server FQDN</td>
-                        <td><div id="divDestFqdn"/></td>
-                    </tr>
-                    <tr>
-                        <td>Destination Tanium Server Username</td>
-                        <td><div id="divUsername"/></td>
-                    </tr>
-                    <tr>
-                        <td>Destination Tanium Server Password</td>
-                        <td><input id="taniumServerPassword" type="password"/></td>
-                    </tr>
-                    <tr>
-                        <td>Destination Tanium Server Signing Keys</td>
-                        <td><div id="divSigningKey" /></td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="3" align="right"><button id="processButton">Process Packages</button></td>
-        </tr>
-        </table>`;
+        return html;
+    }
 
-        html = html + `<div id="divFqdns" style="visibility: hidden;">`;
+    static getModifiedWebContent(modifiedPackages: any[], panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
+        // get fqdns
+        const fqdnsString: string = config.get('fqdns', []).join();
 
-        // add fqdns
-        for (var i = 0; i < fqdns.length; i++) {
-            const fqdn = fqdns[i];
-            if (i === fqdns.length - 1) {
-                html = html + fqdn;
-            } else {
-                html = html + `${fqdn},`;
-            }
-        }
+        // get usernames
+        const usernamesString: string = config.get('usernames', []).join();
 
-        html = html + `</div>`;
+        // get signing keys
+        const signingKeys: any[] = config.get<any>('signingPaths', []);
+        const signingKeysString: string = signingKeys.map(key => key.serverLabel).join();
 
-        html = html + `<div id="divUsernames" style="visibility: hidden;">`;
+        // Local path to main script run in the webview
+        const scriptPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'modified.js');
+        const pugPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'modified.pug');
 
-        // add usernames
-        for (var i = 0; i < usernames.length; i++) {
-            const username = usernames[i];
-            if (i === usernames.length - 1) {
-                html = html + username;
-            } else {
-                html = html + `${username},`;
-            }
-        }
+        // And the uri we use to load this script in the webview
+        const scriptUri = panel.webview.asWebviewUri(scriptPathOnDisk);
 
-        html = html + `</div>`;
+        // Use a nonce to only allow specific scripts to be run
+        const nonce = this.getNonce();
 
-        html = html + `<div id="divSigningKeys" style="visibility: hidden;">`;
+        const compiledFunction = pug.compileFile(pugPathOnDisk.fsPath, {
+            pretty: true
+        });
 
-        // add signing keys
-        for (var i = 0; i < signingKeys.length; i++) {
-            const signingKey = signingKeys[i];
-            if (i === signingKeys.length - 1) {
-                html = html + signingKey.serverLabel;
-            } else {
-                html = html + `${signingKey.serverLabel},`;
-            }
-        }
+        const html = compiledFunction({
+            myTitle: 'Packages',
+            panelWebviewCspSource: panel.webview.cspSource,
+            nonce: nonce,
+            modifiedItems: modifiedPackages,
+            fqdns: fqdnsString,
+            usernames: usernamesString,
+            signingKeys: signingKeysString,
+            scriptUri: scriptUri,
+            transferIndividual: 1
+        });
 
-        html = html + `</div>`;
+        return html;
+    }
 
-        html = html + `<script nonce="${nonce}" src="${scriptUri}"></script>
-        </body>
-</html>`;
+    static getCreatedWebContent(createdPackages: any[], panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
+        // get fqdns
+        const fqdnsString: string = config.get('fqdns', []).join();
+
+        // get usernames
+        const usernamesString: string = config.get('usernames', []).join();
+
+        // get signing keys
+        const signingKeys: any[] = config.get<any>('signingPaths', []);
+        const signingKeysString: string = signingKeys.map(key => key.serverLabel).join();
+
+        // Local path to main script run in the webview
+        const scriptPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'created.js');
+        const pugPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'created.pug');
+
+        // And the uri we use to load this script in the webview
+        const scriptUri = panel.webview.asWebviewUri(scriptPathOnDisk);
+
+        // Use a nonce to only allow specific scripts to be run
+        const nonce = this.getNonce();
+
+        const compiledFunction = pug.compileFile(pugPathOnDisk.fsPath, {
+            pretty: true
+        });
+
+        const html = compiledFunction({
+            myTitle: 'Packages',
+            panelWebviewCspSource: panel.webview.cspSource,
+            nonce: nonce,
+            createdItems: createdPackages,
+            fqdns: fqdnsString,
+            usernames: usernamesString,
+            signingKeys: signingKeysString,
+            scriptUri: scriptUri
+        });
+
+        return html;
+    }
+
+    static getMissingWebContent(missingPackages: any[], panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
+        // get fqdns
+        const fqdnsString: string = config.get('fqdns', []).join();
+
+        // get usernames
+        const usernamesString: string = config.get('usernames', []).join();
+
+        // get signing keys
+        const signingKeys: any[] = config.get<any>('signingPaths', []);
+        const signingKeysString: string = signingKeys.map(key => key.serverLabel).join();
+
+        // Local path to main script run in the webview
+        const scriptPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'missing.js');
+        const pugPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'missing.pug');
+
+        // And the uri we use to load this script in the webview
+        const scriptUri = panel.webview.asWebviewUri(scriptPathOnDisk);
+
+        // Use a nonce to only allow specific scripts to be run
+        const nonce = this.getNonce();
+
+        const compiledFunction = pug.compileFile(pugPathOnDisk.fsPath, {
+            pretty: true
+        });
+
+        const html = compiledFunction({
+            myTitle: 'Packages',
+            panelWebviewCspSource: panel.webview.cspSource,
+            nonce: nonce,
+            missingItems: missingPackages,
+            fqdns: fqdnsString,
+            usernames: usernamesString,
+            signingKeys: signingKeysString,
+            scriptUri: scriptUri
+        });
 
         return html;
     }

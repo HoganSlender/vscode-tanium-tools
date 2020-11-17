@@ -46,6 +46,21 @@ export class RestClient {
         return p;
     }
 
+    static delete(url: string, options: any, allowSelfSignedCerts: boolean, httpTimeout: number) {
+        const p: Promise<any> = new Promise(async (resolve, reject) => {
+            try {
+                options = this._wrapOption(allowSelfSignedCerts, httpTimeout, options);
+                const { body } = await got.delete(url, options);
+
+                return resolve(body);
+            } catch (err) {
+                return reject(err);
+            }
+        });
+
+        return p;
+    }
+
     static get(url: string, options: any, allowSelfSignedCerts: boolean, httpTimeout: number) {
         const p: Promise<any> = new Promise(async (resolve, reject) => {
             try {

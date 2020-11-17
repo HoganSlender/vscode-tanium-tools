@@ -21,57 +21,97 @@
 	"activationEvents": [
 		"onCommand:hoganslendertanium.compareContentSetSensors",
 		"onCommand:hoganslendertanium.compareServerServerSensors",
+		"onCommand:hoganslendertanium.compareServerServerContentSets",
+		"onCommand:hoganslendertanium.compareServerServerContentSetPrivileges",
 		"onCommand:hoganslendertanium.generateExportFileMissingSensors",
 		"onCommand:hoganslendertanium.signContentFile",
 		"onCommand:hoganslendertanium.generateExportFileModifiedSensors",
 		"onCommand:hoganslendertanium.retrieveSensorByName",
 		"onCommand:hoganslendertanium.retrieveSensorByHash",
 		"onCommand:hoganslendertanium.compareServerServerPackages",
-		"onCommand:hoganslendertanium.generateMissingPackages",
-		"onCommand:hoganslendertanium.downloadPackageFiles"
+		"onCommand:hoganslendertanium.analyzePackages",
+		"onCommand:hoganslendertanium.analyzeContentSets",
+		"onCommand:hoganslendertanium.analyzeContentSetPrivileges",
+		"onCommand:hoganslendertanium.downloadPackageFiles",
+		"onCommand:hoganslendertanium.workspaceInit"
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
 		"commands": [
 			{
 				"command": "hoganslendertanium.compareContentSetSensors",
-				"title": "Tanium: Compare Content Set Sensors"
+				"title": "Compare Content Set Sensors",
+				"category": "Tanium"
 			},
 			{
 				"command": "hoganslendertanium.compareServerServerSensors",
-				"title": "Tanium: Compare Tanium Server Sensors"
+				"title": "Compare Tanium Server Sensors",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.compareServerServerContentSets",
+				"title": "Compare Tanium Server Content Sets",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.compareServerServerContentSetPrivileges",
+				"title": "Compare Tanium Server Content Set Privileges",
+				"category": "Tanium"
 			},
 			{
 				"command": "hoganslendertanium.generateExportFileMissingSensors",
-				"title": "Tanium: Generate Export File for Missing Sensors"
+				"title": "Generate Export File for Missing Sensors",
+				"category": "Tanium"
 			},
 			{
 				"command": "hoganslendertanium.signContentFile",
-				"title": "Tanium: Sign Content File"
+				"title": "Sign Content File",
+				"category": "Tanium"
 			},
 			{
 				"command": "hoganslendertanium.generateExportFileModifiedSensors",
-				"title": "Tanium: Generate Export File for Modified Sensors"
+				"title": "Generate Export File for Modified Sensors",
+				"category": "Tanium"
 			},
 			{
 				"command": "hoganslendertanium.retrieveSensorByName",
-				"title": "Tanium: Retrieve Sensor Data by Name"
+				"title": "Retrieve Sensor Data by Name",
+				"category": "Tanium"
 			},
 			{
 				"command": "hoganslendertanium.retrieveSensorByHash",
-				"title": "Tanium: Retrieve Sensor Data by Hash"
+				"title": "Retrieve Sensor Data by Hash",
+				"category": "Tanium"
 			},
 			{
 				"command": "hoganslendertanium.compareServerServerPackages",
-				"title": "Tanium: Compare Tanium Server Packages"
+				"title": "Compare Tanium Server Packages",
+				"category": "Tanium"
 			},
 			{
-				"command": "hoganslendertanium.generateMissingPackages",
-				"title": "Tanium: Process Missing Packages"
+				"command": "hoganslendertanium.analyzePackages",
+				"title": "Analyze Packages",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.analyzeContentSets",
+				"title": "Analyze Content Sets",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.analyzeContentSetPrivileges",
+				"title": "Analyze Content Set Privileges",
+				"category": "Tanium"
 			},
 			{
 				"command": "hoganslendertanium.downloadPackageFiles",
-				"title": "Tanium: Download Package Files"
+				"title": "Download Package Files",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.workspaceInit",
+				"title": "Setup Tanium Workspace",
+				"category": "Tanium"
 			}
 		],
 		"menus": {
@@ -89,7 +129,15 @@
 					"when": "false"
 				},
 				{
-					"command": "hoganslendertanium.generateMissingPackages",
+					"command": "hoganslendertanium.analyzePackages",
+					"when": "false"
+				},
+				{
+					"command": "hoganslendertanium.analyzeContentSets",
+					"when": "false"
+				},
+				{
+					"command": "hoganslendertanium.analyzeContentSetPrivileges",
 					"when": "false"
 				}
 			],
@@ -110,7 +158,17 @@
 					"when": "explorerResourceIsFolder && listDoubleSelection"
 				},
 				{
-					"command": "hoganslendertanium.generateMissingPackages",
+					"command": "hoganslendertanium.analyzePackages",
+					"group": "3_compare@1",
+					"when": "explorerResourceIsFolder && listDoubleSelection"
+				},
+				{
+					"command": "hoganslendertanium.analyzeContentSets",
+					"group": "3_compare@1",
+					"when": "explorerResourceIsFolder && listDoubleSelection"
+				},
+				{
+					"command": "hoganslendertanium.analyzeContentSetPrivileges",
 					"group": "3_compare@1",
 					"when": "explorerResourceIsFolder && listDoubleSelection"
 				}
@@ -179,12 +237,14 @@
 		"@types/got": "^9.6.11",
 		"@types/he": "^1.1.1",
 		"@types/lodash": "^4.14.161",
+		"@types/pug": "^2.0.4",
 		"@types/uuid": "^8.3.0",
 		"diff-match-patch": "^1.0.5",
 		"fast-xml-parser": "^3.17.4",
 		"got": "^11.6.0",
 		"he": "^1.2.0",
 		"lodash": "^4.17.20",
+		"pug": "^3.0.0",
 		"sanitize-filename-ts": "^1.0.2",
 		"uuid": "^8.3.0"
 	}

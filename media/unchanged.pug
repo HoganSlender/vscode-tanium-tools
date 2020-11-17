@@ -1,0 +1,17 @@
+doctype html
+html(lang='en')
+    head
+        meta(charset='UTF-8')
+        meta(name='viewport' content='width=device-width, initial-scale=1.0')
+        title Missing #{myTitle}
+        meta(http-equiv='Content-Security-Policy' content="default-src 'none'; img-src " + panelWebviewCspSource + " https:; script-src 'nonce-" + nonce + "'; style-src 'unsafe-inline';")
+    body
+        table(style='border: 1px solid black;')
+            tr
+                td #[b Unchanged #{myTitle}]
+            tr
+                td
+                    select(id='unchangedlitems' name='unchangedlitems' multiple='multiple' size='40' style='min-width: 600px;min-height: 800px;')
+                        each item in unchangedItems
+                            option(value=item.path) #{item.name}
+        script(nonce="" + nonce + "" src="" + scriptUri + "")

@@ -1,5 +1,5 @@
 import { OutputChannel, window } from "vscode";
-import { RequestError } from "got";
+import { HTTPError, RequestError } from "got";
 
 export class OutputChannelLogging {
     private static channel: OutputChannel;
@@ -25,7 +25,10 @@ export class OutputChannelLogging {
 
     public static logError(msg: string, errObject: any) {
         OutputChannelLogging.log(msg);
-        if (errObject instanceof TypeError) {
+        if (errObject instanceof HTTPError) {
+            var body:any = errObject.response.body;
+            OutputChannelLogging.log(`\t${body.text}`);
+        } else if (errObject instanceof TypeError) {
             OutputChannelLogging.log(`\t${errObject.message} at ${errObject.stack}`);
         } else if (errObject instanceof RequestError) {
             OutputChannelLogging.log(`\t${errObject.message} at ${errObject.stack}`);

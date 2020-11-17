@@ -12,6 +12,11 @@ import { collectServerServerModifiedSensorInputs } from '../parameter-collection
 import { collectServerServerPackageInputs } from '../parameter-collection/server-server-package-parameters';
 import { Session } from '../common/session';
 import { RestClient } from '../common/restClient';
+import { Packages } from './Packages';
+import { ContentSets } from './ContentSets';
+import { ContentSetPrivileges } from './ContentSetPrivileges';
+import { collectServerServerContentSetInputs } from '../parameter-collection/server-server-content-sets-parameters';
+import { collectServerServerContentSetPrivilegeInputs } from '../parameter-collection/server-server-content-set-privileges-parameters';
 
 const diffMatchPatch = require('diff-match-patch');
 
@@ -28,6 +33,12 @@ export function activate(context: vscode.ExtensionContext) {
         },
         'hoganslendertanium.compareServerServerPackages': (uri: vscode.Uri, uris: vscode.Uri[]) => {
             ServerServer.processPackages(context);
+        },
+        'hoganslendertanium.compareServerServerContentSets': () => {
+            ServerServer.processContentSets(context);
+        },
+        'hoganslendertanium.compareServerServerContentSetPrivileges': () => {
+            ServerServer.processContentSetPrivileges(context);
         }
     });
 }
@@ -76,7 +87,7 @@ class ServerServer {
             fs.mkdirSync(rightDir);
         }
 
-        vscode.window.withProgress({
+        await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: 'Package Compare',
             cancellable: false
@@ -97,6 +108,211 @@ class ServerServer {
 
             return p;
         });
+
+        // analyze packages
+        Packages.analyzePackages(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
+    }
+
+    static processServerContentSetPrivileges(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
+        const restBase = `https://${fqdn}/api/v2`;
+
+        const p = new Promise(async (resolve, reject) => {
+            try {
+                // get session
+                var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
+
+                (async () => {
+                    OutputChannelLogging.log(`content set privilege retrieval - initialized for ${fqdn}`);
+                    var content_set_privileges: [any];
+
+                    // get packages
+                    try {
+                        const body = await RestClient.post(`${restBase}/export`, {
+                            headers: {
+                                session: session,
+                            },
+                            json: {
+                                "content_set_privileges": {
+                                    "include_all": true,
+                                }
+                            },
+                            responseType: 'json',
+                        }, allowSelfSignedCerts, httpTimeout);
+
+                        OutputChannelLogging.log(`content set privilege retrieval - complete for ${fqdn}`);
+                        content_set_privileges = body.data.object_list.content_set_privileges;
+                    } catch (err) {
+                        OutputChannelLogging.logError(`retrieving content set privileges from ${fqdn}`, err);
+                        return reject(`retrieving content_set_privileges from ${fqdn}`);
+                    }
+
+                    // iterate through each download export
+                    var contentSetPrivilegeCounter = 0;
+                    var contentSetPrivilegeTotal = content_set_privileges.length - 1;
+                    for (var i = 0; i < content_set_privileges.length; i++) {
+                        const contentSetPrivilege: any = content_set_privileges[i];
+
+                        if (i % 30 === 0 || i === contentSetPrivilegeTotal) {
+                            OutputChannelLogging.log(`processing ${i + 1} of ${contentSetPrivilegeTotal}`);
+                        }
+
+                        if (contentSetPrivilege?.content_set?.name === 'Reserved') {
+                            contentSetPrivilegeCounter++;
+
+                            if (contentSetPrivilegeTotal === contentSetPrivilegeCounter) {
+                                OutputChannelLogging.log(`processed ${contentSetPrivilegeTotal} content set privileges from ${fqdn}`);
+                                resolve();
+                            }
+                        }
+
+                        // get export
+                        try {
+                            const contentSetPrivilegeName: string = sanitize(contentSetPrivilege.name);
+
+                            try {
+                                const content: string = JSON.stringify(contentSetPrivilege, null, 2);
+
+                                const contentSetPrivilegeFile = path.join(directory, contentSetPrivilegeName + '.json');
+                                fs.writeFile(contentSetPrivilegeFile, content, (err) => {
+                                    if (err) {
+                                        OutputChannelLogging.logError(`could not write ${contentSetPrivilegeFile}`, err);
+                                    }
+
+                                    contentSetPrivilegeCounter++;
+
+                                    if (contentSetPrivilegeTotal === contentSetPrivilegeCounter) {
+                                        OutputChannelLogging.log(`processed ${contentSetPrivilegeTotal} content set privileges from ${fqdn}`);
+                                        resolve();
+                                    }
+                                });
+                            } catch (err) {
+                                OutputChannelLogging.logError(`error processing ${label} content set privilege ${contentSetPrivilegeName}`, err);
+                                contentSetPrivilegeCounter++;
+
+                                if (contentSetPrivilegeTotal === contentSetPrivilegeCounter) {
+                                    OutputChannelLogging.log(`processed ${contentSetPrivilegeTotal} content set privilege from ${fqdn}`);
+                                    resolve();
+                                }
+                            }
+                        } catch (err) {
+                            OutputChannelLogging.logError(`saving content set privilege file for ${contentSetPrivilege.name} from ${fqdn}`, err);
+                            contentSetPrivilegeCounter++;
+
+                            if (contentSetPrivilegeTotal === contentSetPrivilegeCounter) {
+                                OutputChannelLogging.log(`processed ${contentSetPrivilegeTotal} content sets from ${fqdn}`);
+                                resolve();
+                            }
+                        }
+                    }
+                })();
+            } catch (err) {
+                OutputChannelLogging.logError(`error downloading content set privileges from ${restBase}`, err);
+                return reject(`error downloading content set privileges from ${restBase}`);
+            }
+        });
+
+        return p;
+    }
+
+    static processServerContentSets(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
+        const restBase = `https://${fqdn}/api/v2`;
+
+        const p = new Promise(async (resolve, reject) => {
+            try {
+                // get session
+                var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
+
+                (async () => {
+                    OutputChannelLogging.log(`content set retrieval - initialized for ${fqdn}`);
+                    var content_sets: [any];
+
+                    // get packages
+                    try {
+                        const body = await RestClient.post(`${restBase}/export`, {
+                            headers: {
+                                session: session,
+                            },
+                            json: {
+                                "content_sets": {
+                                    "include_all": true,
+                                }
+                            },
+                            responseType: 'json',
+                        }, allowSelfSignedCerts, httpTimeout);
+
+                        OutputChannelLogging.log(`content set retrieval - complete for ${fqdn}`);
+                        content_sets = body.data.object_list.content_sets;
+                    } catch (err) {
+                        OutputChannelLogging.logError(`retrieving content sets from ${fqdn}`, err);
+                        return reject(`retrieving content_sets from ${fqdn}`);
+                    }
+
+                    // iterate through each download export
+                    var contentSetCounter = 0;
+                    var contentSetTotal = content_sets.length - 1;
+                    for (var i = 0; i < content_sets.length; i++) {
+                        const contentSet: any = content_sets[i];
+
+                        if (i % 30 === 0 || i === contentSetTotal) {
+                            OutputChannelLogging.log(`processing ${i + 1} of ${contentSetTotal}`);
+                        }
+
+                        if (contentSet?.content_set?.name === 'Reserved') {
+                            contentSetCounter++;
+
+                            if (contentSetTotal === contentSetCounter) {
+                                OutputChannelLogging.log(`processed ${contentSetTotal} packages from ${fqdn}`);
+                                resolve();
+                            }
+                        }
+
+                        // get export
+                        try {
+                            const contentSetName: string = sanitize(contentSet.name);
+
+                            try {
+                                const content: string = JSON.stringify(contentSet, null, 2);
+
+                                const contentSetFile = path.join(directory, contentSetName + '.json');
+                                fs.writeFile(contentSetFile, content, (err) => {
+                                    if (err) {
+                                        OutputChannelLogging.logError(`could not write ${contentSetFile}`, err);
+                                    }
+
+                                    contentSetCounter++;
+
+                                    if (contentSetTotal === contentSetCounter) {
+                                        OutputChannelLogging.log(`processed ${contentSetTotal} content sets from ${fqdn}`);
+                                        resolve();
+                                    }
+                                });
+                            } catch (err) {
+                                OutputChannelLogging.logError(`error processing ${label} content set ${contentSetName}`, err);
+                                contentSetCounter++;
+
+                                if (contentSetTotal === contentSetCounter) {
+                                    OutputChannelLogging.log(`processed ${contentSetTotal} content set from ${fqdn}`);
+                                    resolve();
+                                }
+                            }
+                        } catch (err) {
+                            OutputChannelLogging.logError(`saving content set file for ${contentSet.name} from ${fqdn}`, err);
+                            contentSetCounter++;
+
+                            if (contentSetTotal === contentSetCounter) {
+                                OutputChannelLogging.log(`processed ${contentSetTotal} content sets from ${fqdn}`);
+                                resolve();
+                            }
+                        }
+                    }
+                })();
+            } catch (err) {
+                OutputChannelLogging.logError(`error downloading content sets from ${restBase}`, err);
+                return reject(`error downloading content sets from ${restBase}`);
+            }
+        });
+
+        return p;
     }
 
     static processServerPackages(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
@@ -109,72 +325,94 @@ class ServerServer {
 
                 (async () => {
                     OutputChannelLogging.log(`package retrieval - initialized for ${fqdn}`);
-                    var packages: [any];
+                    var package_specs: [any];
 
+                    // get packages
                     try {
-                        const body = await RestClient.post(`${restBase}/export`, {
+                        const body = await RestClient.get(`${restBase}/packages`, {
                             headers: {
                                 session: session,
-                            },
-                            json: {
-                                package_specs: {
-                                    include_all: true
-                                }
                             },
                             responseType: 'json',
                         }, allowSelfSignedCerts, httpTimeout);
 
-                        OutputChannelLogging.log(`package retrieval - complete for ${fqdn}`);
-
-                        packages = body.data.object_list.package_specs;
+                        OutputChannelLogging.log(`package_spec retrieval - complete for ${fqdn}`);
+                        package_specs = body.data;
                     } catch (err) {
-                        OutputChannelLogging.logError(`retrieving packages from ${fqdn}`, err);
-                        return reject(`retrieving packages from ${fqdn}`);
+                        OutputChannelLogging.logError(`retrieving package_specs from ${fqdn}`, err);
+                        return reject(`retrieving package_specs from ${fqdn}`);
                     }
 
-                    const packageTotal = packages.length;
-                    OutputChannelLogging.log(`packages retrieved from ${fqdn} - ${packageTotal}`);
-                    var packageCounter = 0;
+                    // iterate through each download export
+                    var packageSpecCounter = 0;
+                    var packageSpecTotal = package_specs.length - 1;
+                    for (var i = 0; i < package_specs.length - 1; i++) {
+                        const packageSpec: any = package_specs[i];
 
-                    for (var i = 0; i < packages.length; i++) {
-                        const taniumPackage: any = packages[i];
-
-                        if (taniumPackage?.content_set?.name === 'Reserved') {
-                            packageCounter++;
-
-                            if (packageTotal === packageCounter) {
-                                OutputChannelLogging.log(`processed ${packageTotal} packages from ${fqdn}`);
-                                resolve();
-                            }
-                            continue;
+                        if (i % 30 === 0 || i === packageSpecTotal) {
+                            OutputChannelLogging.log(`processing ${i + 1} of ${packageSpecTotal}`);
                         }
 
-                        const packageName: string = sanitize(taniumPackage.name);
+                        if (packageSpec?.content_set?.name === 'Reserved') {
+                            packageSpecCounter++;
 
+                            if (packageSpecTotal === packageSpecCounter) {
+                                OutputChannelLogging.log(`processed ${packageSpecTotal} packages from ${fqdn}`);
+                                resolve();
+                            }
+                        }
+
+                        // get export
                         try {
-                            const content: string = JSON.stringify(taniumPackage, null, 2);
+                            const body = await RestClient.post(`${restBase}/export`, {
+                                headers: {
+                                    session: session,
+                                },
+                                json: {
+                                    package_specs: {
+                                        include: [
+                                            packageSpec.name
+                                        ]
+                                    }
+                                },
+                                responseType: 'json',
+                            }, allowSelfSignedCerts, httpTimeout);
 
-                            const packageFile = path.join(directory, packageName + '.json');
-                            fs.writeFile(packageFile, content, (err) => {
-                                if (err) {
-                                    OutputChannelLogging.logError(`could not write ${packageFile}`, err);
+                            const taniumPackage: any = body.data.object_list.package_specs[0];
+                            const packageName: string = sanitize(taniumPackage.name);
+
+                            try {
+                                const content: string = JSON.stringify(body.data.object_list, null, 2);
+
+                                const packageFile = path.join(directory, packageName + '.json');
+                                fs.writeFile(packageFile, content, (err) => {
+                                    if (err) {
+                                        OutputChannelLogging.logError(`could not write ${packageFile}`, err);
+                                    }
+
+                                    packageSpecCounter++;
+
+                                    if (packageSpecTotal === packageSpecCounter) {
+                                        OutputChannelLogging.log(`processed ${packageSpecTotal} packages from ${fqdn}`);
+                                        resolve();
+                                    }
+                                });
+                            } catch (err) {
+                                OutputChannelLogging.logError(`error processing ${label} package ${packageName}`, err);
+                                packageSpecCounter++;
+
+                                if (packageSpecTotal === packageSpecCounter) {
+                                    OutputChannelLogging.log(`processed ${packageSpecTotal} packages from ${fqdn}`);
+                                    resolve();
                                 }
-
-                                packageCounter++;
-
-                                if (packageTotal === packageCounter) {
-                                    OutputChannelLogging.log(`processed ${packageTotal} packages from ${fqdn}`);
-                                    return resolve();
-                                }
-                            });
+                            }
                         } catch (err) {
-                            OutputChannelLogging.logError(`error processing ${label} package ${packageName}`, err);
+                            OutputChannelLogging.logError(`retrieving packageExport for ${packageSpec.name} from ${fqdn}`, err);
+                            packageSpecCounter++;
 
-                            packageCounter++;
-
-                            if (packageTotal === packageCounter) {
-                                OutputChannelLogging.log(`processed ${packageTotal} packages`);
-                                return resolve();
+                            if (packageSpecTotal === packageSpecCounter) {
+                                OutputChannelLogging.log(`processed ${packageSpecTotal} packages from ${fqdn}`);
+                                resolve();
                             }
                         }
                     }
@@ -400,6 +638,145 @@ class ServerServer {
         } else {
             OutputChannelLogging.log(`no sensors were found`);
         }
+    }
+
+    static async processContentSetPrivileges(context: vscode.ExtensionContext) {
+        // get the current folder
+        const folderPath = vscode.workspace.rootPath;
+
+        // define output channel
+        OutputChannelLogging.initialize();
+
+        // get configurations
+        const config = vscode.workspace.getConfiguration('hoganslender.tanium');
+        const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
+        const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
+
+        const state = await collectServerServerContentSetPrivilegeInputs(config, context);
+
+        // collect values
+        const leftFqdn: string = state.leftFqdn;
+        const leftUsername: string = state.leftUsername;
+        const leftPassword: string = state.leftPassword;
+        const rightFqdn: string = state.rightFqdn;
+        const rightUsername: string = state.rightUsername;
+        const rightPassword: string = state.rightPassword;
+
+        OutputChannelLogging.showClear();
+
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left username: ${leftUsername}`);
+        OutputChannelLogging.log(`left password: XXXXXXXX`);
+        OutputChannelLogging.log(`right fqdn: ${rightFqdn}`);
+        OutputChannelLogging.log(`right username: ${rightUsername}`);
+        OutputChannelLogging.log(`right password: XXXXXXXX`);
+
+        // create folders
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)} - Content Sets`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)} - Content Sets`);
+
+        if (!fs.existsSync(leftDir)) {
+            fs.mkdirSync(leftDir);
+        }
+
+        if (!fs.existsSync(rightDir)) {
+            fs.mkdirSync(rightDir);
+        }
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Content Set Privilege Compare',
+            cancellable: false
+        }, async (progress) => {
+            progress.report({ increment: 0 });
+
+            const increment = 50;
+
+            progress.report({ increment: increment, message: `content set privilege retrieval from ${leftFqdn}` });
+            await this.processServerContentSetPrivileges(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
+            progress.report({ increment: increment, message: `content set privilege retrieval from ${rightFqdn}` });
+            await this.processServerContentSetPrivileges(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
+            const p = new Promise(resolve => {
+                setTimeout(() => {
+                    resolve();
+                }, 3000);
+            });
+
+            return p;
+        });
+
+        // analyze content sets
+        ContentSetPrivileges.analyzeContentSetPrivileges(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
+    }
+
+    static async processContentSets(context: vscode.ExtensionContext) {
+        // get the current folder
+        const folderPath = vscode.workspace.rootPath;
+
+        // define output channel
+        OutputChannelLogging.initialize();
+
+        // get configurations
+        const config = vscode.workspace.getConfiguration('hoganslender.tanium');
+        const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
+        const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
+
+        const state = await collectServerServerContentSetInputs(config, context);
+
+        // collect values
+        const leftFqdn: string = state.leftFqdn;
+        const leftUsername: string = state.leftUsername;
+        const leftPassword: string = state.leftPassword;
+        const rightFqdn: string = state.rightFqdn;
+        const rightUsername: string = state.rightUsername;
+        const rightPassword: string = state.rightPassword;
+
+
+        OutputChannelLogging.showClear();
+
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left username: ${leftUsername}`);
+        OutputChannelLogging.log(`left password: XXXXXXXX`);
+        OutputChannelLogging.log(`right fqdn: ${rightFqdn}`);
+        OutputChannelLogging.log(`right username: ${rightUsername}`);
+        OutputChannelLogging.log(`right password: XXXXXXXX`);
+
+        // create folders
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)} - Content Sets`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)} - Content Sets`);
+
+        if (!fs.existsSync(leftDir)) {
+            fs.mkdirSync(leftDir);
+        }
+
+        if (!fs.existsSync(rightDir)) {
+            fs.mkdirSync(rightDir);
+        }
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Content Set Compare',
+            cancellable: false
+        }, async (progress) => {
+            progress.report({ increment: 0 });
+
+            const increment = 50;
+
+            progress.report({ increment: increment, message: `content set retrieval from ${leftFqdn}` });
+            await this.processServerContentSets(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
+            progress.report({ increment: increment, message: `content set retrieval from ${rightFqdn}` });
+            await this.processServerContentSets(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
+            const p = new Promise(resolve => {
+                setTimeout(() => {
+                    resolve();
+                }, 3000);
+            });
+
+            return p;
+        });
+
+        // analyze content sets
+        ContentSets.analyzeContentSets(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
     }
 
     public static async processSensors(context: vscode.ExtensionContext) {

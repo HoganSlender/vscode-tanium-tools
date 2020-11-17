@@ -23,6 +23,7 @@
 		"onCommand:hoganslendertanium.compareServerServerSensors",
 		"onCommand:hoganslendertanium.compareServerServerContentSets",
 		"onCommand:hoganslendertanium.compareServerServerContentSetPrivileges",
+		"onCommand:hoganslendertanium.compareServerServerContentSetRoles",
 		"onCommand:hoganslendertanium.generateExportFileMissingSensors",
 		"onCommand:hoganslendertanium.signContentFile",
 		"onCommand:hoganslendertanium.generateExportFileModifiedSensors",
@@ -32,6 +33,7 @@
 		"onCommand:hoganslendertanium.analyzePackages",
 		"onCommand:hoganslendertanium.analyzeContentSets",
 		"onCommand:hoganslendertanium.analyzeContentSetPrivileges",
+		"onCommand:hoganslendertanium.analyzeContentSetRoles",
 		"onCommand:hoganslendertanium.downloadPackageFiles",
 		"onCommand:hoganslendertanium.workspaceInit"
 	],
@@ -56,6 +58,11 @@
 			{
 				"command": "hoganslendertanium.compareServerServerContentSetPrivileges",
 				"title": "Compare Tanium Server Content Set Privileges",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.compareServerServerContentSetRoles",
+				"title": "Compare Tanium Server Content Set Roles",
 				"category": "Tanium"
 			},
 			{
@@ -104,6 +111,11 @@
 				"category": "Tanium"
 			},
 			{
+				"command": "hoganslendertanium.analyzeContentSetRoles",
+				"title": "Analyze Content Set Roles",
+				"category": "Tanium"
+			},
+			{
 				"command": "hoganslendertanium.downloadPackageFiles",
 				"title": "Download Package Files",
 				"category": "Tanium"
@@ -139,6 +151,10 @@
 				{
 					"command": "hoganslendertanium.analyzeContentSetPrivileges",
 					"when": "false"
+				},
+				{
+					"command": "hoganslendertanium.analyzeContentSetRoles",
+					"when": "false"
 				}
 			],
 			"explorer/context": [
@@ -169,6 +185,11 @@
 				},
 				{
 					"command": "hoganslendertanium.analyzeContentSetPrivileges",
+					"group": "3_compare@1",
+					"when": "explorerResourceIsFolder && listDoubleSelection"
+				},
+				{
+					"command": "hoganslendertanium.analyzeContentSetRoles",
 					"group": "3_compare@1",
 					"when": "explorerResourceIsFolder && listDoubleSelection"
 				}

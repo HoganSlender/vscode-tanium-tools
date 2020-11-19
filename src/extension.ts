@@ -1,10 +1,19 @@
 import { ExtensionContext } from 'vscode';
-import * as contentset from './services/ContentSet';
+import * as contentSet from './services/ContentSet';
 import * as serverServer from './services/ServerServer';
+import * as serverServerPackages from './services/ServerServerPackages';
+import * as serverServerContentSets from './services/ServerServerContentSets';
+import * as serverServerContentSetPrivileges from './services/ServerServerContentSetPrivileges';
+import * as serverServerContentSetRoles from './services/ServerServerContentSetRoles';
+import * as serverServerContentSetRolePrivileges from './services/ServerServerContentSetRolePrivileges';
+import * as serverServerContentSetRoleMemberships from './services/ServerServerContentSetRoleMemberships';
 import * as signContentFile from './services/SignContentFile';
 import * as sensor from './services/Sensor';
 import * as packages from './services/Packages';
-import * as contentsets from './services/ContentSets';
+import * as contentSets from './services/ContentSets';
+import * as contentSetPrivileges from './services/ContentSetPrivileges';
+import * as contentSetRoles from './services/ContentSetRoles';
+import * as contentSetRolePrivileges from './services/ContentSetRolePrivileges';
 import { OutputChannelLogging } from './common/logging';
 
 // this method is called when your extension is activated
@@ -12,12 +21,21 @@ import { OutputChannelLogging } from './common/logging';
 export function activate(context: ExtensionContext) {
 	OutputChannelLogging.initialize();
 
-	contentset.activate(context);
+	contentSet.activate(context);
 	serverServer.activate(context);
+	serverServerPackages.activate(context);
+	serverServerContentSets.activate(context);
+	serverServerContentSetPrivileges.activate(context);
+	serverServerContentSetRoles.activate(context);
+	serverServerContentSetRolePrivileges.activate(context);
+	serverServerContentSetRoleMemberships.activate(context);
 	signContentFile.activate(context);
 	sensor.activate(context);
 	packages.activate(context);
-	contentsets.activate(context);
+	contentSets.activate(context);
+	contentSetPrivileges.activate(context);
+	contentSetRoles.activate(context);
+	contentSetRolePrivileges.activate(context);
 }
 
 // this method is called when your extension is deactivated

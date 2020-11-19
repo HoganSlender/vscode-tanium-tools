@@ -84,7 +84,7 @@ export async function collectServerServerContentSetInputs(config: WorkspaceConfi
                 addButton
             ],
             buttonTooltip: 'Add New Username',
-            quickPickPlaceholder: 'Please choose the source Tanium server username or click + upper right to add new',
+            quickPickPlaceholder: 'Please choose the dest Tanium server username or click + upper right to add new',
             activeItemPropertyName: 'rightUsernameQp',
             inputPrompt: 'Please enter the source Tanium server username',
         },
@@ -99,7 +99,7 @@ export async function collectServerServerContentSetInputs(config: WorkspaceConfi
     ];
 
     const state = {} as Partial<ServerServerContentSetState>;
-    await collectInputs('Compare Tanium Server ContentSets to Tanium Server ContentSets', state, steps);
+    await collectInputs('Compare Tanium Server Content Sets to Tanium Server Content Sets', state, steps);
 
     if (typeof state.leftFqdnQp === 'string') {
         if (fqdns.indexOf(state.leftFqdnQp) === -1) {

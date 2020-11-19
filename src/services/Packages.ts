@@ -710,7 +710,8 @@ export class Packages {
             usernames: usernamesString,
             signingKeys: signingKeysString,
             scriptUri: scriptUri,
-            transferIndividual: 1
+            transferIndividual: 1,
+            showServerInfo: 1
         });
 
         return html;
@@ -749,7 +750,9 @@ export class Packages {
             fqdns: fqdnsString,
             usernames: usernamesString,
             signingKeys: signingKeysString,
-            scriptUri: scriptUri
+            scriptUri: scriptUri,
+            transferIndividual: 1,
+            showServerInfo: 1
         });
 
         return html;
@@ -788,7 +791,9 @@ export class Packages {
             fqdns: fqdnsString,
             usernames: usernamesString,
             signingKeys: signingKeysString,
-            scriptUri: scriptUri
+            scriptUri: scriptUri,
+            transferIndividual: 1,
+            showServerInfo: 1
         });
 
         return html;

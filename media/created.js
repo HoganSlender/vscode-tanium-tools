@@ -5,13 +5,21 @@ console.log('created');
 var createdAddButton = document.getElementById("createdAddButton");
 var createdRemoveButton = document.getElementById("createdRemoveButton");
 var processCreatedButton = document.getElementById("processCreatedButton");
-processCreatedButton.disabled = true;
+
+if (processCreatedButton !== null) {
+    processCreatedButton.disabled = true;
+}
 
 var createdlItems = document.getElementById("createdlitems");
 var createdrItems = document.getElementById("createdritems");
 
-createdlItems.addEventListener("dblclick", () => openFile(createdlItems));
-createdrItems.addEventListener("dblclick", () => openFile(createdrItems));
+if (createdlItems !== null) {
+    createdlItems.addEventListener("dblclick", () => openFile(createdlItems));
+}
+
+if (createdrItems !== null) {
+    createdrItems.addEventListener("dblclick", () => openFile(createdrItems));
+}
 
 var divShowServerInfo = document.getElementById('divShowServerInfo');
 var showServerInfo = divShowServerInfo.value === '1';
@@ -21,51 +29,56 @@ var divTransferIndividual = document.getElementById('divTransferIndividual');
 var transferIndividual = divTransferIndividual.value === '1';
 console.log(`transferIndividual: ${transferIndividual}`);
 
-createdAddButton.addEventListener("click", () => addButtonEvent(createdlItems, createdrItems));
-createdRemoveButton.addEventListener("click", () => removeButtonEvent(createdrItems, createdlItems));
-processCreatedButton.addEventListener("click", processCreatedItems);
+if (createdAddButton !== null) {
+    createdAddButton.addEventListener("click", () => addButtonEvent(createdlItems, createdrItems));
+}
+
+if (createdRemoveButton !== null) {
+    createdRemoveButton.addEventListener("click", () => removeButtonEvent(createdrItems, createdlItems));
+}
+
+if (processCreatedButton !== null) {
+    processCreatedButton.addEventListener("click", processCreatedItems);
+}
 
 var divFqdns = document.getElementById("divFqdns");
 var divUsernames = document.getElementById("divUsernames");
 var divSigningKeys = document.getElementById("divSigningKeys");
-var divTransferIndividual = document.getElementById("divTransferIndividual");
-var divShowServerInfo = document.getElementById('divShowServerInfo');
-var serverInfo = document.getElementById('serverInfo');
-
-var divCreatedSourceFqdn = document.getElementById("divCreatedSourceFqdn");
-var divCreatedDestFqdn = document.getElementById("divCreatedDestFqdn");
-var divCreatedUsername = document.getElementById("divCreatedUsername");
-var divCreatedSigningKey = document.getElementById("divCreatedSigningKey");
 
 if (!showServerInfo) {
     serverInfo.style.visibility = 'hidden';
+} else {
+    var divCreatedSourceFqdn = document.getElementById("divCreatedSourceFqdn");
+    var divCreatedDestFqdn = document.getElementById("divCreatedDestFqdn");
+    var divCreatedUsername = document.getElementById("divCreatedUsername");
+    var divCreatedSigningKey = document.getElementById("divCreatedSigningKey");
+
+    var fqdnsText = divFqdns.innerHTML;
+
+    var fqdns = fqdnsText.split(',');
+    
+    var usernamesText = divUsernames.innerHTML;
+    
+    var usernames = usernamesText.split(',');
+    
+    var signingKeysText = divSigningKeys.innerHTML;
+    
+    var signingKeys = signingKeysText.split(',');
+    
+    processInput(fqdns, divCreatedSourceFqdn, 'taniumSourceServerFqdnSelect', false);
+    processInput(fqdns, divCreatedDestFqdn, 'taniumDestServerFqdnSelect', true);
+    processInput(usernames, divCreatedUsername, 'taniumServerUsernameSelect', true);
+    processInput(signingKeys, divCreatedSigningKey, 'taniumSigningKeySelect', true);
+    
+    var createdTaniumServerPassword = document.getElementById("createdTaniumServerPassword");
+    
+    var taniumSourceServerFqdnSelect = document.getElementById("taniumSourceServerFqdnSelect");
+    var taniumDestServerFqdnSelect = document.getElementById("taniumDestServerFqdnSelect");
+    var taniumServerUsernameSelect = document.getElementById("taniumServerUsernameSelect");
+    var taniumSigningKeySelect = document.getElementById("taniumSigningKeySelect");
+    
+    createdTaniumServerPassword.addEventListener("input", enableProcessPackage);
 }
-
-var fqdnsText = divFqdns.innerHTML;
-
-var fqdns = fqdnsText.split(',');
-
-var usernamesText = divUsernames.innerHTML;
-
-var usernames = usernamesText.split(',');
-
-var signingKeysText = divSigningKeys.innerHTML;
-
-var signingKeys = signingKeysText.split(',');
-
-processInput(fqdns, divCreatedSourceFqdn, 'taniumSourceServerFqdnSelect', false);
-processInput(fqdns, divCreatedDestFqdn, 'taniumDestServerFqdnSelect', true);
-processInput(usernames, divCreatedUsername, 'taniumServerUsernameSelect', true);
-processInput(signingKeys, divCreatedSigningKey, 'taniumSigningKeySelect', true);
-
-var createdTaniumServerPassword = document.getElementById("createdTaniumServerPassword");
-
-var taniumSourceServerFqdnSelect = document.getElementById("taniumSourceServerFqdnSelect");
-var taniumDestServerFqdnSelect = document.getElementById("taniumDestServerFqdnSelect");
-var taniumServerUsernameSelect = document.getElementById("taniumServerUsernameSelect");
-var taniumSigningKeySelect = document.getElementById("taniumSigningKeySelect");
-
-createdTaniumServerPassword.addEventListener("input", enableProcessPackage);
 
 // handle messages from extension to webview
 window.addEventListener('message', event => {

@@ -84,7 +84,7 @@ export async function collectServerServerContentSetRoleInputs(config: WorkspaceC
                 addButton
             ],
             buttonTooltip: 'Add New Username',
-            quickPickPlaceholder: 'Please choose the source Tanium server username or click + upper right to add new',
+            quickPickPlaceholder: 'Please choose the dest Tanium server username or click + upper right to add new',
             activeItemPropertyName: 'rightUsernameQp',
             inputPrompt: 'Please enter the source Tanium server username',
         },
@@ -99,7 +99,7 @@ export async function collectServerServerContentSetRoleInputs(config: WorkspaceC
     ];
 
     const state = {} as Partial<ServerServerContentSetRoleState>;
-    await collectInputs('Compare Tanium Server ContentSets to Tanium Server ContentSets', state, steps);
+    await collectInputs('Compare Tanium Server Content Set Roles to Tanium Server Content Set Roles', state, steps);
 
     if (typeof state.leftFqdnQp === 'string') {
         if (fqdns.indexOf(state.leftFqdnQp) === -1) {

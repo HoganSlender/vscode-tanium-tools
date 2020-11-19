@@ -5,13 +5,21 @@ console.log('missing');
 var missingAddButton = document.getElementById("missingAddButton");
 var missingRemoveButton = document.getElementById("missingRemoveButton");
 var processMissingButton = document.getElementById("processMissingButton");
-processMissingButton.disabled = true;
+
+if (processMissingButton !== null) {
+    processMissingButton.disabled = true;
+}
 
 var missinglItems = document.getElementById("missinglitems");
 var missingrItems = document.getElementById("missingritems");
 
-missinglItems.addEventListener("dblclick", () => openFile(missinglItems));
-missingrItems.addEventListener("dblclick", () => openFile(missingrItems));
+if (missinglItems !== null) {
+    missinglItems.addEventListener("dblclick", () => openFile(missinglItems));
+}
+
+if (missingrItems !== null) {
+    missingrItems.addEventListener("dblclick", () => openFile(missingrItems));
+}
 
 var divShowServerInfo = document.getElementById('divShowServerInfo');
 var showServerInfo = divShowServerInfo.value === '1';
@@ -21,48 +29,56 @@ var divTransferIndividual = document.getElementById('divTransferIndividual');
 var transferIndividual = divTransferIndividual.value === '1';
 console.log(`transferIndividual: ${transferIndividual}`);
 
-missingAddButton.addEventListener("click", () => addButtonEvent(missinglItems, missingrItems));
-missingRemoveButton.addEventListener("click", () => removeButtonEvent(missingrItems, missinglItems));
-processMissingButton.addEventListener("click", processMissingItems);
+if (missingAddButton !== null) {
+    missingAddButton.addEventListener("click", () => addButtonEvent(missinglItems, missingrItems));
+}
+
+if (missingRemoveButton !== null) {
+    missingRemoveButton.addEventListener("click", () => removeButtonEvent(missingrItems, missinglItems));
+}
+
+if (processMissingButton !== null) {
+    processMissingButton.addEventListener("click", processMissingItems);
+}
 
 var divFqdns = document.getElementById("divFqdns");
 var divUsernames = document.getElementById("divUsernames");
 var divSigningKeys = document.getElementById("divSigningKeys");
 
-var divMissingSourceFqdn = document.getElementById("divMissingSourceFqdn");
-var divMissingDestFqdn = document.getElementById("divMissingDestFqdn");
-var divMissingUsername = document.getElementById("divMissingUsername");
-var divMissingSigningKey = document.getElementById("divMissingSigningKey");
-
 if (!showServerInfo) {
     serverInfo.style.visibility = 'hidden';
+} else {
+    var divMissingSourceFqdn = document.getElementById("divMissingSourceFqdn");
+    var divMissingDestFqdn = document.getElementById("divMissingDestFqdn");
+    var divMissingUsername = document.getElementById("divMissingUsername");
+    var divMissingSigningKey = document.getElementById("divMissingSigningKey");
+
+    var fqdnsText = divFqdns.innerHTML;
+
+    var fqdns = fqdnsText.split(',');
+
+    var usernamesText = divUsernames.innerHTML;
+
+    var usernames = usernamesText.split(',');
+
+    var signingKeysText = divSigningKeys.innerHTML;
+
+    var signingKeys = signingKeysText.split(',');
+
+    processInput(fqdns, divMissingSourceFqdn, 'taniumSourceServerFqdnSelect', false);
+    processInput(fqdns, divMissingDestFqdn, 'taniumDestServerFqdnSelect', true);
+    processInput(usernames, divMissingUsername, 'taniumServerUsernameSelect', true);
+    processInput(signingKeys, divMissingSigningKey, 'taniumSigningKeySelect', true);
+
+    var missingTaniumServerPassword = document.getElementById("missingTaniumServerPassword");
+
+    var taniumSourceServerFqdnSelect = document.getElementById("taniumSourceServerFqdnSelect");
+    var taniumDestServerFqdnSelect = document.getElementById("taniumDestServerFqdnSelect");
+    var taniumServerUsernameSelect = document.getElementById("taniumServerUsernameSelect");
+    var taniumSigningKeySelect = document.getElementById("taniumSigningKeySelect");
+
+    missingTaniumServerPassword.addEventListener("input", enableProcessPackage);
 }
-
-var fqdnsText = divFqdns.innerHTML;
-
-var fqdns = fqdnsText.split(',');
-
-var usernamesText = divUsernames.innerHTML;
-
-var usernames = usernamesText.split(',');
-
-var signingKeysText = divSigningKeys.innerHTML;
-
-var signingKeys = signingKeysText.split(',');
-
-processInput(fqdns, divMissingSourceFqdn, 'taniumSourceServerFqdnSelect', false);
-processInput(fqdns, divMissingDestFqdn, 'taniumDestServerFqdnSelect', true);
-processInput(usernames, divMissingUsername, 'taniumServerUsernameSelect', true);
-processInput(signingKeys, divMissingSigningKey, 'taniumSigningKeySelect', true);
-
-var missingTaniumServerPassword = document.getElementById("missingTaniumServerPassword");
-
-var taniumSourceServerFqdnSelect = document.getElementById("taniumSourceServerFqdnSelect");
-var taniumDestServerFqdnSelect = document.getElementById("taniumDestServerFqdnSelect");
-var taniumServerUsernameSelect = document.getElementById("taniumServerUsernameSelect");
-var taniumSigningKeySelect = document.getElementById("taniumSigningKeySelect");
-
-missingTaniumServerPassword.addEventListener("input", enableProcessPackage);
 
 // handle messages from extension to webview
 window.addEventListener('message', event => {

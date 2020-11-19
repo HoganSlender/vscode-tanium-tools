@@ -24,6 +24,8 @@
 		"onCommand:hoganslendertanium.compareServerServerContentSets",
 		"onCommand:hoganslendertanium.compareServerServerContentSetPrivileges",
 		"onCommand:hoganslendertanium.compareServerServerContentSetRoles",
+		"onCommand:hoganslendertanium.compareServerServerContentSetRolePrivileges",
+		"onCommand:hoganslendertanium.compareServerServerContentSetRoleMemberships",
 		"onCommand:hoganslendertanium.generateExportFileMissingSensors",
 		"onCommand:hoganslendertanium.signContentFile",
 		"onCommand:hoganslendertanium.generateExportFileModifiedSensors",
@@ -34,6 +36,7 @@
 		"onCommand:hoganslendertanium.analyzeContentSets",
 		"onCommand:hoganslendertanium.analyzeContentSetPrivileges",
 		"onCommand:hoganslendertanium.analyzeContentSetRoles",
+		"onCommand:hoganslendertanium.analyzeContentSetRolePrivileges",
 		"onCommand:hoganslendertanium.downloadPackageFiles",
 		"onCommand:hoganslendertanium.workspaceInit"
 	],
@@ -63,6 +66,16 @@
 			{
 				"command": "hoganslendertanium.compareServerServerContentSetRoles",
 				"title": "Compare Tanium Server Content Set Roles",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.compareServerServerContentSetRolePrivileges",
+				"title": "Compare Tanium Server Content Set Role Privileges",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.compareServerServerContentSetRoleMemberships",
+				"title": "Compare Tanium Server Content Set Role Memberships",
 				"category": "Tanium"
 			},
 			{
@@ -116,6 +129,11 @@
 				"category": "Tanium"
 			},
 			{
+				"command": "hoganslendertanium.analyzeContentSetRolePrivileges",
+				"title": "Analyze Content Set Role Privileges",
+				"category": "Tanium"
+			},
+			{
 				"command": "hoganslendertanium.downloadPackageFiles",
 				"title": "Download Package Files",
 				"category": "Tanium"
@@ -155,6 +173,10 @@
 				{
 					"command": "hoganslendertanium.analyzeContentSetRoles",
 					"when": "false"
+				},
+				{
+					"command": "hoganslendertanium.analyzeContentSetRolePrivileges",
+					"when": "false"
 				}
 			],
 			"explorer/context": [
@@ -190,6 +212,11 @@
 				},
 				{
 					"command": "hoganslendertanium.analyzeContentSetRoles",
+					"group": "3_compare@1",
+					"when": "explorerResourceIsFolder && listDoubleSelection"
+				},
+				{
+					"command": "hoganslendertanium.analyzeContentSetRolePrivileges",
 					"group": "3_compare@1",
 					"when": "explorerResourceIsFolder && listDoubleSelection"
 				}

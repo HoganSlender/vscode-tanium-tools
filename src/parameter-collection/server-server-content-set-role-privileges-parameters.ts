@@ -1,7 +1,7 @@
 import { collectInputs, MyButton, Step, StepType } from "./multi-step-input";
 import { QuickPickItem, WorkspaceConfiguration, ExtensionContext, Uri, ConfigurationTarget } from "vscode";
 
-interface ServerServerContentSetPrivilegeState {
+interface ServerServerContentSetRolePrivilegeState {
     leftFqdnQp: QuickPickItem | string;
     leftUsernameQp: QuickPickItem | string;
     leftPassword: string;
@@ -14,7 +14,7 @@ interface ServerServerContentSetPrivilegeState {
     rightUsername: string;
 }
 
-export async function collectServerServerContentSetPrivilegeInputs(config: WorkspaceConfiguration, context: ExtensionContext) {
+export async function collectServerServerContentSetRolePrivilegeInputs(config: WorkspaceConfiguration, context: ExtensionContext) {
     const addButton = new MyButton({
         dark: Uri.file(context.asAbsolutePath('resources/dark/add.svg')),
         light: Uri.file(context.asAbsolutePath('resources/light/add.svg')),
@@ -98,8 +98,8 @@ export async function collectServerServerContentSetPrivilegeInputs(config: Works
         }
     ];
 
-    const state = {} as Partial<ServerServerContentSetPrivilegeState>;
-    await collectInputs('Compare Tanium Server Content Set Privileges to Tanium Server Content Set Privileges', state, steps);
+    const state = {} as Partial<ServerServerContentSetRolePrivilegeState>;
+    await collectInputs('Compare Tanium Server ContentSet Role Privileges to Tanium Server Content Set Role Privileges', state, steps);
 
     if (typeof state.leftFqdnQp === 'string') {
         if (fqdns.indexOf(state.leftFqdnQp) === -1) {
@@ -142,5 +142,5 @@ export async function collectServerServerContentSetPrivilegeInputs(config: Works
     }
 
     // store data
-    return state as ServerServerContentSetPrivilegeState;
+    return state as ServerServerContentSetRolePrivilegeState;
 }

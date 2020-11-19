@@ -9,46 +9,50 @@ html(lang='en')
         table(style='border: 1px solid black;')
             tr
                 td #[b Modified #{myTitle}]
-                td
-                td #[b Selected #{myTitle}]
+                if !readOnly
+                    td
+                    td #[b Selected #{myTitle}]
             tr
                 td
                     select(id='modifiedlitems' name='modifiedlitems' multiple='multiple' size='40' style='min-width: 600px;min-height: 800px;')
                         each item in modifiedItems
                             option(value=item.path) #{item.name}
-                td
-                    button(type='button' id='modifiedAddButton') >
-                    br
-                    br
-                    button(type='button' id='modifiedRemoveButton') <
-                td
-                    select(id='modifiedritems' name='modifiedritems' multiple='multiple' size='40' style='min-width: 600px;min-height: 800px;')
-            tr
-                td(colspan='3' align='right')
-                    table(id='serverInfo')
-                        tr
-                            td Source Tanium Server FQDN
-                            td 
-                                div(id='divModifiedSourceFqdn')
-                        tr
-                            td Destination Tanium Server FQDN
-                            td
-                                div(id='divModifiedDestFqdn')
-                        tr
-                            td Destination Tanium Server Username
-                            td
-                                div(id='divModifiedUsername')
-                        tr
-                            td Destination Tanium Server Password
-                            td
-                                input(id='modifiedTaniumServerPassword' type='password')
-                        tr
-                            td Destination Tanium Server Signing Keys
-                            td
-                                div(id='divModifiedSigningKey')
-            tr
-                td(colspan='3' align='right' )
-                    button(id='processModifiedButton') Process #{myTitle}
+                if !readOnly
+                    td
+                        button(type='button' id='modifiedAddButton') >
+                        br
+                        br
+                        button(type='button' id='modifiedRemoveButton') <
+                    td
+                        select(id='modifiedritems' name='modifiedritems' multiple='multiple' size='40' style='min-width: 600px;min-height: 800px;')
+            if !readOnly
+                tr
+                    td(colspan='3' align='right')
+                        table(id='serverInfo')
+                            tr
+                                td Source Tanium Server FQDN
+                                td 
+                                    div(id='divModifiedSourceFqdn')
+                            tr
+                                td Destination Tanium Server FQDN
+                                td
+                                    div(id='divModifiedDestFqdn')
+                            tr
+                                td Destination Tanium Server Username
+                                td
+                                    div(id='divModifiedUsername')
+                            tr
+                                td Destination Tanium Server Password
+                                td
+                                    input(id='modifiedTaniumServerPassword' type='password')
+                            tr
+                                td Destination Tanium Server Signing Keys
+                                td
+                                    div(id='divModifiedSigningKey')
+            if !readOnly
+                tr
+                    td(colspan='3' align='right' )
+                        button(id='processModifiedButton') Process #{myTitle}
         div(id='divFqdns' style='visibility: hidden;') #{fqdns}
         div(id='divUsernames' style='visibility: hidden;') #{usernames}
         div(id='divSigningKeys' style='visibility: hidden;') #{signingKeys}

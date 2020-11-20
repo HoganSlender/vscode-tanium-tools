@@ -7,6 +7,7 @@ import path = require('path');
 import { OutputChannelLogging } from '../common/logging';
 import { PathUtils } from '../common/pathUtils';
 import { WebContentUtils } from '../common/webContentUtils';
+import { resolve } from 'path';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -196,40 +197,51 @@ export class ContentSets {
     }
 
     static async transferItems(items: any[]) {
-        // generate json
-        var importJson = {
-            object_list: {
-                content_sets: []
-            },
-            version: 2
-        };
+        const p = new Promise((resolve, reject) => {
+            try {
+                // generate json
+                var importJson = {
+                    object_list: {
+                        content_sets: []
+                    },
+                    version: 2
+                };
 
-        var content_sets: any = [];
+                var content_sets: any = [];
 
-        for (var i = 0; i < items.length; i++) {
-            const item = items[i];
+                for (var i = 0; i < items.length; i++) {
+                    const item = items[i];
 
-            const path = item.path.split('~')[0];
-            const name = item.name;
+                    const path = item.path.split('~')[0];
+                    const name = item.name;
 
-            // get content set data from file
-            const contentSetFromFile: any = JSON.parse(fs.readFileSync(path, 'utf-8'));
+                    // get content set data from file
+                    const contentSetFromFile: any = JSON.parse(fs.readFileSync(path, 'utf-8'));
 
-            // add to importJson
-            content_sets.push(contentSetFromFile);
-        }
+                    // add to importJson
+                    content_sets.push(contentSetFromFile);
+                }
 
-        importJson.object_list.content_sets = content_sets;
+                importJson.object_list.content_sets = content_sets;
 
-        // save file to base
-        const baseDir = PathUtils.getPath(PathUtils.getPath(items[0].path.split('~')[0]));
-        const tempPath = path.join(baseDir, uuidv4() + '.json');
-        fs.writeFileSync(tempPath, `${JSON.stringify(importJson, null, 2)}\r\n`, 'utf-8');
+                // save file to base
+                const baseDir = PathUtils.getPath(PathUtils.getPath(items[0].path.split('~')[0]));
+                const tempPath = path.join(baseDir, uuidv4() + '.json');
+                fs.writeFileSync(tempPath, `${JSON.stringify(importJson, null, 2)}\r\n`, 'utf-8');
 
-        // open file
-        vscode.commands.executeCommand('vscode.open', vscode.Uri.file(tempPath), {
-            preview: false,
-            viewColumn: vscode.ViewColumn.Active,
+                // open file
+                vscode.commands.executeCommand('vscode.open', vscode.Uri.file(tempPath), {
+                    preview: false,
+                    viewColumn: vscode.ViewColumn.Active,
+                });
+
+                resolve();
+            } catch (err) {
+                OutputChannelLogging.logError('error transferring content sets', err);
+                reject();
+            }
         });
+
+        return p;
     }
 }

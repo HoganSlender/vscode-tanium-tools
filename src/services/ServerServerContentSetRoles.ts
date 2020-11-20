@@ -51,8 +51,8 @@ export class ServerServerContentSetRoles {
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}~ContentSetRoles`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}~ContentSetRoles`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}%ContentSetRoles`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}%ContentSetRoles`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -129,15 +129,6 @@ export class ServerServerContentSetRoles {
 
                         if (i % 30 === 0 || i === contentSetRoleTotal) {
                             OutputChannelLogging.log(`processing ${i + 1} of ${contentSetRoleTotal}`);
-                        }
-
-                        if (contentSetRole?.content_set?.name === 'Reserved') {
-                            contentSetRoleCounter++;
-
-                            if (contentSetRoleTotal === contentSetRoleCounter) {
-                                OutputChannelLogging.log(`processed ${contentSetRoleTotal} content set roles from ${fqdn}`);
-                                resolve();
-                            }
                         }
 
                         // get export

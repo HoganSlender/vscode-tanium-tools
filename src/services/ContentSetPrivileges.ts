@@ -197,40 +197,51 @@ export class ContentSetPrivileges {
     }
 
     static async transferItems(items: any[]) {
-        // generate json
-        var importJson = {
-            object_list: {
-                content_set_privileges: []
-            },
-            version: 2
-        };
+        const p = new Promise((resolve, reject) => {
+            try {
+                // generate json
+                var importJson = {
+                    object_list: {
+                        content_set_privileges: []
+                    },
+                    version: 2
+                };
 
-        var content_set_privileges: any = [];
+                var content_set_privileges: any = [];
 
-        for (var i = 0; i < items.length; i++) {
-            const item = items[i];
+                for (var i = 0; i < items.length; i++) {
+                    const item = items[i];
 
-            const path = item.path.split('~')[0];
-            const name = item.name;
+                    const path = item.path.split('~')[0];
+                    const name = item.name;
 
-            // get content set data from file
-            const contentSetFromFile: any = JSON.parse(fs.readFileSync(path, 'utf-8'));
+                    // get content set data from file
+                    const contentSetFromFile: any = JSON.parse(fs.readFileSync(path, 'utf-8'));
 
-            // add to importJson
-            content_set_privileges.push(contentSetFromFile);
-        }
+                    // add to importJson
+                    content_set_privileges.push(contentSetFromFile);
+                }
 
-        importJson.object_list.content_set_privileges = content_set_privileges;
+                importJson.object_list.content_set_privileges = content_set_privileges;
 
-        // save file to base
-        const baseDir = PathUtils.getPath(PathUtils.getPath(items[0].path.split('~')[0]));
-        const tempPath = path.join(baseDir, uuidv4() + '.json');
-        fs.writeFileSync(tempPath, `${JSON.stringify(importJson, null, 2)}\r\n`, 'utf-8');
+                // save file to base
+                const baseDir = PathUtils.getPath(PathUtils.getPath(items[0].path.split('~')[0]));
+                const tempPath = path.join(baseDir, uuidv4() + '.json');
+                fs.writeFileSync(tempPath, `${JSON.stringify(importJson, null, 2)}\r\n`, 'utf-8');
 
-        // open file
-        vscode.commands.executeCommand('vscode.open', vscode.Uri.file(tempPath), {
-            preview: false,
-            viewColumn: vscode.ViewColumn.Active,
+                // open file
+                vscode.commands.executeCommand('vscode.open', vscode.Uri.file(tempPath), {
+                    preview: false,
+                    viewColumn: vscode.ViewColumn.Active,
+                });
+
+                resolve();
+            } catch (err) {
+                OutputChannelLogging.logError('error transferring content set privileges', err);
+                reject();
+            }
         });
+
+        return p;
     }
 }

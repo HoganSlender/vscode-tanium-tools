@@ -52,8 +52,8 @@ export class ServerServerContentSets {
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}~ContentSets`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}~ContentSets`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}%ContentSets`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}%ContentSets`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -130,15 +130,6 @@ export class ServerServerContentSets {
 
                         if (i % 30 === 0 || i === contentSetTotal) {
                             OutputChannelLogging.log(`processing ${i + 1} of ${contentSetTotal}`);
-                        }
-
-                        if (contentSet?.content_set?.name === 'Reserved') {
-                            contentSetCounter++;
-
-                            if (contentSetTotal === contentSetCounter) {
-                                OutputChannelLogging.log(`processed ${contentSetTotal} packages from ${fqdn}`);
-                                resolve();
-                            }
                         }
 
                         // get export

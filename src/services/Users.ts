@@ -7,6 +7,7 @@ import { RestClient } from '../common/restClient';
 import { PathUtils } from '../common/pathUtils';
 import { WebContentUtils } from '../common/webContentUtils';
 import { Session } from '../common/session';
+import { reject } from 'lodash';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -236,7 +237,7 @@ export class Users {
         });
     }
 
-    static retrieveUserMap(allowSelfSignedCerts: boolean, httpTimeout: number, restBase: string, session: string): any {
+    static retrieveUserMapById(allowSelfSignedCerts: boolean, httpTimeout: number, restBase: string, session: string): any {
         const p = new Promise((resolve, reject) => {
             try {
                 (async () => {
@@ -277,6 +278,46 @@ export class Users {
         return p;
     }
 
+    static retrieveUserMapByName(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, session: string): any {
+        const p = new Promise((resolve, reject) => {
+            try {
+                (async () => {
+                    var users: any = {};
+                    var userData: [any];
+
+                    // get users
+                    try {
+                        const body = await RestClient.get(`https://${fqdn}/api/v2/users`, {
+                            headers: {
+                                session: session,
+                            },
+                            responseType: 'json',
+                        }, allowSelfSignedCerts, httpTimeout);
+
+                        OutputChannelLogging.log(`users retrieved`);
+                        userData = body.data;
+                    } catch (err) {
+                        OutputChannelLogging.logError(`error retrieving users`, err);
+                        return reject();
+                    }
+
+                    // create map
+                    for (var i = 0; i < userData.length; i++) {
+                        const user = userData[i];
+                        users[user.name] = user;
+                    }
+
+                    resolve(users);
+                })();
+            } catch (err) {
+                OutputChannelLogging.logError(`error retrieving users`, err);
+                reject();
+            }
+        });
+
+        return p;
+    }
+
     static anonymizeUser(user: any): any {
         return {
             name: user.name,
@@ -293,35 +334,47 @@ export class Users {
         filePath: string,
         targetFilePath: string,
         userName: string) {
-        OutputChannelLogging.initialize();
+        const p = new Promise(async (resolve, reject) => {
+            try {
+                OutputChannelLogging.initialize();
 
-        // get package data from file
-        const userFromFile = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+                // get package data from file
+                const userFromFile = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
-        try {
-            // get session
-            const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
+                try {
+                    // get session
+                    const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
 
-            // import user
-            const restBase = `https://${destFqdn}/api/v2`;
+                    // import user
+                    const restBase = `https://${destFqdn}/api/v2`;
 
-            OutputChannelLogging.log(`importing ${userName} into ${destFqdn}`);
+                    OutputChannelLogging.log(`importing ${userName} into ${destFqdn}`);
 
-            const data = await RestClient.post(`${restBase}/users`, {
-                headers: {
-                    session: session,
-                },
-                json: userFromFile,
-                responseType: 'json',
-            }, allowSelfSignedCerts, httpTimeout);
+                    const data = await RestClient.post(`${restBase}/users`, {
+                        headers: {
+                            session: session,
+                        },
+                        json: userFromFile,
+                        responseType: 'json',
+                    }, allowSelfSignedCerts, httpTimeout);
 
-            OutputChannelLogging.log(`importing ${userName} complete`);
+                    OutputChannelLogging.log(`importing ${userName} complete`);
 
-            // create the missing file
-            const targetContents = fs.readFileSync(filePath, 'utf-8');
-            fs.writeFileSync(targetFilePath, targetContents);
-        } catch (err) {
-            OutputChannelLogging.logError('error importing user', err);
-        }
+                    // create the missing file
+                    const targetContents = fs.readFileSync(filePath, 'utf-8');
+                    fs.writeFileSync(targetFilePath, targetContents);
+                } catch (err) {
+                    OutputChannelLogging.logError('error importing user', err);
+                    reject();
+                }
+
+                resolve();
+            } catch (err) {
+                OutputChannelLogging.logError('error transferring users', err);
+                reject();
+            }
+        });
+
+        return p;
     }
 }

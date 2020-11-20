@@ -51,8 +51,8 @@ class ServerServerUsers {
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}~Users`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}~Users`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}%Users`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}%Users`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -72,9 +72,9 @@ class ServerServerUsers {
             const increment = 50;
 
             progress.report({ increment: increment, message: `user retrieval from ${leftFqdn}` });
-            await this.processServerContentSetPrivileges(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
+            await this.processServerUsers(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
             progress.report({ increment: increment, message: `user retrieval from ${rightFqdn}` });
-            await this.processServerContentSetPrivileges(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
+            await this.processServerUsers(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise(resolve => {
                 setTimeout(() => {
                     resolve();
@@ -88,7 +88,7 @@ class ServerServerUsers {
         Users.analyzeUsers(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
     }
 
-    static processServerContentSetPrivileges(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
+    static processServerUsers(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
         const restBase = `https://${fqdn}/api/v2`;
 
         const p = new Promise(async (resolve, reject) => {

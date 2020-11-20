@@ -17,6 +17,7 @@ import * as contentSetRoles from './services/ContentSetRoles';
 import * as contentSetRolePrivileges from './services/ContentSetRolePrivileges';
 import { OutputChannelLogging } from './common/logging';
 import * as users from './services/Users';
+import * as contentSetRoleMemberships from './services/ContentSetRoleMemberships';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -40,6 +41,7 @@ export function activate(context: ExtensionContext) {
 	contentSetRoles.activate(context);
 	contentSetRolePrivileges.activate(context);
 	users.activate(context);
+	contentSetRoleMemberships.activate(context);
 }
 
 // this method is called when your extension is deactivated

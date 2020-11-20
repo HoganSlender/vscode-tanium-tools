@@ -39,6 +39,7 @@
 		"onCommand:hoganslendertanium.analyzeContentSetRoles",
 		"onCommand:hoganslendertanium.analyzeContentSetRolePrivileges",
 		"onCommand:hoganslendertanium.analyzeUsers",
+		"onCommand:hoganslendertanium.analyzeContentSetRoleMemberships",
 		"onCommand:hoganslendertanium.downloadPackageFiles",
 		"onCommand:hoganslendertanium.workspaceInit"
 	],
@@ -146,6 +147,11 @@
 				"category": "Tanium"
 			},
 			{
+				"command": "hoganslendertanium.analyzeContentSetRoleMemberships",
+				"title": "Analyze Content Set Role Memberships",
+				"category": "Tanium"
+			},
+			{
 				"command": "hoganslendertanium.downloadPackageFiles",
 				"title": "Download Package Files",
 				"category": "Tanium"
@@ -193,6 +199,10 @@
 				{
 					"command": "hoganslendertanium.analyzeUsers",
 					"when": "false"
+				},
+				{
+					"command": "hoganslendertanium.analyzeContentSetRoleMemberships",
+					"when": "false"
 				}
 			],
 			"explorer/context": [
@@ -214,32 +224,37 @@
 				{
 					"command": "hoganslendertanium.analyzePackages",
 					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*~Packages$/"
+					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%Packages$/"
 				},
 				{
 					"command": "hoganslendertanium.analyzeContentSets",
 					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*~ContentSets$/"
+					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%ContentSets$/"
 				},
 				{
 					"command": "hoganslendertanium.analyzeContentSetPrivileges",
 					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*~ContentSetPrivileges$/"
+					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%ContentSetPrivileges$/"
 				},
 				{
 					"command": "hoganslendertanium.analyzeContentSetRoles",
 					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*~ContentSetRoles$/"
+					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%ContentSetRoles$/"
 				},
 				{
 					"command": "hoganslendertanium.analyzeContentSetRolePrivileges",
 					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection && resourceFilename =~ /.*~ContentSetRolePrivileges$/"
+					"when": "explorerResourceIsFolder && listDoubleSelection && resourceFilename =~ /.*%ContentSetRolePrivileges$/"
 				},
 				{
 					"command": "hoganslendertanium.analyzeUsers",
 					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection && resourceFilename =~ /.*~Users$/"
+					"when": "explorerResourceIsFolder && listDoubleSelection && resourceFilename =~ /.*%Users$/"
+				},
+				{
+					"command": "hoganslendertanium.analyzeContentSetRoleMemberships",
+					"group": "3_compare@1",
+					"when": "explorerResourceIsFolder && listDoubleSelection && resourceFilename =~ /.*%ContentSetRoleMemberships$/"
 				}
 			]
 		},

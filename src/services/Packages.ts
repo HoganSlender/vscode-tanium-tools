@@ -318,118 +318,130 @@ export class Packages {
     }
 
     static async transferPackage(allowSelfSignedCerts: boolean, httpTimeout: number, sourceFqdn: string, destFqdn: string, username: string, password: string, filePath: string, targetFilePath: string, signingKey: SigningKey, packageName: string) {
-        OutputChannelLogging.initialize();
+        const p = new Promise(async (resolve, reject) => {
+            try {
+                OutputChannelLogging.initialize();
 
-        // get package data from file
-        const packageSpecFromFile = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+                // get package data from file
+                const packageSpecFromFile = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
-        // generate import json
-        const importJson = {
-            object_list: packageSpecFromFile,
-            version: 2
-        };
+                // generate import json
+                const importJson = {
+                    object_list: packageSpecFromFile,
+                    version: 2
+                };
 
-        // save file in temp
-        const tempDir = os.tmpdir();
-        const tempPath = path.join(tempDir, uuidv4());
-        fs.writeFileSync(tempPath, `${JSON.stringify(importJson)}\r\n`, 'utf-8');
-        OutputChannelLogging.log(`wrote package data to ${tempPath}`);
+                // save file in temp
+                const tempDir = os.tmpdir();
+                const tempPath = path.join(tempDir, uuidv4());
+                fs.writeFileSync(tempPath, `${JSON.stringify(importJson)}\r\n`, 'utf-8');
+                OutputChannelLogging.log(`wrote package data to ${tempPath}`);
 
-        // sign json
-        await SignContentFile.signContent(signingKey.keyUtilityPath, signingKey.privateKeyFilePath, tempPath);
-        OutputChannelLogging.log(`signed package data at ${tempPath}`);
+                // sign json
+                await SignContentFile.signContent(signingKey.keyUtilityPath, signingKey.privateKeyFilePath, tempPath);
+                OutputChannelLogging.log(`signed package data at ${tempPath}`);
 
-        // import into Tanium server
-        const signedContent = fs.readFileSync(tempPath, {
-            encoding: 'utf-8'
+                // import into Tanium server
+                const signedContent = fs.readFileSync(tempPath, {
+                    encoding: 'utf-8'
+                });
+
+                try {
+                    // get session
+                    const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
+
+                    // check for existing package; if exists then delete it
+                    const restBase = `https://${destFqdn}/api/v2`;
+                    try {
+                        const body = await RestClient.get(`${restBase}/packages/by-name/${packageSpecFromFile.package_specs[0].name}`, {
+                            headers: {
+                                session: session,
+                            },
+                            responseType: 'json',
+                        }, allowSelfSignedCerts, httpTimeout);
+
+                        const foundId = body.data.id;
+
+                        // delete package
+                        const deleteBody = await RestClient.delete(`${restBase}/packages/${foundId}`, {
+                            headers: {
+                                session: session,
+                            },
+                            responseType: 'json',
+                        }, allowSelfSignedCerts, httpTimeout);
+                        console.log(JSON.stringify(deleteBody));
+
+                    } catch (err) {
+                        // ignore, package doesn't exist
+                        console.log(err);
+                    }
+
+                    // import package
+                    OutputChannelLogging.log(`importing ${packageName} into ${destFqdn}`);
+
+                    const options = {
+                        hostname: destFqdn,
+                        port: 443,
+                        path: '/api/v2/import',
+                        method: 'POST',
+                        headers: {
+                            session: session,
+                            'Content-Type': 'text/plain',
+                            'Content-Length': signedContent.length
+                        },
+                        rejectUnauthorized: !allowSelfSignedCerts,
+                        timeout: httpTimeout
+                    };
+
+                    const data = await RestClient.postTextPlain(signedContent, options);
+                    const dataAsString = data.toString();
+
+                    OutputChannelLogging.log(`importing ${packageName} complete`);
+
+                    // process package files
+                    const packageSpec = packageSpecFromFile.package_specs[0];
+
+                    for (var i = 0; i < packageSpec.files.length; i++) {
+                        var packageFile = packageSpec.files[i];
+
+                        if (packageFile.source.length === 0) {
+                            OutputChannelLogging.log(`processing ${packageFile.name}`);
+
+                            // download file to temp dir
+                            const tempFilePath = path.join(tempDir, packageFile.hash);
+                            await RestClient.downloadFile(`https://${sourceFqdn}/cache/${packageFile.hash}`, tempFilePath, {}, allowSelfSignedCerts, httpTimeout);
+                            OutputChannelLogging.log(`downloaded ${packageFile.name} to ${tempFilePath}`);
+
+                            // upload file to tanium server
+                            OutputChannelLogging.log(`uploading ${packageFile.name} to ${destFqdn}`);
+                            await this.uploadFile(destFqdn, allowSelfSignedCerts, httpTimeout, username, password, tempFilePath, packageFile.name);
+                            OutputChannelLogging.log(`uploading ${packageFile.name} complete.`);
+
+                            // delete temp file
+                            fs.unlinkSync(tempFilePath);
+                        }
+                    }
+                    OutputChannelLogging.log(`all files processed for ${packageSpec.name}`);
+
+                    // delete package temp file
+                    fs.unlinkSync(tempPath);
+
+                    // create the missing file
+                    const targetContents = fs.readFileSync(filePath, 'utf-8');
+                    fs.writeFileSync(targetFilePath, targetContents);
+                } catch (err) {
+                    OutputChannelLogging.logError('error retrieving session', err);
+                    reject();
+                }
+
+                resolve();
+            } catch (err) {
+                OutputChannelLogging.logError('error transferring packages', err);
+                reject();
+            }
         });
 
-        try {
-            // get session
-            const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
-
-            // check for existing package; if exists then delete it
-            const restBase = `https://${destFqdn}/api/v2`;
-            try {
-                const body = await RestClient.get(`${restBase}/packages/by-name/${packageSpecFromFile.package_specs[0].name}`, {
-                    headers: {
-                        session: session,
-                    },
-                    responseType: 'json',
-                }, allowSelfSignedCerts, httpTimeout);
-
-                const foundId = body.data.id;
-
-                // delete package
-                const deleteBody = await RestClient.delete(`${restBase}/packages/${foundId}`, {
-                    headers: {
-                        session: session,
-                    },
-                    responseType: 'json',
-                }, allowSelfSignedCerts, httpTimeout);
-                console.log(JSON.stringify(deleteBody));
-
-            } catch (err) {
-                // ignore, package doesn't exist
-                console.log(err);
-            }
-
-            // import package
-            OutputChannelLogging.log(`importing ${packageName} into ${destFqdn}`);
-
-            const options = {
-                hostname: destFqdn,
-                port: 443,
-                path: '/api/v2/import',
-                method: 'POST',
-                headers: {
-                    session: session,
-                    'Content-Type': 'text/plain',
-                    'Content-Length': signedContent.length
-                },
-                rejectUnauthorized: !allowSelfSignedCerts,
-                timeout: httpTimeout
-            };
-
-            const data = await RestClient.postTextPlain(signedContent, options);
-            const dataAsString = data.toString();
-
-            OutputChannelLogging.log(`importing ${packageName} complete`);
-
-            // process package files
-            const packageSpec = packageSpecFromFile.package_specs[0];
-
-            for (var i = 0; i < packageSpec.files.length; i++) {
-                var packageFile = packageSpec.files[i];
-
-                if (packageFile.source.length === 0) {
-                    OutputChannelLogging.log(`processing ${packageFile.name}`);
-
-                    // download file to temp dir
-                    const tempFilePath = path.join(tempDir, packageFile.hash);
-                    await RestClient.downloadFile(`https://${sourceFqdn}/cache/${packageFile.hash}`, tempFilePath, {}, allowSelfSignedCerts, httpTimeout);
-                    OutputChannelLogging.log(`downloaded ${packageFile.name} to ${tempFilePath}`);
-
-                    // upload file to tanium server
-                    OutputChannelLogging.log(`uploading ${packageFile.name} to ${destFqdn}`);
-                    await this.uploadFile(destFqdn, allowSelfSignedCerts, httpTimeout, username, password, tempFilePath, packageFile.name);
-                    OutputChannelLogging.log(`uploading ${packageFile.name} complete.`);
-
-                    // delete temp file
-                    fs.unlinkSync(tempFilePath);
-                }
-            }
-            OutputChannelLogging.log(`all files processed for ${packageSpec.name}`);
-
-            // delete package temp file
-            fs.unlinkSync(tempPath);
-
-            // create the missing file
-            const targetContents = fs.readFileSync(filePath, 'utf-8');
-            fs.writeFileSync(targetFilePath, targetContents);
-        } catch (err) {
-            OutputChannelLogging.logError('error retrieving session', err);
-        }
+        return p;
     }
 
     static async uploadFile(destFqdn: string, allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, tempFilePath: string, packageFileName: string) {

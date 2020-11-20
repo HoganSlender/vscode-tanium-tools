@@ -10,6 +10,7 @@ import { RestClient } from '../common/restClient';
 import { collectServerServerContentSetRoleMembershipInputs } from '../parameter-collection/server-server-content-set-role-memberships-parameters';
 import { ServerServerContentSetRoles } from './ServerServerContentSetRoles';
 import { Users } from './Users';
+import { ContentSetRoleMemberships } from './ContentSetRoleMemberships';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -53,8 +54,8 @@ class ServerServerContentSetRoleMemberships {
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}%ContentSetRoleMemberships`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}%ContentSetRoleMemberships`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -87,7 +88,7 @@ class ServerServerContentSetRoleMemberships {
         });
 
         // analyze content sets
-        //ContentSetRolePrivileges.analyzeContentSetRolePrivileges(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
+        ContentSetRoleMemberships.analyzeContentSetRoleMemberships(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
     }
     static processServerContentSetRoleMemberships(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
         const restBase = `https://${fqdn}/api/v2`;
@@ -101,7 +102,7 @@ class ServerServerContentSetRoleMemberships {
                 var contentSetRoles = await ServerServerContentSetRoles.retrieveContentSetRoleMap(allowSelfSignedCerts, httpTimeout, restBase, session);
 
                 OutputChannelLogging.log(`user retrieval - initialized for ${fqdn}`);
-                var users = await Users.retrieveUserMap(allowSelfSignedCerts, httpTimeout, restBase, session);
+                var users = await Users.retrieveUserMapById(allowSelfSignedCerts, httpTimeout, restBase, session);
 
                 (async () => {
                     OutputChannelLogging.log(`content set role memberships retrieval - initialized for ${fqdn}`);
@@ -129,54 +130,64 @@ class ServerServerContentSetRoleMemberships {
                     for (var i = 0; i < content_set_role_memberships.length; i++) {
                         const contentSetRoleMembership: any = content_set_role_memberships[i];
 
-                        var newObject: any = {};
-
-                        newObject['content_set_role'] = {
-                            name: contentSetRoles[contentSetRoleMembership.content_set_role.id]
-                        };
-
-                        newObject['user'] = users[contentSetRoleMembership.user.id];
-
-                        if (i % 30 === 0 || i === contentSetRoleMembershipTotal) {
-                            OutputChannelLogging.log(`processing ${i + 1} of ${contentSetRoleMembershipTotal}`);
-                        }
-
-                        // get export
-                        try {
-                            const contentSetRoleMembershipName: string = sanitize(newObject.user.name + '-' + newObject.content_set_role.name);
-
-                            try {
-                                const content: string = JSON.stringify(newObject, null, 2);
-
-                                const contentSetRoleMembershipFile = path.join(directory, contentSetRoleMembershipName + '.json');
-                                fs.writeFile(contentSetRoleMembershipFile, content, (err) => {
-                                    if (err) {
-                                        OutputChannelLogging.logError(`could not write ${contentSetRoleMembershipFile}`, err);
-                                    }
-
-                                    contentSetRoleMembershipCounter++;
-
-                                    if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
-                                        OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role memberships from ${fqdn}`);
-                                        resolve();
-                                    }
-                                });
-                            } catch (err) {
-                                OutputChannelLogging.logError(`error processing ${label} content set role memberships ${contentSetRoleMembershipName}`, err);
-                                contentSetRoleMembershipCounter++;
-
-                                if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
-                                    OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role membership from ${fqdn}`);
-                                    resolve();
-                                }
-                            }
-                        } catch (err) {
-                            OutputChannelLogging.logError(`saving content set role membership file for ${contentSetRoleMembership.name} from ${fqdn}`, err);
+                        // check for deleted
+                        if (contentSetRoleMembership.deleted_flag === 1) {
                             contentSetRoleMembershipCounter++;
 
                             if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
                                 OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role memberships from ${fqdn}`);
                                 resolve();
+                            }
+                        } else {
+                            var newObject: any = {};
+
+                            newObject['content_set_role'] = {
+                                name: contentSetRoles[contentSetRoleMembership.content_set_role.id]
+                            };
+
+                            newObject['user'] = users[contentSetRoleMembership.user.id];
+
+                            if (i % 30 === 0 || i === contentSetRoleMembershipTotal) {
+                                OutputChannelLogging.log(`processing ${i + 1} of ${contentSetRoleMembershipTotal}`);
+                            }
+
+                            // get export
+                            try {
+                                const contentSetRoleMembershipName: string = sanitize(newObject.user.name + '-' + newObject.content_set_role.name);
+
+                                try {
+                                    const content: string = JSON.stringify(newObject, null, 2);
+
+                                    const contentSetRoleMembershipFile = path.join(directory, contentSetRoleMembershipName + '.json');
+                                    fs.writeFile(contentSetRoleMembershipFile, content, (err) => {
+                                        if (err) {
+                                            OutputChannelLogging.logError(`could not write ${contentSetRoleMembershipFile}`, err);
+                                        }
+
+                                        contentSetRoleMembershipCounter++;
+
+                                        if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
+                                            OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role memberships from ${fqdn}`);
+                                            resolve();
+                                        }
+                                    });
+                                } catch (err) {
+                                    OutputChannelLogging.logError(`error processing ${label} content set role memberships ${contentSetRoleMembershipName}`, err);
+                                    contentSetRoleMembershipCounter++;
+
+                                    if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
+                                        OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role membership from ${fqdn}`);
+                                        resolve();
+                                    }
+                                }
+                            } catch (err) {
+                                OutputChannelLogging.logError(`saving content set role membership file for ${contentSetRoleMembership.name} from ${fqdn}`, err);
+                                contentSetRoleMembershipCounter++;
+
+                                if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
+                                    OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role memberships from ${fqdn}`);
+                                    resolve();
+                                }
                             }
                         }
                     }

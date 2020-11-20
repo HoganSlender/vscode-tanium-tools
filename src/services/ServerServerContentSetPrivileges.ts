@@ -51,8 +51,8 @@ export class ServerServerContentSetPrivileges {
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}~ContentSetPrivileges`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}~ContentSetPrivileges`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}%ContentSetPrivileges`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}%ContentSetPrivileges`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -107,8 +107,8 @@ export class ServerServerContentSetPrivileges {
                                 session: session,
                             },
                             json: {
-                                "content_set_privileges": {
-                                    "include_all": true,
+                                content_set_privileges: {
+                                    include_all: true
                                 }
                             },
                             responseType: 'json',
@@ -129,15 +129,6 @@ export class ServerServerContentSetPrivileges {
 
                         if (i % 30 === 0 || i === contentSetPrivilegeTotal) {
                             OutputChannelLogging.log(`processing ${i + 1} of ${contentSetPrivilegeTotal}`);
-                        }
-
-                        if (contentSetPrivilege?.content_set?.name === 'Reserved') {
-                            contentSetPrivilegeCounter++;
-
-                            if (contentSetPrivilegeTotal === contentSetPrivilegeCounter) {
-                                OutputChannelLogging.log(`processed ${contentSetPrivilegeTotal} content set privileges from ${fqdn}`);
-                                resolve();
-                            }
                         }
 
                         // get export

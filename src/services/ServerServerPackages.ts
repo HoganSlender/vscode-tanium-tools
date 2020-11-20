@@ -51,8 +51,8 @@ class ServerServerPackages {
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}~Packages`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}~Packages`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}%Packages`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}%Packages`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -126,66 +126,66 @@ class ServerServerPackages {
                             OutputChannelLogging.log(`processing ${i + 1} of ${packageSpecTotal}`);
                         }
 
-                        if (packageSpec?.content_set?.name === 'Reserved') {
+                        if (packageSpec.deleted_flag) {
                             packageSpecCounter++;
 
                             if (packageSpecTotal === packageSpecCounter) {
                                 OutputChannelLogging.log(`processed ${packageSpecTotal} packages from ${fqdn}`);
                                 resolve();
                             }
-                        }
-
-                        // get export
-                        try {
-                            const body = await RestClient.post(`${restBase}/export`, {
-                                headers: {
-                                    session: session,
-                                },
-                                json: {
-                                    package_specs: {
-                                        include: [
-                                            packageSpec.name
-                                        ]
-                                    }
-                                },
-                                responseType: 'json',
-                            }, allowSelfSignedCerts, httpTimeout);
-
-                            const taniumPackage: any = body.data.object_list.package_specs[0];
-                            const packageName: string = sanitize(taniumPackage.name);
-
+                        } else {
+                           // get export
                             try {
-                                const content: string = JSON.stringify(body.data.object_list, null, 2);
+                                const body = await RestClient.post(`${restBase}/export`, {
+                                    headers: {
+                                        session: session,
+                                    },
+                                    json: {
+                                        package_specs: {
+                                            include: [
+                                                packageSpec.name
+                                            ]
+                                        }
+                                    },
+                                    responseType: 'json',
+                                }, allowSelfSignedCerts, httpTimeout);
 
-                                const packageFile = path.join(directory, packageName + '.json');
-                                fs.writeFile(packageFile, content, (err) => {
-                                    if (err) {
-                                        OutputChannelLogging.logError(`could not write ${packageFile}`, err);
-                                    }
+                                const taniumPackage: any = body.data.object_list.package_specs[0];
+                                const packageName: string = sanitize(taniumPackage.name);
 
+                                try {
+                                    const content: string = JSON.stringify(body.data.object_list, null, 2);
+
+                                    const packageFile = path.join(directory, packageName + '.json');
+                                    fs.writeFile(packageFile, content, (err) => {
+                                        if (err) {
+                                            OutputChannelLogging.logError(`could not write ${packageFile}`, err);
+                                        }
+
+                                        packageSpecCounter++;
+
+                                        if (packageSpecTotal === packageSpecCounter) {
+                                            OutputChannelLogging.log(`processed ${packageSpecTotal} packages from ${fqdn}`);
+                                            resolve();
+                                        }
+                                    });
+                                } catch (err) {
+                                    OutputChannelLogging.logError(`error processing ${label} package ${packageName}`, err);
                                     packageSpecCounter++;
 
                                     if (packageSpecTotal === packageSpecCounter) {
                                         OutputChannelLogging.log(`processed ${packageSpecTotal} packages from ${fqdn}`);
                                         resolve();
                                     }
-                                });
+                                }
                             } catch (err) {
-                                OutputChannelLogging.logError(`error processing ${label} package ${packageName}`, err);
+                                OutputChannelLogging.logError(`retrieving packageExport for ${packageSpec.name} from ${fqdn}`, err);
                                 packageSpecCounter++;
 
                                 if (packageSpecTotal === packageSpecCounter) {
                                     OutputChannelLogging.log(`processed ${packageSpecTotal} packages from ${fqdn}`);
                                     resolve();
                                 }
-                            }
-                        } catch (err) {
-                            OutputChannelLogging.logError(`retrieving packageExport for ${packageSpec.name} from ${fqdn}`, err);
-                            packageSpecCounter++;
-
-                            if (packageSpecTotal === packageSpecCounter) {
-                                OutputChannelLogging.log(`processed ${packageSpecTotal} packages from ${fqdn}`);
-                                resolve();
                             }
                         }
                     }

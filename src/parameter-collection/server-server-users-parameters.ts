@@ -1,15 +1,20 @@
 import { collectInputs, MyButton, Step, StepType } from "./multi-step-input";
 import { QuickPickItem, WorkspaceConfiguration, ExtensionContext, Uri, ConfigurationTarget } from "vscode";
 
-interface PackagesDownloadFilesState {
+interface ServerServerUsersState {
     leftFqdnQp: QuickPickItem | string;
     leftUsernameQp: QuickPickItem | string;
+    leftPassword: string;
+    rightFqdnQp: QuickPickItem | string;
+    rightUsernameQp: QuickPickItem | string;
+    rightPassword: string;
     leftFqdn: string;
     leftUsername: string;
-    leftPassword: string;
+    rightFqdn: string;
+    rightUsername: string;
 }
 
-export async function collectPackageFilesInputs(config: WorkspaceConfiguration, context: ExtensionContext) {
+export async function collectServerServerUsersInputs(config: WorkspaceConfiguration, context: ExtensionContext) {
     const addButton = new MyButton({
         dark: Uri.file(context.asAbsolutePath('resources/dark/add.svg')),
         light: Uri.file(context.asAbsolutePath('resources/light/add.svg')),
@@ -26,7 +31,7 @@ export async function collectPackageFilesInputs(config: WorkspaceConfiguration, 
         {
             stepType: StepType.quickPick,
             step: 1,
-            totalSteps: 7,
+            totalSteps: 6,
             quickPickItems: fqdns.map(label => ({ label })),
             quickPickButtons: [
                 addButton
@@ -39,7 +44,7 @@ export async function collectPackageFilesInputs(config: WorkspaceConfiguration, 
         {
             stepType: StepType.quickPick,
             step: 2,
-            totalSteps: 7,
+            totalSteps: 6,
             quickPickItems: usernames.map(label => ({ label })),
             quickPickButtons: [
                 addButton
@@ -52,15 +57,49 @@ export async function collectPackageFilesInputs(config: WorkspaceConfiguration, 
         {
             stepType: StepType.inputBox,
             step: 3,
-            totalSteps: 7,
+            totalSteps: 6,
             activeItemPropertyName: 'leftPassword',
             inputPrompt: 'Please enter the source Tanium server password',
             password: true
         },
-   ];
+        {
+            stepType: StepType.quickPick,
+            step: 4,
+            totalSteps: 6,
+            quickPickItems: fqdns.map(label => ({ label })),
+            quickPickButtons: [
+                addButton
+            ],
+            buttonTooltip: 'Add New FQDN',
+            quickPickPlaceholder: 'Please choose the dest Tanium server fqdn or click + upper right to add new',
+            activeItemPropertyName: 'rightFqdnQp',
+            inputPrompt: 'Please enter the source Tanium server fqdn',
+        },
+        {
+            stepType: StepType.quickPick,
+            step: 5,
+            totalSteps: 6,
+            quickPickItems: usernames.map(label => ({ label })),
+            quickPickButtons: [
+                addButton
+            ],
+            buttonTooltip: 'Add New Username',
+            quickPickPlaceholder: 'Please choose the dest Tanium server username or click + upper right to add new',
+            activeItemPropertyName: 'rightUsernameQp',
+            inputPrompt: 'Please enter the source Tanium server username',
+        },
+        {
+            stepType: StepType.inputBox,
+            step: 6,
+            totalSteps: 6,
+            activeItemPropertyName: 'rightPassword',
+            inputPrompt: 'Please enter the dest Tanium server password',
+            password: true
+        }
+    ];
 
-    const state = {} as Partial<PackagesDownloadFilesState>;
-    await collectInputs('package download files', state, steps);
+    const state = {} as Partial<ServerServerUsersState>;
+    await collectInputs('Compare Tanium Server Users to Tanium Server Users', state, steps);
 
     if (typeof state.leftFqdnQp === 'string') {
         if (fqdns.indexOf(state.leftFqdnQp) === -1) {
@@ -82,6 +121,26 @@ export async function collectPackageFilesInputs(config: WorkspaceConfiguration, 
         state.leftUsername = state.leftUsernameQp!.label;
     }
 
+    if (typeof state.rightFqdnQp === 'string') {
+        if (fqdns.indexOf(state.rightFqdnQp) === -1) {
+            fqdns.push(state.rightFqdnQp);
+            config.update('fqdns', fqdns, ConfigurationTarget.Global);
+        }
+        state.rightFqdn = state.rightFqdnQp;
+    } else {
+        state.rightFqdn = state.rightFqdnQp!.label;
+    }
+
+    if (typeof state.rightUsernameQp === 'string') {
+        if (usernames.indexOf(state.rightUsernameQp) === -1) {
+            usernames.push(state.rightUsernameQp);
+            config.update('usernames', usernames, ConfigurationTarget.Global);
+            }
+        state.rightUsername = state.rightUsernameQp;
+    } else {
+        state.rightUsername = state.rightUsernameQp!.label;
+    }
+
     // store data
-    return state as PackagesDownloadFilesState;
+    return state as ServerServerUsersState;
 }

@@ -7,38 +7,63 @@ var missingRemoveButton = document.getElementById("missingRemoveButton");
 var processMissingButton = document.getElementById("processMissingButton");
 
 if (processMissingButton !== null) {
+    console.log(`processMissingButtons !== null`);
     processMissingButton.disabled = true;
+} else {
+    console.log(`processMissingButtons === null`);
 }
 
 var missinglItems = document.getElementById("missinglitems");
 var missingrItems = document.getElementById("missingritems");
 
 if (missinglItems !== null) {
+    console.log(`missinglItems !== null`);
     missinglItems.addEventListener("dblclick", () => openFile(missinglItems));
+} else {
+    console.log(`missinglItems === null`);
 }
 
 if (missingrItems !== null) {
+    console.log(`missingrItems !== null`);
     missingrItems.addEventListener("dblclick", () => openFile(missingrItems));
+} else {
+    console.log(`missingrItems === null`);
 }
 
 var divShowServerInfo = document.getElementById('divShowServerInfo');
-var showServerInfo = divShowServerInfo.value === '1';
+
+if (divShowServerInfo !== null) {
+    console.log(`divShowServerInfo !== null`);    
+} else {
+    console.log(`divShowServerInfo === null`);    
+}
+
+var showServerInfo = divShowServerInfo.innerHTML === '1';
 var serverInfo = document.getElementById('serverInfo');
 
 var divTransferIndividual = document.getElementById('divTransferIndividual');
-var transferIndividual = divTransferIndividual.value === '1';
+var transferIndividual = divTransferIndividual.innerHTML === '1';
 console.log(`transferIndividual: ${transferIndividual}`);
 
 if (missingAddButton !== null) {
+    console.log(`missingAddButton !== null`);
     missingAddButton.addEventListener("click", () => addButtonEvent(missinglItems, missingrItems));
+} else {
+    console.log(`missingAddButton === null`);
 }
 
 if (missingRemoveButton !== null) {
+    console.log(`missingRemoveButton !== null`);
     missingRemoveButton.addEventListener("click", () => removeButtonEvent(missingrItems, missinglItems));
+} else {
+    console.log(`missingRemoveButton === null`);
 }
 
 if (processMissingButton !== null) {
+    console.log(`processMissingButton !== null`);
     processMissingButton.addEventListener("click", processMissingItems);
+} else {
+    console.log(`processMissingButton === null`);
 }
 
 var divFqdns = document.getElementById("divFqdns");
@@ -46,8 +71,10 @@ var divUsernames = document.getElementById("divUsernames");
 var divSigningKeys = document.getElementById("divSigningKeys");
 
 if (!showServerInfo) {
+    console.log(`showServerInfo === false`);
     serverInfo.style.visibility = 'hidden';
 } else {
+    console.log(`showServerInfo === true`);
     var divMissingSourceFqdn = document.getElementById("divMissingSourceFqdn");
     var divMissingDestFqdn = document.getElementById("divMissingDestFqdn");
     var divMissingUsername = document.getElementById("divMissingUsername");
@@ -65,10 +92,16 @@ if (!showServerInfo) {
 
     var signingKeys = signingKeysText.split(',');
 
-    processInput(fqdns, divMissingSourceFqdn, 'taniumSourceServerFqdnSelect', false);
+    if (divMissingSourceFqdn !== null) {
+        processInput(fqdns, divMissingSourceFqdn, 'taniumSourceServerFqdnSelect', false);
+    }
+
     processInput(fqdns, divMissingDestFqdn, 'taniumDestServerFqdnSelect', true);
     processInput(usernames, divMissingUsername, 'taniumServerUsernameSelect', true);
-    processInput(signingKeys, divMissingSigningKey, 'taniumSigningKeySelect', true);
+    
+    if (divMissingSigningKey !== null) {
+        processInput(signingKeys, divMissingSigningKey, 'taniumSigningKeySelect', true);
+    }
 
     var missingTaniumServerPassword = document.getElementById("missingTaniumServerPassword");
 
@@ -192,10 +225,10 @@ function openFile(from) {
 function processMissingItems() {
     processMissingButton.disabled = true;
 
-    const sourceFqdn = taniumSourceServerFqdnSelect.value;
+    const sourceFqdn = taniumSourceServerFqdnSelect?.value ?? '';
     const destFqdn = taniumDestServerFqdnSelect.value;
     const username = taniumServerUsernameSelect.value;
-    const signingKey = taniumSigningKeySelect.value;
+    const signingKey = taniumSigningKeySelect?.value ?? ''; 
 
     if (transferIndividual) {
         // process first item
@@ -210,7 +243,7 @@ function processMissingItems() {
                 username: username,
                 password: missingTaniumServerPassword.value,
                 path: option.value,
-                packageName: option.text,
+                name: option.text,
                 signingServerLabel: signingKey,
             });
         } else {

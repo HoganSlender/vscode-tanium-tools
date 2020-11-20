@@ -2,11 +2,12 @@
 import * as commands from '../common/commands';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import * as os from 'os';
 import { v4 as uuidv4 } from 'uuid';
 import path = require('path');
 import * as pug from 'pug';
 import { OutputChannelLogging } from '../common/logging';
+import { PathUtils } from '../common/pathUtils';
+import { WebContentUtils } from '../common/webContentUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -67,20 +68,46 @@ export class ContentSetRolePrivileges {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const missingContentSetRolePrivileges = await this.getMissingContentSetRolePrivileges(left.fsPath, right.fsPath);
-        const modifiedContentSetRolePrivileges = await this.getModifiedContentSetRolePrivileges(left.fsPath, right.fsPath);
-        const createdContentSetRolePrivileges = await this.getCreatedContentSetRolePrivileges(left.fsPath, right.fsPath);
-        const unchangedContentSetRolePrivileges = await this.getUnchangedContentSetRolePrivileges(left.fsPath, right.fsPath);
+        const missingContentSetRolePrivileges = await PathUtils.getMissingItems(left.fsPath, right.fsPath);
+        const modifiedContentSetRolePrivileges = await PathUtils.getModifiedItems(left.fsPath, right.fsPath);
+        const createdContentSetRolePrivileges = await PathUtils.getCreatedItems(left.fsPath, right.fsPath);
+        const unchangedContentSetRolePrivileges = await PathUtils.getUnchangedItems(left.fsPath, right.fsPath);
 
         OutputChannelLogging.log(`missing content set role privileges: ${missingContentSetRolePrivileges.length}`);
         OutputChannelLogging.log(`modified content set role privileges: ${modifiedContentSetRolePrivileges.length}`);
         OutputChannelLogging.log(`created content set role privileges: ${createdContentSetRolePrivileges.length}`);
         OutputChannelLogging.log(`unchanged content set role privileges: ${unchangedContentSetRolePrivileges.length}`);
 
-        panelMissing.webview.html = this.getMissingWebContent(missingContentSetRolePrivileges, panelMissing, context, config);
-        panelModified.webview.html = this.getModifiedWebContent(modifiedContentSetRolePrivileges, panelModified, context, config);
-        panelCreated.webview.html = this.getCreatedWebContent(createdContentSetRolePrivileges, panelCreated, context, config);
-        panelUnchanged.webview.html = this.getUnchangedWebContent(unchangedContentSetRolePrivileges, panelUnchanged, context, config);
+        const title = 'Content Set Role Privileges';
+
+        panelMissing.webview.html = WebContentUtils.getMissingWebContent({
+            myTitle: title,
+            items: missingContentSetRolePrivileges,
+            transferIndividual: 0,
+            showServerInfo: 0,
+            readOnly: true
+        }, panelMissing, context, config);
+
+        panelModified.webview.html = WebContentUtils.getModifiedWebContent({
+            myTitle: title,
+            items: modifiedContentSetRolePrivileges,
+            transferIndividual: 0,
+            showServerInfo: 0,
+            readOnly: true
+        }, panelModified, context, config);
+
+        panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
+            myTitle: title,
+            items: createdContentSetRolePrivileges,
+            transferIndividual: 0,
+            showServerInfo: 0,
+            readOnly: true
+        }, panelCreated, context, config);
+        
+        panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
+            myTitle: title,
+            items: unchangedContentSetRolePrivileges,
+        }, panelUnchanged, context, config);
 
         panelUnchanged.webview.onDidReceiveMessage(async message => {
             try {
@@ -89,7 +116,7 @@ export class ContentSetRolePrivileges {
                         var items = message.path.split('~');
                         var lPath = items[0];
                         var rPath = items[2];
-                        var title = `${message.name}.json (${this.getPath(lPath)} ↔ ${this.getPath(rPath)})`;
+                        var title = `${message.name}.json (${PathUtils.getPath(lPath)} ↔ ${PathUtils.getPath(rPath)})`;
                         vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(lPath), vscode.Uri.file(rPath), title, {
                             preview: false,
                             viewColumn: vscode.ViewColumn.Active
@@ -118,7 +145,7 @@ export class ContentSetRolePrivileges {
                         var diffItems = message.path.split('~');
                         var lPath = diffItems[0];
                         var rPath = diffItems[2];
-                        var title = `${message.name}.json (${this.getPath(lPath)} ↔ ${this.getPath(rPath)})`;
+                        var title = `${message.name}.json (${PathUtils.getPath(lPath)} ↔ ${PathUtils.getPath(rPath)})`;
                         vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(lPath), vscode.Uri.file(rPath), title, {
                             preview: false,
                             viewColumn: vscode.ViewColumn.Active
@@ -172,289 +199,6 @@ export class ContentSetRolePrivileges {
         });
     }
 
-    static getPath(input: string): string {
-        var items = input.split(path.sep);
-
-        return input.replace(path.sep + items[items.length - 1], '');
-    }
-
-    static getMissingContentSetRolePrivileges(leftDir: string, rightDir: string): Promise<any[]> {
-        const p: Promise<string[]> = new Promise((resolve, reject) => {
-            const files: string[] = fs.readdirSync(leftDir);
-            var missing: any[] = [];
-
-            for (var i = 0; i < files.length; i++) {
-                const file = files[i];
-                const leftTarget = path.join(leftDir, file);
-                const rightTarget = leftTarget.replace(leftDir, rightDir);
-
-                if (!fs.existsSync(rightTarget)) {
-                    missing.push({
-                        name: file.replace('.json', ''),
-                        path: leftTarget + '~~' + rightTarget,
-                    });
-                }
-
-                if (i === files.length - 1) {
-                    resolve(missing);
-                }
-            }
-        });
-
-        return p;
-    }
-
-    static getModifiedContentSetRolePrivileges(leftDir: string, rightDir: string): Promise<any[]> {
-        const p: Promise<string[]> = new Promise((resolve, reject) => {
-            const files: string[] = fs.readdirSync(leftDir);
-            var modified: any[] = [];
-
-            for (var i = 0; i < files.length; i++) {
-                const file = files[i];
-                const leftTarget = path.join(leftDir, file);
-                const rightTarget = leftTarget.replace(leftDir, rightDir);
-
-                if (fs.existsSync(rightTarget)) {
-                    // compare left and right contents
-                    var lContents = fs.readFileSync(leftTarget, 'utf-8');
-                    var rContents = fs.readFileSync(rightTarget, 'utf-8');
-
-                    if (lContents !== rContents) {
-                        modified.push({
-                            name: file.replace('.json', ''),
-                            path: leftTarget + '~~' + rightTarget,
-                        });
-                    }
-                }
-
-                if (i === files.length - 1) {
-                    resolve(modified);
-                }
-            }
-        });
-
-        return p;
-    }
-
-    static getCreatedContentSetRolePrivileges(leftDir: string, rightDir: string): Promise<any[]> {
-        const p: Promise<string[]> = new Promise((resolve, reject) => {
-            const files: string[] = fs.readdirSync(rightDir);
-            var created: any[] = [];
-
-            for (var i = 0; i < files.length; i++) {
-                const file = files[i];
-                const rightTarget = path.join(rightDir, file);
-                const leftTarget = rightTarget.replace(rightDir, leftDir);
-
-                if (!fs.existsSync(leftTarget)) {
-                    created.push({
-                        name: file.replace('.json', ''),
-                        path: rightTarget
-                    });
-                }
-
-                if (i === files.length - 1) {
-                    resolve(created);
-                }
-            }
-        });
-
-        return p;
-    }
-
-    static getUnchangedContentSetRolePrivileges(leftDir: string, rightDir: string): Promise<any[]> {
-        const p: Promise<string[]> = new Promise((resolve, reject) => {
-            const files: string[] = fs.readdirSync(leftDir);
-            var unchanged: any[] = [];
-
-            for (var i = 0; i < files.length; i++) {
-                const file = files[i];
-                const leftTarget = path.join(leftDir, file);
-                const rightTarget = leftTarget.replace(leftDir, rightDir);
-
-                if (fs.existsSync(rightTarget)) {
-                    // compare left and right contents
-                    var lContents = fs.readFileSync(leftTarget, 'utf-8');
-                    var rContents = fs.readFileSync(rightTarget, 'utf-8');
-
-                    if (lContents === rContents) {
-                        unchanged.push({
-                            name: file.replace('.json', ''),
-                            path: leftTarget + '~~' + rightTarget,
-                        });
-                    }
-                }
-
-                if (i === files.length - 1) {
-                    resolve(unchanged);
-                }
-            }
-        });
-
-        return p;
-    }
-
-    static getNonce() {
-        let text = '';
-        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        for (let i = 0; i < 32; i++) {
-            text += possible.charAt(Math.floor(Math.random() * possible.length));
-        }
-        return text;
-    }
-
-    static getMissingWebContent(missingContentSetRolePrivileges: any[], panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
-        // get fqdns
-        const fqdnsString: string = config.get('fqdns', []).join();
-
-        // get usernames
-        const usernamesString: string = config.get('usernames', []).join();
-
-        // get signing keys
-        const signingKeys: any[] = config.get<any>('signingPaths', []);
-        const signingKeysString: string = signingKeys.map(key => key.serverLabel).join();
-
-        // Local path to main script run in the webview
-        const scriptPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'missing.js');
-        const pugPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'missing.pug');
-
-        // And the uri we use to load this script in the webview
-        const scriptUri = panel.webview.asWebviewUri(scriptPathOnDisk);
-
-        // Use a nonce to only allow specific scripts to be run
-        const nonce = this.getNonce();
-
-        const compiledFunction = pug.compileFile(pugPathOnDisk.fsPath, {
-            pretty: true
-        });
-
-        const html = compiledFunction({
-            myTitle: 'Content Set Role Privileges',
-            panelWebviewCspSource: panel.webview.cspSource,
-            nonce: nonce,
-            missingItems: missingContentSetRolePrivileges,
-            fqdns: fqdnsString,
-            usernames: usernamesString,
-            signingKeys: signingKeysString,
-            scriptUri: scriptUri,
-            transferIndividual: 0,
-            showServerInfo: 0,
-            readOnly: true
-        });
-
-        return html;
-    }
-
-    static getModifiedWebContent(modifiedContentSetRolePrivileges: any[], panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
-        // get fqdns
-        const fqdnsString: string = config.get('fqdns', []).join();
-
-        // get usernames
-        const usernamesString: string = config.get('usernames', []).join();
-
-        // get signing keys
-        const signingKeys: any[] = config.get<any>('signingPaths', []);
-        const signingKeysString: string = signingKeys.map(key => key.serverLabel).join();
-
-        // Local path to main script run in the webview
-        const scriptPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'modified.js');
-        const pugPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'modified.pug');
-
-        // And the uri we use to load this script in the webview
-        const scriptUri = panel.webview.asWebviewUri(scriptPathOnDisk);
-
-        // Use a nonce to only allow specific scripts to be run
-        const nonce = this.getNonce();
-
-        const compiledFunction = pug.compileFile(pugPathOnDisk.fsPath, {
-            pretty: true
-        });
-
-        const html = compiledFunction({
-            myTitle: 'Content Set Role Privileges',
-            panelWebviewCspSource: panel.webview.cspSource,
-            nonce: nonce,
-            modifiedItems: modifiedContentSetRolePrivileges,
-            fqdns: fqdnsString,
-            usernames: usernamesString,
-            signingKeys: signingKeysString,
-            scriptUri: scriptUri,
-            transferIndividual: 0,
-            showServerInfo: 0,
-            readOnly: true
-        });
-
-        return html;
-    }
-
-    static getCreatedWebContent(createdContentSetRolePrivileges: any[], panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
-        // get fqdns
-        const fqdnsString: string = config.get('fqdns', []).join();
-
-        // get usernames
-        const usernamesString: string = config.get('usernames', []).join();
-
-        // get signing keys
-        const signingKeys: any[] = config.get<any>('signingPaths', []);
-        const signingKeysString: string = signingKeys.map(key => key.serverLabel).join();
-
-        // Local path to main script run in the webview
-        const scriptPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'created.js');
-        const pugPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'created.pug');
-
-        // And the uri we use to load this script in the webview
-        const scriptUri = panel.webview.asWebviewUri(scriptPathOnDisk);
-
-        // Use a nonce to only allow specific scripts to be run
-        const nonce = this.getNonce();
-
-        const compiledFunction = pug.compileFile(pugPathOnDisk.fsPath, {
-            pretty: true
-        });
-
-        const html = compiledFunction({
-            myTitle: 'Content Set Role Privileges',
-            panelWebviewCspSource: panel.webview.cspSource,
-            nonce: nonce,
-            createdItems: createdContentSetRolePrivileges,
-            fqdns: fqdnsString,
-            usernames: usernamesString,
-            signingKeys: signingKeysString,
-            scriptUri: scriptUri,
-            transferIndividual: 0,
-            showServerInfo: 0,
-            readOnly: true
-        });
-
-        return html;
-    }
-
-    static getUnchangedWebContent(unchangedContentSetRolePrivileges: any[], panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
-        // Local path to main script run in the webview
-        const scriptPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'unchanged.js');
-        const pugPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', 'unchanged.pug');
-
-        // And the uri we use to load this script in the webview
-        const scriptUri = panel.webview.asWebviewUri(scriptPathOnDisk);
-
-        // Use a nonce to only allow specific scripts to be run
-        const nonce = this.getNonce();
-
-        const compiledFunction = pug.compileFile(pugPathOnDisk.fsPath, {
-            pretty: true
-        });
-
-        const html = compiledFunction({
-            myTitle: 'Content Set Privileges',
-            panelWebviewCspSource: panel.webview.cspSource,
-            nonce: nonce,
-            unchangedItems: unchangedContentSetRolePrivileges,
-            scriptUri: scriptUri
-        });
-
-        return html;
-    }
-
     static async transferItems(items: any[]) {
         // generate json
         var importJson = {
@@ -482,7 +226,7 @@ export class ContentSetRolePrivileges {
         importJson.object_list.content_set_privileges = content_set_privileges;
 
         // save file to base
-        const baseDir = this.getPath(this.getPath(items[0].path.split('~')[0]));
+        const baseDir = PathUtils.getPath(PathUtils.getPath(items[0].path.split('~')[0]));
         const tempPath = path.join(baseDir, uuidv4() + '.json');
         fs.writeFileSync(tempPath, `${JSON.stringify(importJson, null, 2)}\r\n`, 'utf-8');
 

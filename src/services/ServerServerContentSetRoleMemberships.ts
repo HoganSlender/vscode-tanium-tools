@@ -9,6 +9,7 @@ import { Session } from '../common/session';
 import { RestClient } from '../common/restClient';
 import { collectServerServerContentSetRoleMembershipInputs } from '../parameter-collection/server-server-content-set-role-memberships-parameters';
 import { ServerServerContentSetRoles } from './ServerServerContentSetRoles';
+import { Users } from './Users';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -100,7 +101,7 @@ class ServerServerContentSetRoleMemberships {
                 var contentSetRoles = await ServerServerContentSetRoles.retrieveContentSetRoleMap(allowSelfSignedCerts, httpTimeout, restBase, session);
 
                 OutputChannelLogging.log(`user retrieval - initialized for ${fqdn}`);
-                var users = await this.retrieveUserMap(allowSelfSignedCerts, httpTimeout, restBase, session);
+                var users = await Users.retrieveUserMap(allowSelfSignedCerts, httpTimeout, restBase, session);
 
                 (async () => {
                     OutputChannelLogging.log(`content set role memberships retrieval - initialized for ${fqdn}`);
@@ -183,49 +184,6 @@ class ServerServerContentSetRoleMemberships {
             } catch (err) {
                 OutputChannelLogging.logError(`error downloading content set role memberships from ${restBase}`, err);
                 return reject(`error downloading content set role memberships from ${restBase}`);
-            }
-        });
-
-        return p;
-    }
-    static retrieveUserMap(allowSelfSignedCerts: boolean, httpTimeout: number, restBase: string, session: string): any {
-        const p = new Promise((resolve, reject) => {
-            try {
-                (async () => {
-                    var users: any = {};
-                    var userData: [any];
-
-                    // get content set roles
-                    try {
-                        const body = await RestClient.get(`${restBase}/users`, {
-                            headers: {
-                                session: session,
-                            },
-                            responseType: 'json',
-                        }, allowSelfSignedCerts, httpTimeout);
-
-                        OutputChannelLogging.log(`users retrieved`);
-                        userData = body.data;
-                    } catch (err) {
-                        OutputChannelLogging.logError(`error retrieving users`, err);
-                        return reject();
-                    }
-
-                    // create map
-                    for (var i = 0; i < userData.length; i++) {
-                        const user = userData[i];
-                        var newObject = {
-                            name: user.name,
-                            display_name: user.display_name,
-                        };
-                        users[user.id] = newObject;
-                    }
-
-                    resolve(users);
-                })();
-            } catch (err) {
-                OutputChannelLogging.logError(`error retrieving content set roles`, err);
-                reject();
             }
         });
 

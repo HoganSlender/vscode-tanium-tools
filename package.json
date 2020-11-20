@@ -26,6 +26,7 @@
 		"onCommand:hoganslendertanium.compareServerServerContentSetRoles",
 		"onCommand:hoganslendertanium.compareServerServerContentSetRolePrivileges",
 		"onCommand:hoganslendertanium.compareServerServerContentSetRoleMemberships",
+		"onCommand:hoganslendertanium.compareServerServerUsers",
 		"onCommand:hoganslendertanium.generateExportFileMissingSensors",
 		"onCommand:hoganslendertanium.signContentFile",
 		"onCommand:hoganslendertanium.generateExportFileModifiedSensors",
@@ -37,6 +38,7 @@
 		"onCommand:hoganslendertanium.analyzeContentSetPrivileges",
 		"onCommand:hoganslendertanium.analyzeContentSetRoles",
 		"onCommand:hoganslendertanium.analyzeContentSetRolePrivileges",
+		"onCommand:hoganslendertanium.analyzeUsers",
 		"onCommand:hoganslendertanium.downloadPackageFiles",
 		"onCommand:hoganslendertanium.workspaceInit"
 	],
@@ -76,6 +78,11 @@
 			{
 				"command": "hoganslendertanium.compareServerServerContentSetRoleMemberships",
 				"title": "Compare Tanium Server Content Set Role Memberships",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.compareServerServerUsers",
+				"title": "Compare Tanium Server Users",
 				"category": "Tanium"
 			},
 			{
@@ -134,6 +141,11 @@
 				"category": "Tanium"
 			},
 			{
+				"command": "hoganslendertanium.analyzeUsers",
+				"title": "Analyze Users",
+				"category": "Tanium"
+			},
+			{
 				"command": "hoganslendertanium.downloadPackageFiles",
 				"title": "Download Package Files",
 				"category": "Tanium"
@@ -177,6 +189,10 @@
 				{
 					"command": "hoganslendertanium.analyzeContentSetRolePrivileges",
 					"when": "false"
+				},
+				{
+					"command": "hoganslendertanium.analyzeUsers",
+					"when": "false"
 				}
 			],
 			"explorer/context": [
@@ -198,27 +214,32 @@
 				{
 					"command": "hoganslendertanium.analyzePackages",
 					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection"
+					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*~Packages$/"
 				},
 				{
 					"command": "hoganslendertanium.analyzeContentSets",
 					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection"
+					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*~ContentSets$/"
 				},
 				{
 					"command": "hoganslendertanium.analyzeContentSetPrivileges",
 					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection"
+					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*~ContentSetPrivileges$/"
 				},
 				{
 					"command": "hoganslendertanium.analyzeContentSetRoles",
 					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection"
+					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*~ContentSetRoles$/"
 				},
 				{
 					"command": "hoganslendertanium.analyzeContentSetRolePrivileges",
 					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection"
+					"when": "explorerResourceIsFolder && listDoubleSelection && resourceFilename =~ /.*~ContentSetRolePrivileges$/"
+				},
+				{
+					"command": "hoganslendertanium.analyzeUsers",
+					"group": "3_compare@1",
+					"when": "explorerResourceIsFolder && listDoubleSelection && resourceFilename =~ /.*~Users$/"
 				}
 			]
 		},

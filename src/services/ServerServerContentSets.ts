@@ -52,8 +52,8 @@ export class ServerServerContentSets {
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}~ContentSets`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}~ContentSets`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);

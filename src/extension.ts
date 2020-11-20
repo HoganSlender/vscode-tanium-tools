@@ -7,6 +7,7 @@ import * as serverServerContentSetPrivileges from './services/ServerServerConten
 import * as serverServerContentSetRoles from './services/ServerServerContentSetRoles';
 import * as serverServerContentSetRolePrivileges from './services/ServerServerContentSetRolePrivileges';
 import * as serverServerContentSetRoleMemberships from './services/ServerServerContentSetRoleMemberships';
+import * as serverServerUsers from './services/ServerServerUsers';
 import * as signContentFile from './services/SignContentFile';
 import * as sensor from './services/Sensor';
 import * as packages from './services/Packages';
@@ -15,6 +16,7 @@ import * as contentSetPrivileges from './services/ContentSetPrivileges';
 import * as contentSetRoles from './services/ContentSetRoles';
 import * as contentSetRolePrivileges from './services/ContentSetRolePrivileges';
 import { OutputChannelLogging } from './common/logging';
+import * as users from './services/Users';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -29,6 +31,7 @@ export function activate(context: ExtensionContext) {
 	serverServerContentSetRoles.activate(context);
 	serverServerContentSetRolePrivileges.activate(context);
 	serverServerContentSetRoleMemberships.activate(context);
+	serverServerUsers.activate(context);
 	signContentFile.activate(context);
 	sensor.activate(context);
 	packages.activate(context);
@@ -36,6 +39,7 @@ export function activate(context: ExtensionContext) {
 	contentSetPrivileges.activate(context);
 	contentSetRoles.activate(context);
 	contentSetRolePrivileges.activate(context);
+	users.activate(context);
 }
 
 // this method is called when your extension is deactivated

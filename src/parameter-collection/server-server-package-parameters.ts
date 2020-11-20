@@ -99,7 +99,7 @@ export async function collectServerServerPackageInputs(config: WorkspaceConfigur
     ];
 
     const state = {} as Partial<ServerServerPackageState>;
-    await collectInputs('Compare Tanium Server Sensors to Tanium Server Sensors', state, steps);
+    await collectInputs('Compare Tanium Server Packages to Tanium Server Packages', state, steps);
 
     if (typeof state.leftFqdnQp === 'string') {
         if (fqdns.indexOf(state.leftFqdnQp) === -1) {

@@ -9,13 +9,13 @@ html(lang='en')
         table(style='border: 1px solid black;')
             tr
                 td #[b Modified #{myTitle}]
-                if !readOnly
-                    td
-                    td #[b Selected #{myTitle}]
+                    if !readOnly
+                        td
+                        td #[b Selected #{myTitle}]
             tr
                 td
                     select(id='modifiedlitems' name='modifiedlitems' multiple='multiple' size='40' style='min-width: 600px;min-height: 800px;')
-                        each item in modifiedItems
+                        each item in items
                             option(value=item.path) #{item.name}
                 if !readOnly
                     td
@@ -29,10 +29,11 @@ html(lang='en')
                 tr
                     td(colspan='3' align='right')
                         table(id='serverInfo')
-                            tr
-                                td Source Tanium Server FQDN
-                                td 
-                                    div(id='divModifiedSourceFqdn')
+                            if !noSourceServer
+                                tr
+                                    td Source Tanium Server FQDN
+                                    td 
+                                        div(id='divModifiedSourceFqdn')
                             tr
                                 td Destination Tanium Server FQDN
                                 td
@@ -45,10 +46,11 @@ html(lang='en')
                                 td Destination Tanium Server Password
                                 td
                                     input(id='modifiedTaniumServerPassword' type='password')
-                            tr
-                                td Destination Tanium Server Signing Keys
-                                td
-                                    div(id='divModifiedSigningKey')
+                            if !noSigningKeys
+                                tr
+                                    td Destination Tanium Server Signing Keys
+                                    td
+                                        div(id='divModifiedSigningKey')
             if !readOnly
                 tr
                     td(colspan='3' align='right' )

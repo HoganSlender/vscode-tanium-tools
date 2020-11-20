@@ -99,7 +99,7 @@ export async function collectServerServerContentSetRolePrivilegeInputs(config: W
     ];
 
     const state = {} as Partial<ServerServerContentSetRolePrivilegeState>;
-    await collectInputs('Compare Tanium Server ContentSet Role Privileges to Tanium Server Content Set Role Privileges', state, steps);
+    await collectInputs('Compare Tanium Server Content Set Role Privileges to Tanium Server Content Set Role Privileges', state, steps);
 
     if (typeof state.leftFqdnQp === 'string') {
         if (fqdns.indexOf(state.leftFqdnQp) === -1) {

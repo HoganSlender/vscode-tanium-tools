@@ -12,6 +12,6 @@ html(lang='en')
             tr
                 td
                     select(id='unchangedlitems' name='unchangedlitems' multiple='multiple' size='40' style='min-width: 600px;min-height: 800px;')
-                        each item in unchangedItems
+                        each item in items
                             option(value=item.path) #{item.name}
         script(nonce="" + nonce + "" src="" + scriptUri + "")

@@ -51,8 +51,8 @@ export class ServerServerContentSetRoles {
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}~ContentSetRoles`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}~ContentSetRoles`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);

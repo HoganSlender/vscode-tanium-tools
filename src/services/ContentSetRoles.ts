@@ -203,12 +203,12 @@ export class ContentSetRoles {
                 // generate json
                 var importJson = {
                     object_list: {
-                        content_set_privileges: []
+                        content_set_roles: []
                     },
                     version: 2
                 };
 
-                var content_set_privileges: any = [];
+                var content_set_roles: any = [];
 
                 for (var i = 0; i < items.length; i++) {
                     const item = items[i];
@@ -220,10 +220,10 @@ export class ContentSetRoles {
                     const contentSetFromFile: any = JSON.parse(fs.readFileSync(path, 'utf-8'));
 
                     // add to importJson
-                    content_set_privileges.push(contentSetFromFile);
+                    content_set_roles.push(contentSetFromFile);
                 }
 
-                importJson.object_list.content_set_privileges = content_set_privileges;
+                importJson.object_list.content_set_roles = content_set_roles;
 
                 // save file to base
                 const baseDir = PathUtils.getPath(PathUtils.getPath(items[0].path.split('~')[0]));

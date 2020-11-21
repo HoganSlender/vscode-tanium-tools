@@ -224,14 +224,20 @@ function openFile(from) {
 }
 
 function processModifiedItems() {
+    console.log('inside processModifiedItems');
     processModifiedButton.disabled = true;
 
     const sourceFqdn = taniumSourceServerFqdnSelect?.value ?? '';
-    const destFqdn = taniumDestServerFqdnSelect.value;
-    const username = taniumServerUsernameSelect.value;
+    console.log(`sourceFqdn: ${sourceFqdn}`);
+    const destFqdn = taniumDestServerFqdnSelect?.value ?? '';
+    console.log(`destFqdn: ${destFqdn}`);
+    const username = taniumServerUsernameSelect?.value ?? '';
+    console.log(`username: ${username}`);
     const signingKey = taniumSigningKeySelect?.value ?? '';
+    console.log(`signingKey: ${signingKey}`);
 
     if (transferIndividual) {
+        console.log('transfer individual');
         // process first item
         if (modifiedrItems.options.length !== 0) {
             var option = modifiedrItems.options[0];
@@ -254,6 +260,7 @@ function processModifiedItems() {
             processmodifiedButton.disabled = false;
         }
     } else {
+        console.log('transfer all');
         // gather all values and send
         if (modifiedrItems.options.length !== 0) {
             var items = [];
@@ -264,6 +271,8 @@ function processModifiedItems() {
                     name: o.text,
                 });
             }
+
+            console.log(`items: ${JSON.stringify(items, null, 2)}`);
 
             // send message
             vscode.postMessage({

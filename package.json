@@ -27,6 +27,7 @@
 		"onCommand:hoganslendertanium.compareServerServerContentSetRolePrivileges",
 		"onCommand:hoganslendertanium.compareServerServerContentSetRoleMemberships",
 		"onCommand:hoganslendertanium.compareServerServerUsers",
+		"onCommand:hoganslendertanium.compareServerServerUserGroups",
 		"onCommand:hoganslendertanium.generateExportFileMissingSensors",
 		"onCommand:hoganslendertanium.signContentFile",
 		"onCommand:hoganslendertanium.generateExportFileModifiedSensors",
@@ -39,6 +40,7 @@
 		"onCommand:hoganslendertanium.analyzeContentSetRoles",
 		"onCommand:hoganslendertanium.analyzeContentSetRolePrivileges",
 		"onCommand:hoganslendertanium.analyzeUsers",
+		"onCommand:hoganslendertanium.analyzeUserGroups",
 		"onCommand:hoganslendertanium.analyzeContentSetRoleMemberships",
 		"onCommand:hoganslendertanium.downloadPackageFiles",
 		"onCommand:hoganslendertanium.workspaceInit"
@@ -84,6 +86,11 @@
 			{
 				"command": "hoganslendertanium.compareServerServerUsers",
 				"title": "Compare Tanium Server Users",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.compareServerServerUserGroups",
+				"title": "Compare Tanium Server User Groups",
 				"category": "Tanium"
 			},
 			{
@@ -147,6 +154,11 @@
 				"category": "Tanium"
 			},
 			{
+				"command": "hoganslendertanium.analyzeUserGroups",
+				"title": "Analyze User Groups",
+				"category": "Tanium"
+			},
+			{
 				"command": "hoganslendertanium.analyzeContentSetRoleMemberships",
 				"title": "Analyze Content Set Role Memberships",
 				"category": "Tanium"
@@ -201,6 +213,10 @@
 					"when": "false"
 				},
 				{
+					"command": "hoganslendertanium.analyzeUserGroups",
+					"when": "false"
+				},
+				{
 					"command": "hoganslendertanium.analyzeContentSetRoleMemberships",
 					"when": "false"
 				}
@@ -250,6 +266,11 @@
 					"command": "hoganslendertanium.analyzeUsers",
 					"group": "3_compare@1",
 					"when": "explorerResourceIsFolder && listDoubleSelection && resourceFilename =~ /.*%Users$/"
+				},
+				{
+					"command": "hoganslendertanium.analyzeUserGroups",
+					"group": "3_compare@1",
+					"when": "explorerResourceIsFolder && listDoubleSelection && resourceFilename =~ /.*%UserGroups$/"
 				},
 				{
 					"command": "hoganslendertanium.analyzeContentSetRoleMemberships",

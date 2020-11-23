@@ -18,8 +18,8 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-class ServerServerUserGroups {
-    public static async processUserGroups(context: vscode.ExtensionContext) { 
+export class ServerServerUserGroups {
+    public static async processUserGroups(context: vscode.ExtensionContext) {
         // get the current folder
         const folderPath = vscode.workspace.rootPath;
 
@@ -118,59 +118,65 @@ class ServerServerUserGroups {
 
                     // iterate through each download export
                     var userGroupCounter = 0;
-                    var userGroupTotal = userGroups.length;
-                    for (var i = 0; i < userGroupTotal; i++) {
-                        const userGroup: any = userGroups[i];
+                    var userGroupTotal: number = userGroups.length;
 
-                        if (i % 30 === 0 || i === userGroupTotal) {
-                            OutputChannelLogging.log(`processing ${i + 1} of ${userGroupTotal}`);
-                        }
+                    if (userGroupTotal === 0) {
+                        OutputChannelLogging.log(`there are 0 user groups for ${fqdn}`);
+                        resolve();
+                    } else {
+                        for (var i = 0; i < userGroupTotal; i++) {
+                            const userGroup: any = userGroups[i];
 
-                        if (userGroup.deleted_flag) {
-                            userGroupCounter++;
-
-                            if (userGroupTotal === userGroupCounter) {
-                                OutputChannelLogging.log(`processed ${userGroupTotal} user groups from ${fqdn}`);
-                                resolve();
+                            if (i % 30 === 0 || i === userGroupTotal) {
+                                OutputChannelLogging.log(`processing ${i + 1} of ${userGroupTotal}`);
                             }
-                        } else {
-                            // get export
-                            try {
-                                const userGroupName: string = sanitize(userGroup.name);
 
-                                try {
-                                    const anonymizedUserGroup = UserGroups.anonymizeUserGroup(userGroup);
-                                    const content: string = JSON.stringify(anonymizedUserGroup, null, 2);
-
-                                    const userGroupFile = path.join(directory, userGroupName + '.json');
-                                    fs.writeFile(userGroupFile, content, (err) => {
-                                        if (err) {
-                                            OutputChannelLogging.logError(`could not write ${userGroupFile}`, err);
-                                        }
-
-                                        userGroupCounter++;
-
-                                        if (userGroupTotal === userGroupCounter) {
-                                            OutputChannelLogging.log(`processed ${userGroupTotal} user groups from ${fqdn}`);
-                                            resolve();
-                                        }
-                                    });
-                                } catch (err) {
-                                    OutputChannelLogging.logError(`error processing ${label} user group ${userGroupName}`, err);
-                                    userGroupCounter++;
-
-                                    if (userGroupTotal === userGroupCounter) {
-                                        OutputChannelLogging.log(`processed ${userGroupTotal} user group from ${fqdn}`);
-                                        resolve();
-                                    }
-                                }
-                            } catch (err) {
-                                OutputChannelLogging.logError(`saving user group file for ${userGroup.name} from ${fqdn}`, err);
+                            if (userGroup.deleted_flag) {
                                 userGroupCounter++;
 
                                 if (userGroupTotal === userGroupCounter) {
                                     OutputChannelLogging.log(`processed ${userGroupTotal} user groups from ${fqdn}`);
                                     resolve();
+                                }
+                            } else {
+                                // get export
+                                try {
+                                    const userGroupName: string = sanitize(userGroup.name);
+
+                                    try {
+                                        const anonymizedUserGroup = UserGroups.anonymizeUserGroup(userGroup);
+                                        const content: string = JSON.stringify(anonymizedUserGroup, null, 2);
+
+                                        const userGroupFile = path.join(directory, userGroupName + '.json');
+                                        fs.writeFile(userGroupFile, content, (err) => {
+                                            if (err) {
+                                                OutputChannelLogging.logError(`could not write ${userGroupFile}`, err);
+                                            }
+
+                                            userGroupCounter++;
+
+                                            if (userGroupTotal === userGroupCounter) {
+                                                OutputChannelLogging.log(`processed ${userGroupTotal} user groups from ${fqdn}`);
+                                                resolve();
+                                            }
+                                        });
+                                    } catch (err) {
+                                        OutputChannelLogging.logError(`error processing ${label} user group ${userGroupName}`, err);
+                                        userGroupCounter++;
+
+                                        if (userGroupTotal === userGroupCounter) {
+                                            OutputChannelLogging.log(`processed ${userGroupTotal} user group from ${fqdn}`);
+                                            resolve();
+                                        }
+                                    }
+                                } catch (err) {
+                                    OutputChannelLogging.logError(`saving user group file for ${userGroup.name} from ${fqdn}`, err);
+                                    userGroupCounter++;
+
+                                    if (userGroupTotal === userGroupCounter) {
+                                        OutputChannelLogging.log(`processed ${userGroupTotal} user groups from ${fqdn}`);
+                                        resolve();
+                                    }
                                 }
                             }
                         }
@@ -180,6 +186,38 @@ class ServerServerUserGroups {
                 OutputChannelLogging.logError(`error downloading user groups from ${restBase}`, err);
                 return reject(`error downloading user groups from ${restBase}`);
             }
+        });
+
+        return p;
+    }
+
+    static retrieveUserGroupMap(allowSelfSignedCerts: boolean, httpTimeout: number, restBase: string, session: string): any {
+        const p = new Promise(async (resolve, reject) => {
+            var userGroups: any = {};
+            var user_groups: [any];
+
+            try {
+                const body = await RestClient.get(`${restBase}/user_groups`, {
+                    headers: {
+                        session: session,
+                    },
+                    responseType: 'json',
+                }, allowSelfSignedCerts, httpTimeout);
+
+                OutputChannelLogging.log(`user groups retrieved`);
+                user_groups = body.data;
+            } catch (err) {
+                OutputChannelLogging.logError(`error retrieving user groups`, err);
+                return reject();
+            }
+
+            // create map
+            for (var i = 0; i < user_groups.length; i++) {
+                const userGroup = user_groups[i];
+                userGroups[userGroup.id] = userGroup.name;
+            }
+
+            resolve(userGroups);
         });
 
         return p;

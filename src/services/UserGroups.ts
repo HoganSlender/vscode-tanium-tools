@@ -295,4 +295,35 @@ export class UserGroups {
 
         return p;
     }
+
+    static retrieveUserGroupMapByName(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, session: string): any {
+        const p = new Promise(async (resolve, reject) => {
+            var userGroups: any = {};
+            var userGroupData: [any];
+            try {
+                const body = await RestClient.get(`https://${fqdn}/api/v2/user_groups`, {
+                    headers: {
+                        session: session
+                    },
+                    responseType: 'json',
+                }, allowSelfSignedCerts, httpTimeout);
+
+                OutputChannelLogging.log(`user groups retrieved`);
+                userGroupData = body.data;
+            } catch (err) {
+                OutputChannelLogging.logError(`error retrieving user groups`, err);
+                return reject();
+            }
+
+            // create map
+            for (var i = 0; i < userGroupData.length; i++) {
+                const userGroup = userGroupData[i];
+                userGroups[userGroup.name] = userGroup;
+            }
+
+            resolve(userGroups);
+        });
+
+        return p;
+    }
 }

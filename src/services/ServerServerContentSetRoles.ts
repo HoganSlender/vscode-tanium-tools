@@ -123,50 +123,56 @@ export class ServerServerContentSetRoles {
 
                     // iterate through each download export
                     var contentSetRoleCounter = 0;
-                    var contentSetRoleTotal = content_set_roles.length;
-                    for (var i = 0; i < content_set_roles.length; i++) {
-                        const contentSetRole: any = content_set_roles[i];
+                    var contentSetRoleTotal: number = content_set_roles.length;
 
-                        if (i % 30 === 0 || i === contentSetRoleTotal) {
-                            OutputChannelLogging.log(`processing ${i + 1} of ${contentSetRoleTotal}`);
-                        }
+                    if (contentSetRoleTotal === 0) {
+                        OutputChannelLogging.log(`there are 0 content set roles for ${fqdn}`);
+                        resolve();
+                    } else {
+                        for (var i = 0; i < content_set_roles.length; i++) {
+                            const contentSetRole: any = content_set_roles[i];
 
-                        // get export
-                        try {
-                            const contentSetRoleName: string = sanitize(contentSetRole.name);
+                            if (i % 30 === 0 || i === contentSetRoleTotal) {
+                                OutputChannelLogging.log(`processing ${i + 1} of ${contentSetRoleTotal}`);
+                            }
 
+                            // get export
                             try {
-                                const content: string = JSON.stringify(contentSetRole, null, 2);
+                                const contentSetRoleName: string = sanitize(contentSetRole.name);
 
-                                const contentSetRoleFile = path.join(directory, contentSetRoleName + '.json');
-                                fs.writeFile(contentSetRoleFile, content, (err) => {
-                                    if (err) {
-                                        OutputChannelLogging.logError(`could not write ${contentSetRoleFile}`, err);
-                                    }
+                                try {
+                                    const content: string = JSON.stringify(contentSetRole, null, 2);
 
+                                    const contentSetRoleFile = path.join(directory, contentSetRoleName + '.json');
+                                    fs.writeFile(contentSetRoleFile, content, (err) => {
+                                        if (err) {
+                                            OutputChannelLogging.logError(`could not write ${contentSetRoleFile}`, err);
+                                        }
+
+                                        contentSetRoleCounter++;
+
+                                        if (contentSetRoleTotal === contentSetRoleCounter) {
+                                            OutputChannelLogging.log(`processed ${contentSetRoleTotal} content set roles from ${fqdn}`);
+                                            resolve();
+                                        }
+                                    });
+                                } catch (err) {
+                                    OutputChannelLogging.logError(`error processing ${label} content set roles ${contentSetRoleName}`, err);
                                     contentSetRoleCounter++;
 
                                     if (contentSetRoleTotal === contentSetRoleCounter) {
-                                        OutputChannelLogging.log(`processed ${contentSetRoleTotal} content set roles from ${fqdn}`);
+                                        OutputChannelLogging.log(`processed ${contentSetRoleTotal} content set role from ${fqdn}`);
                                         resolve();
                                     }
-                                });
+                                }
                             } catch (err) {
-                                OutputChannelLogging.logError(`error processing ${label} content set roles ${contentSetRoleName}`, err);
+                                OutputChannelLogging.logError(`saving content set role file for ${contentSetRole.name} from ${fqdn}`, err);
                                 contentSetRoleCounter++;
 
                                 if (contentSetRoleTotal === contentSetRoleCounter) {
-                                    OutputChannelLogging.log(`processed ${contentSetRoleTotal} content set role from ${fqdn}`);
+                                    OutputChannelLogging.log(`processed ${contentSetRoleTotal} content set roles from ${fqdn}`);
                                     resolve();
                                 }
-                            }
-                        } catch (err) {
-                            OutputChannelLogging.logError(`saving content set role file for ${contentSetRole.name} from ${fqdn}`, err);
-                            contentSetRoleCounter++;
-
-                            if (contentSetRoleTotal === contentSetRoleCounter) {
-                                OutputChannelLogging.log(`processed ${contentSetRoleTotal} content set roles from ${fqdn}`);
-                                resolve();
                             }
                         }
                     }

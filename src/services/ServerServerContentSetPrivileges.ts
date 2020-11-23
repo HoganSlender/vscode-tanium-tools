@@ -123,53 +123,60 @@ export class ServerServerContentSetPrivileges {
 
                     // iterate through each download export
                     var contentSetPrivilegeCounter = 0;
-                    var contentSetPrivilegeTotal = content_set_privileges.length;
-                    for (var i = 0; i < content_set_privileges.length; i++) {
-                        const contentSetPrivilege: any = content_set_privileges[i];
+                    var contentSetPrivilegeTotal: number = content_set_privileges.length;
 
-                        if (i % 30 === 0 || i === contentSetPrivilegeTotal) {
-                            OutputChannelLogging.log(`processing ${i + 1} of ${contentSetPrivilegeTotal}`);
-                        }
+                    if (contentSetPrivilegeTotal === 0) {
+                        OutputChannelLogging.log(`there are 0 content set privileges for ${fqdn}`);
+                        resolve();
+                    } else {
+                        for (var i = 0; i < content_set_privileges.length; i++) {
+                            const contentSetPrivilege: any = content_set_privileges[i];
 
-                        // get export
-                        try {
-                            const contentSetPrivilegeName: string = sanitize(contentSetPrivilege.name);
+                            if (i % 30 === 0 || i === contentSetPrivilegeTotal) {
+                                OutputChannelLogging.log(`processing ${i + 1} of ${contentSetPrivilegeTotal}`);
+                            }
 
+                            // get export
                             try {
-                                const content: string = JSON.stringify(contentSetPrivilege, null, 2);
+                                const contentSetPrivilegeName: string = sanitize(contentSetPrivilege.name);
 
-                                const contentSetPrivilegeFile = path.join(directory, contentSetPrivilegeName + '.json');
-                                fs.writeFile(contentSetPrivilegeFile, content, (err) => {
-                                    if (err) {
-                                        OutputChannelLogging.logError(`could not write ${contentSetPrivilegeFile}`, err);
-                                    }
+                                try {
+                                    const content: string = JSON.stringify(contentSetPrivilege, null, 2);
 
+                                    const contentSetPrivilegeFile = path.join(directory, contentSetPrivilegeName + '.json');
+                                    fs.writeFile(contentSetPrivilegeFile, content, (err) => {
+                                        if (err) {
+                                            OutputChannelLogging.logError(`could not write ${contentSetPrivilegeFile}`, err);
+                                        }
+
+                                        contentSetPrivilegeCounter++;
+
+                                        if (contentSetPrivilegeTotal === contentSetPrivilegeCounter) {
+                                            OutputChannelLogging.log(`processed ${contentSetPrivilegeTotal} content set privileges from ${fqdn}`);
+                                            resolve();
+                                        }
+                                    });
+                                } catch (err) {
+                                    OutputChannelLogging.logError(`error processing ${label} content set privilege ${contentSetPrivilegeName}`, err);
                                     contentSetPrivilegeCounter++;
 
                                     if (contentSetPrivilegeTotal === contentSetPrivilegeCounter) {
-                                        OutputChannelLogging.log(`processed ${contentSetPrivilegeTotal} content set privileges from ${fqdn}`);
+                                        OutputChannelLogging.log(`processed ${contentSetPrivilegeTotal} content set privilege from ${fqdn}`);
                                         resolve();
                                     }
-                                });
+                                }
                             } catch (err) {
-                                OutputChannelLogging.logError(`error processing ${label} content set privilege ${contentSetPrivilegeName}`, err);
+                                OutputChannelLogging.logError(`saving content set privilege file for ${contentSetPrivilege.name} from ${fqdn}`, err);
                                 contentSetPrivilegeCounter++;
 
                                 if (contentSetPrivilegeTotal === contentSetPrivilegeCounter) {
-                                    OutputChannelLogging.log(`processed ${contentSetPrivilegeTotal} content set privilege from ${fqdn}`);
+                                    OutputChannelLogging.log(`processed ${contentSetPrivilegeTotal} content sets from ${fqdn}`);
                                     resolve();
                                 }
                             }
-                        } catch (err) {
-                            OutputChannelLogging.logError(`saving content set privilege file for ${contentSetPrivilege.name} from ${fqdn}`, err);
-                            contentSetPrivilegeCounter++;
-
-                            if (contentSetPrivilegeTotal === contentSetPrivilegeCounter) {
-                                OutputChannelLogging.log(`processed ${contentSetPrivilegeTotal} content sets from ${fqdn}`);
-                                resolve();
-                            }
                         }
                     }
+
                 })();
             } catch (err) {
                 OutputChannelLogging.logError(`error downloading content set privileges from ${restBase}`, err);

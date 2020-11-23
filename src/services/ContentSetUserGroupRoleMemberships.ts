@@ -7,21 +7,22 @@ import { PathUtils } from '../common/pathUtils';
 import { WebContentUtils } from '../common/webContentUtils';
 import { Session } from '../common/session';
 import { ContentSetRoles } from './ContentSetRoles';
-import { Users } from './Users';
+import { ServerServerUserGroups } from './ServerServerUserGroups';
 import { RestClient } from '../common/restClient';
+import { UserGroups } from './UserGroups';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.analyzeContentSetRoleMemberships': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            ContentSetRoleMemberships.analyzeContentSetRoleMemberships(uris[0], uris[1], context);
+        'hoganslendertanium.analyzeContentSetUserGroupRoleMemberships': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+            ContentSetUserGroupRoleMemberships.analyzeContentSetUserGroupRoleMemberships(uris[0], uris[1], context);
         },
     });
 }
 
-export class ContentSetRoleMemberships {
-    static async analyzeContentSetRoleMemberships(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
+export class ContentSetUserGroupRoleMemberships {
+    static async analyzeContentSetUserGroupRoleMemberships(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
         const panelMissing = vscode.window.createWebviewPanel(
-            'hoganslenderMissingContentSetRolememberships',
+            'hoganslenderMissingContentSetUserGroupRoleMemberships',
             'Missing Content Set Role Memberships',
             vscode.ViewColumn.One,
             {
@@ -31,7 +32,7 @@ export class ContentSetRoleMemberships {
         );
 
         const panelModified = vscode.window.createWebviewPanel(
-            'hoganslenderModifiedContentSetRoleMemberships',
+            'hoganslenderModifiedContentSetUserGroupRoleMemberships',
             'Modified Content Set Role Memberships',
             vscode.ViewColumn.One,
             {
@@ -41,7 +42,7 @@ export class ContentSetRoleMemberships {
         );
 
         const panelCreated = vscode.window.createWebviewPanel(
-            'hoganslenderCreatedContentSetRoleMemberships',
+            'hoganslenderCreatedContentSetUserGroupRoleMemberships',
             'Created Content Set Role Memberships',
             vscode.ViewColumn.One,
             {
@@ -51,7 +52,7 @@ export class ContentSetRoleMemberships {
         );
 
         const panelUnchanged = vscode.window.createWebviewPanel(
-            'hoganslenderUnchangedContentSetRoleMemberships',
+            'hoganslenderUnchangedContentSetUserGroupRoleMemberships',
             'Unchanged Content Set Role Memberships',
             vscode.ViewColumn.One,
             {
@@ -72,21 +73,21 @@ export class ContentSetRoleMemberships {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const missingContentSetRoleMemberships = await PathUtils.getMissingItems(left.fsPath, right.fsPath);
-        const modifiedContentSetRoleMemberships = await PathUtils.getModifiedItems(left.fsPath, right.fsPath);
-        const createdContentSetRoleMemberships = await PathUtils.getCreatedItems(left.fsPath, right.fsPath);
-        const unchangedContentSetRoleMemberships = await PathUtils.getUnchangedItems(left.fsPath, right.fsPath);
+        const missingContentSetUserGroupRoleMemberships = await PathUtils.getMissingItems(left.fsPath, right.fsPath);
+        const modifiedContentSetUserGroupRoleMemberships = await PathUtils.getModifiedItems(left.fsPath, right.fsPath);
+        const createdContentSetUserGroupRoleMemberships = await PathUtils.getCreatedItems(left.fsPath, right.fsPath);
+        const unchangedContentSetUserGroupRoleMemberships = await PathUtils.getUnchangedItems(left.fsPath, right.fsPath);
 
-        OutputChannelLogging.log(`missing content set role memberships: ${missingContentSetRoleMemberships.length}`);
-        OutputChannelLogging.log(`modified content set role memberships: ${modifiedContentSetRoleMemberships.length}`);
-        OutputChannelLogging.log(`created content set role memberships: ${createdContentSetRoleMemberships.length}`);
-        OutputChannelLogging.log(`unchanged content set role memberships: ${unchangedContentSetRoleMemberships.length}`);
+        OutputChannelLogging.log(`missing content set user group role memberships: ${missingContentSetUserGroupRoleMemberships.length}`);
+        OutputChannelLogging.log(`modified content set user group role memberships: ${modifiedContentSetUserGroupRoleMemberships.length}`);
+        OutputChannelLogging.log(`created content set user group role memberships: ${createdContentSetUserGroupRoleMemberships.length}`);
+        OutputChannelLogging.log(`unchanged content set user group role memberships: ${unchangedContentSetUserGroupRoleMemberships.length}`);
 
         const title = 'Content Set Role Memberships';
 
         panelMissing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
-            items: missingContentSetRoleMemberships,
+            items: missingContentSetUserGroupRoleMemberships,
             transferIndividual: 1,
             showServerInfo: 1,
             noSourceServer: true,
@@ -95,7 +96,7 @@ export class ContentSetRoleMemberships {
 
         panelModified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
-            items: modifiedContentSetRoleMemberships,
+            items: modifiedContentSetUserGroupRoleMemberships,
             transferIndividual: 1,
             showServerInfo: 1,
             noSourceServer: true,
@@ -104,7 +105,7 @@ export class ContentSetRoleMemberships {
 
         panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
             myTitle: title,
-            items: createdContentSetRoleMemberships,
+            items: createdContentSetUserGroupRoleMemberships,
             transferIndividual: 1,
             showServerInfo: 1,
             noSourceServer: true,
@@ -113,7 +114,7 @@ export class ContentSetRoleMemberships {
 
         panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
-            items: unchangedContentSetRoleMemberships,
+            items: unchangedContentSetUserGroupRoleMemberships,
         }, panelUnchanged, context, config);
 
         panelUnchanged.webview.onDidReceiveMessage(async message => {
@@ -147,7 +148,7 @@ export class ContentSetRoleMemberships {
                         var path = items[0];
                         var targetPath = items[2];
 
-                        await this.transferContentSetRoleMembership(
+                        await this.transferContentSetUserGroupRoleMembership(
                             allowSelfSignedCerts,
                             httpTimeout,
                             message.destFqdn,
@@ -192,7 +193,7 @@ export class ContentSetRoleMemberships {
                         var path = items[0];
                         var targetPath = items[2];
 
-                        await this.transferContentSetRoleMembership(
+                        await this.transferContentSetUserGroupRoleMembership(
                             allowSelfSignedCerts,
                             httpTimeout,
                             message.destFqdn,
@@ -238,7 +239,7 @@ export class ContentSetRoleMemberships {
         });
     }
 
-    static async transferContentSetRoleMembership(
+    static async transferContentSetUserGroupRoleMembership(
         allowSelfSignedCerts: boolean,
         httpTimeout: number,
         destFqdn: any,
@@ -261,20 +262,20 @@ export class ContentSetRoleMemberships {
                 // get content set role
                 const contentSetRole = await ContentSetRoles.retrieveContentSetRoleByName(dataFromFile.content_set_role.name, destFqdn, session, allowSelfSignedCerts, httpTimeout);
 
-                // get user map
-                const userMap = await Users.retrieveUserMapByName(allowSelfSignedCerts, httpTimeout, destFqdn, session);
+                // get user group map
+                const userGroupMap = await UserGroups.retrieveUserGroupMapByName(allowSelfSignedCerts, httpTimeout, destFqdn, session);
 
                 // generate json
                 var newObject = {
                     content_set_role: {
                         id: contentSetRole.id,
                     },
-                    user: {
-                        id: userMap[dataFromFile.user.name].id,
+                    user_group: {
+                        id: userGroupMap[dataFromFile.user_group.name].id,
                     }
                 };
 
-                const data = await RestClient.post(`https://${destFqdn}/api/v2/content_set_role_memberships`, {
+                const data = await RestClient.post(`https://${destFqdn}/api/v2/content_set_user_group_role_memberships`, {
                     headers: {
                         session: session,
                     },
@@ -282,15 +283,14 @@ export class ContentSetRoleMemberships {
                     responseType: 'json',
                 }, allowSelfSignedCerts, httpTimeout);
 
-                OutputChannelLogging.log(`importing content set role membership complete`);
+                OutputChannelLogging.log(`importing content set user group role membership complete`);
                 resolve();
 
             } catch (err) {
-                OutputChannelLogging.logError('error importing content set role membership', err);
+                OutputChannelLogging.logError('error importing content set user group role membership', err);
                 reject();
             }
         });
 
         return p;
-    }
-}
+    }}

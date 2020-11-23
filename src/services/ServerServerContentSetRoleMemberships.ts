@@ -126,67 +126,73 @@ class ServerServerContentSetRoleMemberships {
 
                     // iterate through each download export
                     var contentSetRoleMembershipCounter = 0;
-                    var contentSetRoleMembershipTotal = content_set_role_memberships.length;
-                    for (var i = 0; i < content_set_role_memberships.length; i++) {
-                        const contentSetRoleMembership: any = content_set_role_memberships[i];
+                    var contentSetRoleMembershipTotal: number = content_set_role_memberships.length;
 
-                        // check for deleted
-                        if (contentSetRoleMembership.deleted_flag === 1) {
-                            contentSetRoleMembershipCounter++;
+                    if (contentSetRoleMembershipTotal === 0) {
+                        OutputChannelLogging.log(`there are 0 content set role memberships for ${fqdn}`);
+                        resolve();
+                    } else {
+                        for (var i = 0; i < content_set_role_memberships.length; i++) {
+                            const contentSetRoleMembership: any = content_set_role_memberships[i];
 
-                            if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
-                                OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role memberships from ${fqdn}`);
-                                resolve();
-                            }
-                        } else {
-                            var newObject: any = {};
-
-                            newObject['content_set_role'] = {
-                                name: contentSetRoles[contentSetRoleMembership.content_set_role.id]
-                            };
-
-                            newObject['user'] = users[contentSetRoleMembership.user.id];
-
-                            if (i % 30 === 0 || i === contentSetRoleMembershipTotal) {
-                                OutputChannelLogging.log(`processing ${i + 1} of ${contentSetRoleMembershipTotal}`);
-                            }
-
-                            // get export
-                            try {
-                                const contentSetRoleMembershipName: string = sanitize(newObject.user.name + '-' + newObject.content_set_role.name);
-
-                                try {
-                                    const content: string = JSON.stringify(newObject, null, 2);
-
-                                    const contentSetRoleMembershipFile = path.join(directory, contentSetRoleMembershipName + '.json');
-                                    fs.writeFile(contentSetRoleMembershipFile, content, (err) => {
-                                        if (err) {
-                                            OutputChannelLogging.logError(`could not write ${contentSetRoleMembershipFile}`, err);
-                                        }
-
-                                        contentSetRoleMembershipCounter++;
-
-                                        if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
-                                            OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role memberships from ${fqdn}`);
-                                            resolve();
-                                        }
-                                    });
-                                } catch (err) {
-                                    OutputChannelLogging.logError(`error processing ${label} content set role memberships ${contentSetRoleMembershipName}`, err);
-                                    contentSetRoleMembershipCounter++;
-
-                                    if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
-                                        OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role membership from ${fqdn}`);
-                                        resolve();
-                                    }
-                                }
-                            } catch (err) {
-                                OutputChannelLogging.logError(`saving content set role membership file for ${contentSetRoleMembership.name} from ${fqdn}`, err);
+                            // check for deleted
+                            if (contentSetRoleMembership.deleted_flag === 1) {
                                 contentSetRoleMembershipCounter++;
 
                                 if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
                                     OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role memberships from ${fqdn}`);
                                     resolve();
+                                }
+                            } else {
+                                var newObject: any = {};
+
+                                newObject['content_set_role'] = {
+                                    name: contentSetRoles[contentSetRoleMembership.content_set_role.id]
+                                };
+
+                                newObject['user'] = users[contentSetRoleMembership.user.id];
+
+                                if (i % 30 === 0 || i === contentSetRoleMembershipTotal) {
+                                    OutputChannelLogging.log(`processing ${i + 1} of ${contentSetRoleMembershipTotal}`);
+                                }
+
+                                // get export
+                                try {
+                                    const contentSetRoleMembershipName: string = sanitize(newObject.user.name + '-' + newObject.content_set_role.name);
+
+                                    try {
+                                        const content: string = JSON.stringify(newObject, null, 2);
+
+                                        const contentSetRoleMembershipFile = path.join(directory, contentSetRoleMembershipName + '.json');
+                                        fs.writeFile(contentSetRoleMembershipFile, content, (err) => {
+                                            if (err) {
+                                                OutputChannelLogging.logError(`could not write ${contentSetRoleMembershipFile}`, err);
+                                            }
+
+                                            contentSetRoleMembershipCounter++;
+
+                                            if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
+                                                OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role memberships from ${fqdn}`);
+                                                resolve();
+                                            }
+                                        });
+                                    } catch (err) {
+                                        OutputChannelLogging.logError(`error processing ${label} content set role memberships ${contentSetRoleMembershipName}`, err);
+                                        contentSetRoleMembershipCounter++;
+
+                                        if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
+                                            OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role membership from ${fqdn}`);
+                                            resolve();
+                                        }
+                                    }
+                                } catch (err) {
+                                    OutputChannelLogging.logError(`saving content set role membership file for ${contentSetRoleMembership.name} from ${fqdn}`, err);
+                                    contentSetRoleMembershipCounter++;
+
+                                    if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
+                                        OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role memberships from ${fqdn}`);
+                                        resolve();
+                                    }
                                 }
                             }
                         }

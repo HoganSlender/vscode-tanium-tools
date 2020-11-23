@@ -124,50 +124,56 @@ export class ServerServerContentSets {
 
                     // iterate through each download export
                     var contentSetCounter = 0;
-                    var contentSetTotal = content_sets.length;
-                    for (var i = 0; i < content_sets.length; i++) {
-                        const contentSet: any = content_sets[i];
+                    var contentSetTotal: number = content_sets.length;
 
-                        if (i % 30 === 0 || i === contentSetTotal) {
-                            OutputChannelLogging.log(`processing ${i + 1} of ${contentSetTotal}`);
-                        }
+                    if (contentSetTotal === 0) {
+                        OutputChannelLogging.log(`there are 0 content sets for ${fqdn}`);
+                        resolve();
+                    } else {
+                        for (var i = 0; i < content_sets.length; i++) {
+                            const contentSet: any = content_sets[i];
 
-                        // get export
-                        try {
-                            const contentSetName: string = sanitize(contentSet.name);
+                            if (i % 30 === 0 || i === contentSetTotal) {
+                                OutputChannelLogging.log(`processing ${i + 1} of ${contentSetTotal}`);
+                            }
 
+                            // get export
                             try {
-                                const content: string = JSON.stringify(contentSet, null, 2);
+                                const contentSetName: string = sanitize(contentSet.name);
 
-                                const contentSetFile = path.join(directory, contentSetName + '.json');
-                                fs.writeFile(contentSetFile, content, (err) => {
-                                    if (err) {
-                                        OutputChannelLogging.logError(`could not write ${contentSetFile}`, err);
-                                    }
+                                try {
+                                    const content: string = JSON.stringify(contentSet, null, 2);
 
+                                    const contentSetFile = path.join(directory, contentSetName + '.json');
+                                    fs.writeFile(contentSetFile, content, (err) => {
+                                        if (err) {
+                                            OutputChannelLogging.logError(`could not write ${contentSetFile}`, err);
+                                        }
+
+                                        contentSetCounter++;
+
+                                        if (contentSetTotal === contentSetCounter) {
+                                            OutputChannelLogging.log(`processed ${contentSetTotal} content sets from ${fqdn}`);
+                                            resolve();
+                                        }
+                                    });
+                                } catch (err) {
+                                    OutputChannelLogging.logError(`error processing ${label} content set ${contentSetName}`, err);
                                     contentSetCounter++;
 
                                     if (contentSetTotal === contentSetCounter) {
-                                        OutputChannelLogging.log(`processed ${contentSetTotal} content sets from ${fqdn}`);
+                                        OutputChannelLogging.log(`processed ${contentSetTotal} content set from ${fqdn}`);
                                         resolve();
                                     }
-                                });
+                                }
                             } catch (err) {
-                                OutputChannelLogging.logError(`error processing ${label} content set ${contentSetName}`, err);
+                                OutputChannelLogging.logError(`saving content set file for ${contentSet.name} from ${fqdn}`, err);
                                 contentSetCounter++;
 
                                 if (contentSetTotal === contentSetCounter) {
-                                    OutputChannelLogging.log(`processed ${contentSetTotal} content set from ${fqdn}`);
+                                    OutputChannelLogging.log(`processed ${contentSetTotal} content sets from ${fqdn}`);
                                     resolve();
                                 }
-                            }
-                        } catch (err) {
-                            OutputChannelLogging.logError(`saving content set file for ${contentSet.name} from ${fqdn}`, err);
-                            contentSetCounter++;
-
-                            if (contentSetTotal === contentSetCounter) {
-                                OutputChannelLogging.log(`processed ${contentSetTotal} content sets from ${fqdn}`);
-                                resolve();
                             }
                         }
                     }

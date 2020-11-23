@@ -130,85 +130,91 @@ class ServerServerContentSetRolePrivileges {
 
                     // iterate through each download export
                     var contentSetRolePrivilegeCounter = 0;
-                    var contentSetRolePrivilegeTotal = content_set_role_privileges.length;
-                    for (var i = 0; i < content_set_role_privileges.length; i++) {
-                        const contentSetRolePrivilege: any = content_set_role_privileges[i];
+                    var contentSetRolePrivilegeTotal: number = content_set_role_privileges.length;
 
-                        // check for deleted
-                        if (contentSetRolePrivilege.deleted_flag === 1) {
-                            contentSetRolePrivilegeCounter++;
+                    if (contentSetRolePrivilegeTotal === 0) {
+                        OutputChannelLogging.log(`there are 0 content set user group role privileges for ${fqdn}`);
+                        resolve();
+                    } else {
+                        for (var i = 0; i < content_set_role_privileges.length; i++) {
+                            const contentSetRolePrivilege: any = content_set_role_privileges[i];
 
-                            if (contentSetRolePrivilegeTotal === contentSetRolePrivilegeCounter) {
-                                OutputChannelLogging.log(`processed ${contentSetRolePrivilegeTotal} content set role privileges from ${fqdn}`);
-                                resolve();
-                            }
-                        } else {
-                            var newObject: any = {};
-
-                            if (contentSetRolePrivilege.content_set === null) {
-                                newObject['content_set'] = null;
-                            } else {
-                                newObject['content_set'] = {
-                                    name: contentSets[contentSetRolePrivilege.content_set.id]
-                                };
-                            }
-
-                            if (contentSetRolePrivilege.content_set_role === null) {
-                                newObject['content_set_role'] = null;
-                            } else {
-                                newObject['content_set_role'] = {
-                                    name: contentSetRoles[contentSetRolePrivilege.content_set_role.id]
-                                };
-                            }
-
-                            if (contentSetRolePrivilege.content_set_privilege === null) {
-                                newObject['content_set_privilege'] = null;
-                            } else {
-                                newObject['content_set_privilege'] = {
-                                    name: contentSetPrivileges[contentSetRolePrivilege.content_set_privilege.id]
-                                };
-                            }
-
-                            if (i % 30 === 0 || i === contentSetRolePrivilegeTotal) {
-                                OutputChannelLogging.log(`processing ${i + 1} of ${contentSetRolePrivilegeTotal}`);
-                            }
-
-                            // get export
-                            try {
-                                const contentSetRolePrivilegeName: string = sanitize(newObject.content_set.name + '-' + newObject.content_set_role.name + '-' + newObject.content_set_privilege.name);
-
-                                try {
-                                    const content: string = JSON.stringify(newObject, null, 2);
-
-                                    const contentSetRolePrivilegeFile = path.join(directory, contentSetRolePrivilegeName + '.json');
-                                    fs.writeFile(contentSetRolePrivilegeFile, content, (err) => {
-                                        if (err) {
-                                            OutputChannelLogging.logError(`could not write ${contentSetRolePrivilegeFile}`, err);
-                                        }
-
-                                        contentSetRolePrivilegeCounter++;
-
-                                        if (contentSetRolePrivilegeTotal === contentSetRolePrivilegeCounter) {
-                                            OutputChannelLogging.log(`processed ${contentSetRolePrivilegeTotal} content set role privileges from ${fqdn}`);
-                                            resolve();
-                                        }
-                                    });
-                                } catch (err) {
-                                    OutputChannelLogging.logError(`error processing ${label} content set role privileges ${contentSetRolePrivilegeName}`, err);
-                                    contentSetRolePrivilegeCounter++;
-
-                                    if (contentSetRolePrivilegeTotal === contentSetRolePrivilegeCounter) {
-                                        OutputChannelLogging.log(`processed ${contentSetRolePrivilegeTotal} content set role privilege from ${fqdn}`);
-                                        resolve();
-                                    }
-                                }
-                            } catch (err) {
-                                OutputChannelLogging.logError(`saving content set role privilege file for ${contentSetRolePrivilege.name} from ${fqdn}`, err);
+                            // check for deleted
+                            if (contentSetRolePrivilege.deleted_flag === 1) {
                                 contentSetRolePrivilegeCounter++;
 
                                 if (contentSetRolePrivilegeTotal === contentSetRolePrivilegeCounter) {
                                     OutputChannelLogging.log(`processed ${contentSetRolePrivilegeTotal} content set role privileges from ${fqdn}`);
                                     resolve();
+                                }
+                            } else {
+                                var newObject: any = {};
+
+                                if (contentSetRolePrivilege.content_set === null) {
+                                    newObject['content_set'] = null;
+                                } else {
+                                    newObject['content_set'] = {
+                                        name: contentSets[contentSetRolePrivilege.content_set.id]
+                                    };
+                                }
+
+                                if (contentSetRolePrivilege.content_set_role === null) {
+                                    newObject['content_set_role'] = null;
+                                } else {
+                                    newObject['content_set_role'] = {
+                                        name: contentSetRoles[contentSetRolePrivilege.content_set_role.id]
+                                    };
+                                }
+
+                                if (contentSetRolePrivilege.content_set_privilege === null) {
+                                    newObject['content_set_privilege'] = null;
+                                } else {
+                                    newObject['content_set_privilege'] = {
+                                        name: contentSetPrivileges[contentSetRolePrivilege.content_set_privilege.id]
+                                    };
+                                }
+
+                                if (i % 30 === 0 || i === contentSetRolePrivilegeTotal) {
+                                    OutputChannelLogging.log(`processing ${i + 1} of ${contentSetRolePrivilegeTotal}`);
+                                }
+
+                                // get export
+                                try {
+                                    const contentSetRolePrivilegeName: string = sanitize(newObject.content_set.name + '-' + newObject.content_set_role.name + '-' + newObject.content_set_privilege.name);
+
+                                    try {
+                                        const content: string = JSON.stringify(newObject, null, 2);
+
+                                        const contentSetRolePrivilegeFile = path.join(directory, contentSetRolePrivilegeName + '.json');
+                                        fs.writeFile(contentSetRolePrivilegeFile, content, (err) => {
+                                            if (err) {
+                                                OutputChannelLogging.logError(`could not write ${contentSetRolePrivilegeFile}`, err);
+                                            }
+
+                                            contentSetRolePrivilegeCounter++;
+
+                                            if (contentSetRolePrivilegeTotal === contentSetRolePrivilegeCounter) {
+                                                OutputChannelLogging.log(`processed ${contentSetRolePrivilegeTotal} content set role privileges from ${fqdn}`);
+                                                resolve();
+                                            }
+                                        });
+                                    } catch (err) {
+                                        OutputChannelLogging.logError(`error processing ${label} content set role privileges ${contentSetRolePrivilegeName}`, err);
+                                        contentSetRolePrivilegeCounter++;
+
+                                        if (contentSetRolePrivilegeTotal === contentSetRolePrivilegeCounter) {
+                                            OutputChannelLogging.log(`processed ${contentSetRolePrivilegeTotal} content set role privilege from ${fqdn}`);
+                                            resolve();
+                                        }
+                                    }
+                                } catch (err) {
+                                    OutputChannelLogging.logError(`saving content set role privilege file for ${contentSetRolePrivilege.name} from ${fqdn}`, err);
+                                    contentSetRolePrivilegeCounter++;
+
+                                    if (contentSetRolePrivilegeTotal === contentSetRolePrivilegeCounter) {
+                                        OutputChannelLogging.log(`processed ${contentSetRolePrivilegeTotal} content set role privileges from ${fqdn}`);
+                                        resolve();
+                                    }
                                 }
                             }
                         }

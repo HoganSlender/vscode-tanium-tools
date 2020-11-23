@@ -118,59 +118,65 @@ class ServerServerUsers {
 
                     // iterate through each download export
                     var userCounter = 0;
-                    var userTotal = users.length;
-                    for (var i = 0; i < userTotal; i++) {
-                        const user: any = users[i];
+                    var userTotal: number = users.length;
 
-                        if (i % 30 === 0 || i === userTotal) {
-                            OutputChannelLogging.log(`processing ${i + 1} of ${userTotal}`);
-                        }
+                    if (userTotal === 0) {
+                        OutputChannelLogging.log(`there are 0 users for ${fqdn}`);
+                        resolve();
+                    } else {
+                        for (var i = 0; i < userTotal; i++) {
+                            const user: any = users[i];
 
-                        if (user.deleted_flag || user.locked_out !== 0) {
-                            userCounter++;
-
-                            if (userTotal === userCounter) {
-                                OutputChannelLogging.log(`processed ${userTotal} users from ${fqdn}`);
-                                resolve();
+                            if (i % 30 === 0 || i === userTotal) {
+                                OutputChannelLogging.log(`processing ${i + 1} of ${userTotal}`);
                             }
-                        } else {
-                            // get export
-                            try {
-                                const userName: string = sanitize(user.display_name.trim().length === 0 ? user.name : user.display_name);
 
-                                try {
-                                    const anonymizedUser = Users.anonymizeUser(user);
-                                    const content: string = JSON.stringify(anonymizedUser, null, 2);
-
-                                    const userFile = path.join(directory, userName + '.json');
-                                    fs.writeFile(userFile, content, (err) => {
-                                        if (err) {
-                                            OutputChannelLogging.logError(`could not write ${userFile}`, err);
-                                        }
-
-                                        userCounter++;
-
-                                        if (userTotal === userCounter) {
-                                            OutputChannelLogging.log(`processed ${userTotal} users from ${fqdn}`);
-                                            resolve();
-                                        }
-                                    });
-                                } catch (err) {
-                                    OutputChannelLogging.logError(`error processing ${label} user ${userName}`, err);
-                                    userCounter++;
-
-                                    if (userTotal === userCounter) {
-                                        OutputChannelLogging.log(`processed ${userTotal} user from ${fqdn}`);
-                                        resolve();
-                                    }
-                                }
-                            } catch (err) {
-                                OutputChannelLogging.logError(`saving user file for ${user.name} from ${fqdn}`, err);
+                            if (user.deleted_flag || user.locked_out !== 0) {
                                 userCounter++;
 
                                 if (userTotal === userCounter) {
                                     OutputChannelLogging.log(`processed ${userTotal} users from ${fqdn}`);
                                     resolve();
+                                }
+                            } else {
+                                // get export
+                                try {
+                                    const userName: string = sanitize(user.display_name.trim().length === 0 ? user.name : user.display_name);
+
+                                    try {
+                                        const anonymizedUser = Users.anonymizeUser(user);
+                                        const content: string = JSON.stringify(anonymizedUser, null, 2);
+
+                                        const userFile = path.join(directory, userName + '.json');
+                                        fs.writeFile(userFile, content, (err) => {
+                                            if (err) {
+                                                OutputChannelLogging.logError(`could not write ${userFile}`, err);
+                                            }
+
+                                            userCounter++;
+
+                                            if (userTotal === userCounter) {
+                                                OutputChannelLogging.log(`processed ${userTotal} users from ${fqdn}`);
+                                                resolve();
+                                            }
+                                        });
+                                    } catch (err) {
+                                        OutputChannelLogging.logError(`error processing ${label} user ${userName}`, err);
+                                        userCounter++;
+
+                                        if (userTotal === userCounter) {
+                                            OutputChannelLogging.log(`processed ${userTotal} user from ${fqdn}`);
+                                            resolve();
+                                        }
+                                    }
+                                } catch (err) {
+                                    OutputChannelLogging.logError(`saving user file for ${user.name} from ${fqdn}`, err);
+                                    userCounter++;
+
+                                    if (userTotal === userCounter) {
+                                        OutputChannelLogging.log(`processed ${userTotal} users from ${fqdn}`);
+                                        resolve();
+                                    }
                                 }
                             }
                         }

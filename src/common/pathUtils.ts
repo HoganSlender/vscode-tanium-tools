@@ -13,20 +13,24 @@ export class PathUtils {
             const files: string[] = fs.readdirSync(leftDir);
             var missing: any[] = [];
 
-            for (var i = 0; i < files.length; i++) {
-                const file = files[i];
-                const leftTarget = path.join(leftDir, file);
-                const rightTarget = leftTarget.replace(leftDir, rightDir);
+            if (files.length === 0) {
+                resolve(missing);
+            } else {
+                for (var i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const leftTarget = path.join(leftDir, file);
+                    const rightTarget = leftTarget.replace(leftDir, rightDir);
 
-                if (!fs.existsSync(rightTarget)) {
-                    missing.push({
-                        name: file.replace('.json', ''),
-                        path: leftTarget + '~~' + rightTarget,
-                    });
-                }
+                    if (!fs.existsSync(rightTarget)) {
+                        missing.push({
+                            name: file.replace('.json', ''),
+                            path: leftTarget + '~~' + rightTarget,
+                        });
+                    }
 
-                if (i === files.length - 1) {
-                    resolve(missing);
+                    if (i === files.length - 1) {
+                        resolve(missing);
+                    }
                 }
             }
         });
@@ -39,26 +43,30 @@ export class PathUtils {
             const files: string[] = fs.readdirSync(leftDir);
             var modified: any[] = [];
 
-            for (var i = 0; i < files.length; i++) {
-                const file = files[i];
-                const leftTarget = path.join(leftDir, file);
-                const rightTarget = leftTarget.replace(leftDir, rightDir);
+            if (files.length === 0) {
+                resolve(modified);
+            } else {
+                for (var i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const leftTarget = path.join(leftDir, file);
+                    const rightTarget = leftTarget.replace(leftDir, rightDir);
 
-                if (fs.existsSync(rightTarget)) {
-                    // compare left and right contents
-                    var lContents = fs.readFileSync(leftTarget, 'utf-8');
-                    var rContents = fs.readFileSync(rightTarget, 'utf-8');
+                    if (fs.existsSync(rightTarget)) {
+                        // compare left and right contents
+                        var lContents = fs.readFileSync(leftTarget, 'utf-8');
+                        var rContents = fs.readFileSync(rightTarget, 'utf-8');
 
-                    if (lContents !== rContents) {
-                        modified.push({
-                            name: file.replace('.json', ''),
-                            path: leftTarget + '~~' + rightTarget,
-                        });
+                        if (lContents !== rContents) {
+                            modified.push({
+                                name: file.replace('.json', ''),
+                                path: leftTarget + '~~' + rightTarget,
+                            });
+                        }
                     }
-                }
 
-                if (i === files.length - 1) {
-                    resolve(modified);
+                    if (i === files.length - 1) {
+                        resolve(modified);
+                    }
                 }
             }
         });
@@ -71,20 +79,24 @@ export class PathUtils {
             const files: string[] = fs.readdirSync(rightDir);
             var created: any[] = [];
 
-            for (var i = 0; i < files.length; i++) {
-                const file = files[i];
-                const rightTarget = path.join(rightDir, file);
-                const leftTarget = rightTarget.replace(rightDir, leftDir);
+            if (files.length === 0) {
+                resolve(created);
+            } else {
+                for (var i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const rightTarget = path.join(rightDir, file);
+                    const leftTarget = rightTarget.replace(rightDir, leftDir);
 
-                if (!fs.existsSync(leftTarget)) {
-                    created.push({
-                        name: file.replace('.json', ''),
-                        path: rightTarget
-                    });
-                }
+                    if (!fs.existsSync(leftTarget)) {
+                        created.push({
+                            name: file.replace('.json', ''),
+                            path: rightTarget
+                        });
+                    }
 
-                if (i === files.length - 1) {
-                    resolve(created);
+                    if (i === files.length - 1) {
+                        resolve(created);
+                    }
                 }
             }
         });
@@ -97,26 +109,30 @@ export class PathUtils {
             const files: string[] = fs.readdirSync(leftDir);
             var unchanged: any[] = [];
 
-            for (var i = 0; i < files.length; i++) {
-                const file = files[i];
-                const leftTarget = path.join(leftDir, file);
-                const rightTarget = leftTarget.replace(leftDir, rightDir);
+            if (files.length === 0) {
+                resolve(unchanged);
+            } else {
+                for (var i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const leftTarget = path.join(leftDir, file);
+                    const rightTarget = leftTarget.replace(leftDir, rightDir);
 
-                if (fs.existsSync(rightTarget)) {
-                    // compare left and right contents
-                    var lContents = fs.readFileSync(leftTarget, 'utf-8');
-                    var rContents = fs.readFileSync(rightTarget, 'utf-8');
+                    if (fs.existsSync(rightTarget)) {
+                        // compare left and right contents
+                        var lContents = fs.readFileSync(leftTarget, 'utf-8');
+                        var rContents = fs.readFileSync(rightTarget, 'utf-8');
 
-                    if (lContents === rContents) {
-                        unchanged.push({
-                            name: file.replace('.json', ''),
-                            path: leftTarget + '~~' + rightTarget,
-                        });
+                        if (lContents === rContents) {
+                            unchanged.push({
+                                name: file.replace('.json', ''),
+                                path: leftTarget + '~~' + rightTarget,
+                            });
+                        }
                     }
-                }
 
-                if (i === files.length - 1) {
-                    resolve(unchanged);
+                    if (i === files.length - 1) {
+                        resolve(unchanged);
+                    }
                 }
             }
         });

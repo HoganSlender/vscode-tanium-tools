@@ -1,5 +1,6 @@
+import { ConfigurationTarget, ExtensionContext, QuickPickItem, Uri, WorkspaceConfiguration } from "vscode";
+
 import { collectInputs, MyButton, Step, StepType } from "./multi-step-input";
-import { QuickPickItem, WorkspaceConfiguration, ExtensionContext, Uri, ConfigurationTarget } from "vscode";
 
 interface ServerServerPackageState {
     leftFqdnQp: QuickPickItem | string;

@@ -1,14 +1,16 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import * as commands from '../common/commands';
-import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import path = require('path');
-import * as pug from 'pug';
+import * as vscode from 'vscode';
+
+import * as commands from '../common/commands';
 import { OutputChannelLogging } from '../common/logging';
 import { PathUtils } from '../common/pathUtils';
-import { WebContentUtils } from '../common/webContentUtils';
 import { RestClient } from '../common/restClient';
+import { WebContentUtils } from '../common/webContentUtils';
+
+import path = require('path');
+import { OpenType } from '../common/enums';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -86,6 +88,7 @@ export class ContentSetRoles {
             items: missingContentSetRoles,
             transferIndividual: 0,
             showServerInfo: 0,
+            openType: OpenType.file,
         }, panelMissing, context, config);
 
         panelModified.webview.html = WebContentUtils.getModifiedWebContent({
@@ -93,6 +96,7 @@ export class ContentSetRoles {
             items: modifiedContentSetRoles,
             transferIndividual: 0,
             showServerInfo: 0,
+            openType: OpenType.diff,
         }, panelModified, context, config);
 
         panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
@@ -100,11 +104,15 @@ export class ContentSetRoles {
             items: createdContentSetRoles,
             transferIndividual: 0,
             showServerInfo: 0,
+            openType: OpenType.file,
         }, panelCreated, context, config);
 
         panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
             items: unchangedContentSetRoles,
+            transferIndividual: 0,
+            showServerInfo: 0,
+            openType: OpenType.diff,
         }, panelUnchanged, context, config);
 
         panelUnchanged.webview.onDidReceiveMessage(async message => {

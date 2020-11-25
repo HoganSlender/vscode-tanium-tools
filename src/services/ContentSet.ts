@@ -1,16 +1,17 @@
-import * as url from 'url';
-import * as path from 'path';
+import * as parser from 'fast-xml-parser';
 import * as fs from 'fs';
 import * as he from 'he';
-import * as parser from 'fast-xml-parser';
+import * as path from 'path';
 import { sanitize } from "sanitize-filename-ts";
-import { TransformSensor } from '../transform/transform-sensor';
+import * as url from 'url';
 import * as vscode from 'vscode';
-import { collectContentSetSensorInputs } from '../parameter-collection/content-set-sensors-parameters';
-import { OutputChannelLogging } from '../common/logging';
+
 import * as commands from '../common/commands';
-import { Session } from '../common/session';
+import { OutputChannelLogging } from '../common/logging';
 import { RestClient } from '../common/restClient';
+import { Session } from '../common/session';
+import { collectContentSetSensorInputs } from '../parameter-collection/content-set-sensors-parameters';
+import { TransformSensor } from '../transform/transform-sensor';
 
 const diffMatchPatch = require('diff-match-patch');
 

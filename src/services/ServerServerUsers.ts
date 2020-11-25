@@ -1,14 +1,17 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import * as commands from '../common/commands';
-import * as vscode from 'vscode';
-import { OutputChannelLogging } from '../common/logging';
-import path = require('path');
-import { sanitize } from 'sanitize-filename-ts';
 import * as fs from 'fs';
-import { Session } from '../common/session';
+import { sanitize } from 'sanitize-filename-ts';
+import * as vscode from 'vscode';
+
+import * as commands from '../common/commands';
+import { OutputChannelLogging } from '../common/logging';
 import { RestClient } from '../common/restClient';
+import { Session } from '../common/session';
 import { collectServerServerUsersInputs } from '../parameter-collection/server-server-users-parameters';
+import { Groups } from './Groups';
 import { Users } from './Users';
+
+import path = require('path');
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -100,7 +103,7 @@ class ServerServerUsers {
                     OutputChannelLogging.log(`user retrieval - initialized for ${fqdn}`);
                     var users: [any];
 
-                    // get usaers
+                    // get users
                     try {
                         const body = await RestClient.get(`${restBase}/users`, {
                             headers: {
@@ -124,6 +127,9 @@ class ServerServerUsers {
                         OutputChannelLogging.log(`there are 0 users for ${fqdn}`);
                         resolve();
                     } else {
+                        // get groups map
+                        const groupMap = await Groups.getGroupMap(allowSelfSignedCerts, httpTimeout, restBase, session);
+
                         for (var i = 0; i < userTotal; i++) {
                             const user: any = users[i];
 
@@ -144,7 +150,7 @@ class ServerServerUsers {
                                     const userName: string = sanitize(user.display_name.trim().length === 0 ? user.name : user.display_name);
 
                                     try {
-                                        const anonymizedUser = Users.anonymizeUser(user);
+                                        const anonymizedUser = await Users.anonymizeUser(user, groupMap);
                                         const content: string = JSON.stringify(anonymizedUser, null, 2);
 
                                         const userFile = path.join(directory, userName + '.json');

@@ -1,6 +1,6 @@
-import { collectInputs, MyButton, Step, StepType } from "./multi-step-input";
-import { QuickPickItem, WorkspaceConfiguration, ExtensionContext, Uri, ConfigurationTarget } from "vscode";
+import { ConfigurationTarget, ExtensionContext, QuickPickItem, Uri, WorkspaceConfiguration } from "vscode";
 import { SigningKey } from "../types/signingKey";
+import { collectInputs, MyButton, Step, StepType } from "./multi-step-input";
 
 interface SigningContentFileState {
     serverLabel: QuickPickItem | string;

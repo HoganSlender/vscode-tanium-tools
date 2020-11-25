@@ -1,17 +1,19 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import * as commands from '../common/commands';
-import * as vscode from 'vscode';
-import { OutputChannelLogging } from '../common/logging';
-import path = require('path');
-import { sanitize } from 'sanitize-filename-ts';
 import * as fs from 'fs';
-import { Session } from '../common/session';
+import { sanitize } from 'sanitize-filename-ts';
+import * as vscode from 'vscode';
+
+import * as commands from '../common/commands';
+import { OutputChannelLogging } from '../common/logging';
 import { RestClient } from '../common/restClient';
+import { Session } from '../common/session';
 import { collectServerServerContentSetRolePrivilegeInputs } from '../parameter-collection/server-server-content-set-role-privileges-parameters';
 import { ContentSetRolePrivileges } from './ContentSetRolePrivileges';
-import { ServerServerContentSets } from './ServerServerContentSets';
-import { ServerServerContentSetRoles } from './ServerServerContentSetRoles';
 import { ServerServerContentSetPrivileges } from './ServerServerContentSetPrivileges';
+import { ServerServerContentSetRoles } from './ServerServerContentSetRoles';
+import { ServerServerContentSets } from './ServerServerContentSets';
+
+import path = require('path');
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {

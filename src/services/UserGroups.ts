@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import * as commands from '../common/commands';
-import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as vscode from 'vscode';
+
+import * as commands from '../common/commands';
+import { OpenType } from '../common/enums';
 import { OutputChannelLogging } from '../common/logging';
-import { RestClient } from '../common/restClient';
 import { PathUtils } from '../common/pathUtils';
-import { WebContentUtils } from '../common/webContentUtils';
+import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
-import { reject } from 'lodash';
+import { WebContentUtils } from '../common/webContentUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -88,8 +89,7 @@ export class UserGroups {
             items: missingUserGroups,
             transferIndividual: 1,
             showServerInfo: 1,
-            noSourceServer: true,
-            noSigningKeys: true,
+            openType: OpenType.file,
         }, panelMissing, context, config);
 
         panelModified.webview.html = WebContentUtils.getModifiedWebContent({
@@ -97,8 +97,7 @@ export class UserGroups {
             items: modifiedUserGroups,
             transferIndividual: 1,
             showServerInfo: 1,
-            noSourceServer: true,
-            noSigningKeys: true,
+            openType: OpenType.diff,
         }, panelModified, context, config);
 
         panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
@@ -106,13 +105,15 @@ export class UserGroups {
             items: createdUserGroups,
             transferIndividual: 1,
             showServerInfo: 1,
-            noSourceServer: true,
-            noSigningKeys: true,
+            openType: OpenType.file,
         }, panelCreated, context, config);
 
         panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
             items: unchangedUserGroups,
+            transferIndividual: 0,
+            showServerInfo: 0,
+            openType: OpenType.diff,
         }, panelUnchanged, context, config);
 
         panelUnchanged.webview.onDidReceiveMessage(async message => {
@@ -150,8 +151,8 @@ export class UserGroups {
                             allowSelfSignedCerts,
                             httpTimeout,
                             message.destFqdn,
-                            message.username,
-                            message.password,
+                            message.destUsername,
+                            message.destPassword,
                             path,
                             targetPath,
                             message.name,
@@ -195,8 +196,8 @@ export class UserGroups {
                             allowSelfSignedCerts,
                             httpTimeout,
                             message.destFqdn,
-                            message.username,
-                            message.password,
+                            message.destUsername,
+                            message.destPassword,
                             path,
                             targetPath,
                             message.name,

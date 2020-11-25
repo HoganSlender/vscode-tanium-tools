@@ -1,10 +1,8 @@
 const vscode = acquireVsCodeApi();
 
-console.log('unchanged');
+var lItems = document.getElementById("litems");
 
-var unchangedlItems = document.getElementById("unchangedlitems");
-
-unchangedlItems.addEventListener("dblclick", () => openDiff(unchangedlItems));
+lItems.addEventListener("dblclick", () => openDiff(lItems));
 
 function openDiff(from) {
     console.log('inside openDiff');

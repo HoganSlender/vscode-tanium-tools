@@ -1,13 +1,15 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import * as commands from '../common/commands';
-import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import path = require('path');
+import * as vscode from 'vscode';
+
+import * as commands from '../common/commands';
+import { OpenType } from '../common/enums';
 import { OutputChannelLogging } from '../common/logging';
 import { PathUtils } from '../common/pathUtils';
 import { WebContentUtils } from '../common/webContentUtils';
-import { resolve } from 'path';
+
+import path = require('path');
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -85,6 +87,7 @@ export class ContentSets {
             items: missingContentSets,
             transferIndividual: 0,
             showServerInfo: 0,
+            openType: OpenType.file,
         }, panelMissing, context, config);
 
         panelModified.webview.html = WebContentUtils.getModifiedWebContent({
@@ -92,6 +95,7 @@ export class ContentSets {
             items: modifiedContentSets,
             transferIndividual: 0,
             showServerInfo: 0,
+            openType: OpenType.diff,
         }, panelModified, context, config);
 
         panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
@@ -99,11 +103,15 @@ export class ContentSets {
             items: createdContentSets,
             transferIndividual: 0,
             showServerInfo: 0,
+            openType: OpenType.file,
         }, panelCreated, context, config);
 
         panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
             items: unchangedContentSets,
+            transferIndividual: 0,
+            showServerInfo: 0,
+            openType: OpenType.diff,
         }, panelUnchanged, context, config);
 
         panelUnchanged.webview.onDidReceiveMessage(async message => {

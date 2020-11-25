@@ -1,34 +1,43 @@
 const vscode = acquireVsCodeApi();
 
-console.log('modified');
+var divOpenType = document.getElementById('divOpenType');
+var openType = divOpenType.innerHTML;
+console.log(`openType: ${openType}`);
 
-var modifiedAddButton = document.getElementById("modifiedAddButton");
-var modifiedRemoveButton = document.getElementById("modifiedRemoveButton");
-var processModifiedButton = document.getElementById("processModifiedButton");
-console.log('after');
+var addButton = document.getElementById("addButton");
+var removeButton = document.getElementById("removeButton");
+var processButton = document.getElementById("processButton");
 
-if (processModifiedButton !== null) {
-    console.log(`processingModifiedButton !== null`);
-    processModifiedButton.disabled = true;
+if (processButton !== null) {
+    console.log(`processButtons !== null`);
+    processButton.disabled = true;
 } else {
-    console.log(`processingModifiedButton === null`);
+    console.log(`processButtons === null`);
 }
 
-var modifiedlItems = document.getElementById("modifiedlitems");
-var modifiedrItems = document.getElementById("modifiedritems");
+var lItems = document.getElementById("litems");
+var rItems = document.getElementById("ritems");
 
-if (modifiedlItems !== null) {
-    console.log(`modifiedlItems !== null`);
-    modifiedlItems.addEventListener("dblclick", () => openDiff(modifiedlItems));
+if (lItems !== null) {
+    console.log(`lItems !== null`);
+    if (openType === 'file') {
+        lItems.addEventListener("dblclick", () => openFile(lItems));
+    } else {
+        lItems.addEventListener("dblclick", () => openDiff(lItems));
+    }
 } else {
-    console.log(`modifiedlItems === null`);
+    console.log(`lItems === null`);
 }
 
-if (modifiedrItems !== null) {
-    console.log(`modifiedrItems !== null`);
-    modifiedrItems.addEventListener("dblclick", () => openDiff(modifiedrItems));
+if (rItems !== null) {
+    console.log(`rItems !== null`);
+    if (openType === 'file') {
+        rItems.addEventListener("dblclick", () => openFile(rItems));
+    } else {
+        rItems.addEventListener("dblclick", () => openDiff(rItems));
+    }
 } else {
-    console.log(`modifiedrItems === null`);
+    console.log(`rItems === null`);
 }
 
 var divShowServerInfo = document.getElementById('divShowServerInfo');
@@ -46,25 +55,25 @@ var divTransferIndividual = document.getElementById('divTransferIndividual');
 var transferIndividual = divTransferIndividual.innerHTML === '1';
 console.log(`transferIndividual: ${transferIndividual}`);
 
-if (modifiedAddButton !== null) {
-    console.log(`modifiedAddButton !== null`);
-    modifiedAddButton.addEventListener("click", () => addButtonEvent(modifiedlItems, modifiedrItems));
+if (addButton !== null) {
+    console.log(`AddButton !== null`);
+    addButton.addEventListener("click", () => addButtonEvent(lItems, rItems));
 } else {
-    console.log(`modifiedAddButton === null`);
+    console.log(`AddButton === null`);
 }
 
-if (modifiedRemoveButton !== null) {
-    console.log(`modifiedRemoveButton !== null`);
-    modifiedRemoveButton.addEventListener("click", () => removeButtonEvent(modifiedrItems, modifiedlItems));
+if (removeButton !== null) {
+    console.log(`RemoveButton !== null`);
+    removeButton.addEventListener("click", () => removeButtonEvent(rItems, lItems));
 } else {
-    console.log(`modifiedRemoveButton === null`);
+    console.log(`RemoveButton === null`);
 }
 
-if (processModifiedButton !== null) {
-    console.log(`processModifiedButton !== null`);
-    processModifiedButton.addEventListener("click", processModifiedItems);
+if (processButton !== null) {
+    console.log(`processButton !== null`);
+    processButton.addEventListener("click", processItems);
 } else {
-    console.log(`processModifiedButton === null`);
+    console.log(`processButton === null`);
 }
 
 var divFqdns = document.getElementById("divFqdns");
@@ -76,42 +85,52 @@ if (!showServerInfo) {
     serverInfo.style.visibility = 'hidden';
 } else {
     console.log(`showServerInfo === true`);
-    var divModifiedSourceFqdn = document.getElementById("divModifiedSourceFqdn");
-    var divModifiedDestFqdn = document.getElementById("divModifiedDestFqdn");
-    var divModifiedUsername = document.getElementById("divModifiedUsername");
-    var divModifiedSigningKey = document.getElementById("divModifiedSigningKey");
+    var divSourceFqdn = document.getElementById("divSourceFqdn");
+    var divSourceUsername = document.getElementById("divSourceUsername");
+
+    var divDestFqdn = document.getElementById("divDestFqdn");
+    var divDestUsername = document.getElementById("divDestUsername");
+
+    var divSigningKey = document.getElementById("divSigningKey");
 
     var fqdnsText = divFqdns.innerHTML;
 
     var fqdns = fqdnsText.split(',');
-    
+
     var usernamesText = divUsernames.innerHTML;
-    
+
     var usernames = usernamesText.split(',');
-    
+
     var signingKeysText = divSigningKeys.innerHTML;
-    
+
     var signingKeys = signingKeysText.split(',');
-    
-    if (divModifiedSourceFqdn !== null) {
-        processInput(fqdns, divModifiedSourceFqdn, 'taniumSourceServerFqdnSelect', false);
+
+    if (divSourceFqdn !== null) {
+        processInput(fqdns, divSourceFqdn, 'taniumSourceFqdnSelect', false);
     }
 
-    processInput(fqdns, divModifiedDestFqdn, 'taniumDestServerFqdnSelect', true);
-    processInput(usernames, divModifiedUsername, 'taniumServerUsernameSelect', true);
-
-    if (divMissingSigningKey !== null) {
-        processInput(signingKeys, divModifiedSigningKey, 'taniumSigningKeySelect', true);
+    if (divSourceUsername !== null) {
+        processInput(usernames, divSourceUsername, 'taniumSourceUsernameSelect', false);
     }
+
+    processInput(fqdns, divDestFqdn, 'taniumDestFqdnSelect', true);
+    processInput(usernames, divDestUsername, 'taniumDestUsernameSelect', true);
     
-    var modifiedTaniumServerPassword = document.getElementById("modifiedTaniumServerPassword");
-    
-    var taniumSourceServerFqdnSelect = document.getElementById("taniumSourceServerFqdnSelect");
-    var taniumDestServerFqdnSelect = document.getElementById("taniumDestServerFqdnSelect");
-    var taniumServerUsernameSelect = document.getElementById("taniumServerUsernameSelect");
+    if (divSigningKey !== null) {
+        processInput(signingKeys, divSigningKey, 'taniumSigningKeySelect', true);
+    }
+
+    var sourcePassword = document.getElementById("sourcePassword");
+    var destPassword = document.getElementById("destPassword");
+
+    var taniumSourceFqdnSelect = document.getElementById("taniumSourceFqdnSelect");
+    var taniumSourceUsernameSelect = document.getElementById("taniumSourceUsernameSelect");
+    var taniumDestFqdnSelect = document.getElementById("taniumDestFqdnSelect");
+    var taniumDestUsernameSelect = document.getElementById("taniumDestUsernameSelect");
     var taniumSigningKeySelect = document.getElementById("taniumSigningKeySelect");
-    
-    modifiedTaniumServerPassword.addEventListener("input", enableProcessPackage);
+
+    sourcePassword.addEventListener("input", enableProcessPackage);
+    destPassword.addEventListener("input", enableProcessPackage);
 }
 
 // handle messages from extension to webview
@@ -120,9 +139,9 @@ window.addEventListener('message', event => {
     switch (message.command) {
         case 'complete':
             // remove first item
-            modifiedrItems.options[0] = null;
+            rItems.options[0] = null;
 
-            processModifiedItems();
+            processItems();
             break;
     }
 });
@@ -149,9 +168,9 @@ function processInput(inputArray, targetDiv, targetId, isLast) {
 
 function enableProcessPackage() {
     if (showServerInfo) {
-        processModifiedButton.disabled = modifiedTaniumServerPassword.value.trim().length === 0;
+        processButton.disabled = rItems.options.length === 0 || destPassword.value.trim().length === 0 || sourcePassword.value.trim().length === 0;
     } else {
-        processModifiedButton.disabled = modifiedrItems.options.length === 0;
+        processButton.disabled = rItems.options.length === 0;
     }
 }
 
@@ -223,32 +242,36 @@ function openFile(from) {
     });
 }
 
-function processModifiedItems() {
-    console.log('inside processModifiedItems');
-    processModifiedButton.disabled = true;
+function processItems() {
+    console.log('inside processItems');
+    processButton.disabled = true;
 
-    const sourceFqdn = taniumSourceServerFqdnSelect?.value ?? '';
+    const sourceFqdn = taniumSourceFqdnSelect?.value ?? '';
     console.log(`sourceFqdn: ${sourceFqdn}`);
-    const destFqdn = taniumDestServerFqdnSelect?.value ?? '';
+    const sourceUsername = taniumSourceUsernameSelect?.value ?? '';
+    console.log(`sourceUsername: ${sourceUsername}`);
+    const destFqdn = taniumDestFqdnSelect?.value ?? '';
     console.log(`destFqdn: ${destFqdn}`);
-    const username = taniumServerUsernameSelect?.value ?? '';
-    console.log(`username: ${username}`);
+    const destUsername = taniumDestUsernameSelect?.value ?? '';
+    console.log(`destUsername: ${destUsername}`);
     const signingKey = taniumSigningKeySelect?.value ?? '';
     console.log(`signingKey: ${signingKey}`);
 
     if (transferIndividual) {
         console.log('transfer individual');
         // process first item
-        if (modifiedrItems.options.length !== 0) {
-            var option = modifiedrItems.options[0];
+        if (rItems.options.length !== 0) {
+            var option = rItems.options[0];
 
             // send message
             vscode.postMessage({
                 command: 'transferItem',
                 sourceFqdn: sourceFqdn,
+                sourceUsername: sourceUsername,
+                sourcePassword: sourcePassword.value,
                 destFqdn: destFqdn,
-                username: username,
-                password: modifiedTaniumServerPassword.value,
+                destUsername: destUsername,
+                destPassword: destPassword.value,
                 path: option.value,
                 name: option.text,
                 signingServerLabel: signingKey,
@@ -257,15 +280,15 @@ function processModifiedItems() {
             vscode.postMessage({
                 command: 'completeProcess'
             });
-            processmodifiedButton.disabled = false;
+            processButton.disabled = false;
         }
     } else {
         console.log('transfer all');
         // gather all values and send
-        if (modifiedrItems.options.length !== 0) {
+        if (rItems.options.length !== 0) {
             var items = [];
-            for (var i = 0; i < modifiedrItems.options.length; i++) {
-                var o = modifiedrItems.options[i];
+            for (var i = 0; i < rItems.options.length; i++) {
+                var o = rItems.options[i];
                 items.push({
                     path: o.value,
                     name: o.text,
@@ -279,7 +302,7 @@ function processModifiedItems() {
                 command: 'transferItems',
                 items: items,
             });
-            processModifiedButton.disabled = false;
+            processButton.disabled = false;
         }
     }
 }

@@ -1,24 +1,49 @@
-import * as vscode from 'vscode';
 import * as pug from 'pug';
+import * as vscode from 'vscode';
+
+import { OpenType } from './enums';
+
+export interface WebContentData {
+    myType?: string,
+    myTitle: string,
+    items: any[],
+    transferIndividual: number,
+    showServerInfo: number,
+    showSourceServer?: boolean,
+    showSourceCreds?: boolean,
+    showSigningKeys?: boolean,
+    openType: OpenType,
+    panelWebviewCspSource?: string,
+    scriptUri?: vscode.Uri,
+    nonce?: string,
+    fqdns?: string,
+    usernames?: string,
+    signingKeys?: string,
+    readOnly?: boolean,
+}
 
 export class WebContentUtils {
-    static getMissingWebContent(pugData: any, panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
-        return this.getBaseWebContent(pugData, 'missing.js', 'missing.pug', panel, context, config);
+    static getMissingWebContent(pugData: WebContentData, panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
+        pugData.myType = 'Missing';
+        return this.getBaseWebContent(pugData, 'editable.js', 'editable.pug', panel, context, config);
     }
 
-    static getModifiedWebContent(pugData: any, panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
-        return this.getBaseWebContent(pugData, 'modified.js', 'modified.pug', panel, context, config);
+    static getModifiedWebContent(pugData: WebContentData, panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
+        pugData.myType = 'Modified';
+        return this.getBaseWebContent(pugData, 'editable.js', 'editable.pug', panel, context, config);
     }
 
-    static getCreatedWebContent(pugData: any, panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
-        return this.getBaseWebContent(pugData, 'created.js', 'created.pug', panel, context, config);
+    static getCreatedWebContent(pugData: WebContentData, panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
+        pugData.myType = 'Created';
+        return this.getBaseWebContent(pugData, 'editable.js', 'editable.pug', panel, context, config);
     }
 
-    static getUnchangedWebContent(pugData: any, panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
-        return this.getBaseWebContent(pugData, 'unchanged.js', 'unchanged.pug', panel, context, config);
+    static getUnchangedWebContent(pugData: WebContentData, panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
+        pugData.myType = 'Unchanged';
+        return this.getBaseWebContent(pugData, 'readonly.js', 'readonly.pug', panel, context, config);
     }
 
-    static getBaseWebContent(pugData: any, scriptFile: string, pugFile: string, panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
+    static getBaseWebContent(pugData: WebContentData, scriptFile: string, pugFile: string, panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
         // get fqdns
         const fqdnsString: string = config.get('fqdns', []).join();
 

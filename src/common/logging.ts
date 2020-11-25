@@ -1,5 +1,5 @@
-import { OutputChannel, window } from "vscode";
 import { HTTPError, RequestError } from "got";
+import { OutputChannel, window } from "vscode";
 
 export class OutputChannelLogging {
     private static channel: OutputChannel;

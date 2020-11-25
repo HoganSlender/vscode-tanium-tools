@@ -1,10 +1,11 @@
-import * as commands from '../common/commands';
 import * as vscode from 'vscode';
+
+import * as commands from '../common/commands';
 import { OutputChannelLogging } from '../common/logging';
-import { collectSensorByNameInputs, SensorByNameState } from '../parameter-collection/sensor-by-name-parameters';
-import { collectSensorByHashInputs, SensorByHashState } from '../parameter-collection/sensor-by-hash-parameters';
-import { Session } from '../common/session';
 import { RestClient } from '../common/restClient';
+import { Session } from '../common/session';
+import { collectSensorByHashInputs, SensorByHashState } from '../parameter-collection/sensor-by-hash-parameters';
+import { collectSensorByNameInputs, SensorByNameState } from '../parameter-collection/sensor-by-name-parameters';
 
 export function activate(context: vscode.ExtensionContext) {
     const myScheme = 'hoganslender';

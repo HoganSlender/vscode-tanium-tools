@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+
 import https = require('https');
 
 const got = require('got');
@@ -36,6 +37,21 @@ export class RestClient {
             try {
                 options = this._wrapOption(allowSelfSignedCerts, httpTimeout, options);
                 const { body } = await got.post(url, options);
+
+                return resolve(body);
+            } catch (err) {
+                return reject(err);
+            }
+        });
+
+        return p;
+    }
+
+    static patch(url: string, options: any, allowSelfSignedCerts: boolean, httpTimeout: number) {
+        const p: Promise<any> = new Promise(async (resolve, reject) => {
+            try {
+                options = this._wrapOption(allowSelfSignedCerts, httpTimeout, options);
+                const { body } = await got.patch(url, options);
 
                 return resolve(body);
             } catch (err) {

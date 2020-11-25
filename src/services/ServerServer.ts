@@ -1,16 +1,18 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import * as commands from '../common/commands';
-import * as vscode from 'vscode';
-import { OutputChannelLogging } from '../common/logging';
-import { collectServerServerSensorInputs } from '../parameter-collection/server-server-sensors-parameters';
-import path = require('path');
-import { sanitize } from 'sanitize-filename-ts';
 import * as fs from 'fs';
-import { TransformSensor } from '../transform/transform-sensor';
+import { sanitize } from 'sanitize-filename-ts';
+import * as vscode from 'vscode';
+
+import * as commands from '../common/commands';
+import { OutputChannelLogging } from '../common/logging';
+import { RestClient } from '../common/restClient';
+import { Session } from '../common/session';
 import { collectServerServerMissingSensorInputs } from '../parameter-collection/server-server-missing-sensors-parameters';
 import { collectServerServerModifiedSensorInputs } from '../parameter-collection/server-server-modified-sensors-parameters';
-import { Session } from '../common/session';
-import { RestClient } from '../common/restClient';
+import { collectServerServerSensorInputs } from '../parameter-collection/server-server-sensors-parameters';
+import { TransformSensor } from '../transform/transform-sensor';
+
+import path = require('path');
 
 const diffMatchPatch = require('diff-match-patch');
 

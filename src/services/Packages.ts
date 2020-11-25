@@ -1,19 +1,20 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import * as commands from '../common/commands';
-import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
-import * as pug from 'pug';
-import { v4 as uuidv4 } from 'uuid';
-import path = require('path');
-import { SignContentFile } from './SignContentFile';
+import * as vscode from 'vscode';
+
+import * as commands from '../common/commands';
+import { OpenType } from '../common/enums';
 import { OutputChannelLogging } from '../common/logging';
-import { SigningKey } from '../types/signingKey';
+import { PathUtils } from '../common/pathUtils';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
-import { collectPackageFilesInputs } from '../parameter-collection/package-download-files-parameters';
-import { PathUtils } from '../common/pathUtils';
+import { SigningUtils } from '../common/signingUtils';
 import { WebContentUtils } from '../common/webContentUtils';
+import { collectPackageFilesInputs } from '../parameter-collection/package-download-files-parameters';
+import { SigningKey } from '../types/signingKey';
+
+import path = require('path');
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -160,6 +161,8 @@ export class Packages {
             items: missingPackages,
             transferIndividual: 1,
             showServerInfo: 1,
+            showSourceServer: true,
+            openType: OpenType.file,
         }, panelMissing, context, config);
 
         panelModified.webview.html = WebContentUtils.getModifiedWebContent({
@@ -167,6 +170,8 @@ export class Packages {
             items: modifiedPackages,
             transferIndividual: 1,
             showServerInfo: 1,
+            showSourceServer: true,
+            openType: OpenType.diff,
         }, panelModified, context, config);
 
         panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
@@ -174,11 +179,16 @@ export class Packages {
             items: createdPackages,
             transferIndividual: 1,
             showServerInfo: 1,
+            showSourceServer: true,
+            openType: OpenType.file,
         }, panelCreated, context, config);
 
         panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
             items: unchangedPackages,
+            transferIndividual: 0,
+            showServerInfo: 0,
+            openType: OpenType.diff,
         }, panelUnchanged, context, config);
 
         panelUnchanged.webview.onDidReceiveMessage(async message => {
@@ -222,8 +232,8 @@ export class Packages {
                             httpTimeout,
                             message.sourceFqdn,
                             message.destFqdn,
-                            message.username,
-                            message.password,
+                            message.destUsername,
+                            message.destPassword,
                             path,
                             targetPath,
                             signingKey!,
@@ -274,8 +284,8 @@ export class Packages {
                             httpTimeout,
                             message.sourceFqdn,
                             message.destFqdn,
-                            message.username,
-                            message.password,
+                            message.destUsername,
+                            message.destPassword,
                             path,
                             targetPath,
                             signingKey!,
@@ -317,7 +327,18 @@ export class Packages {
         });
     }
 
-    static async transferPackage(allowSelfSignedCerts: boolean, httpTimeout: number, sourceFqdn: string, destFqdn: string, username: string, password: string, filePath: string, targetFilePath: string, signingKey: SigningKey, packageName: string) {
+    static async transferPackage(
+        allowSelfSignedCerts: boolean,
+        httpTimeout: number,
+        sourceFqdn: string,
+        destFqdn: string,
+        username: string,
+        password: string,
+        filePath: string,
+        targetFilePath: string,
+        signingKey: SigningKey,
+        packageName: string
+    ) {
         const p = new Promise(async (resolve, reject) => {
             try {
                 OutputChannelLogging.initialize();
@@ -331,20 +352,10 @@ export class Packages {
                     version: 2
                 };
 
-                // save file in temp
-                const tempDir = os.tmpdir();
-                const tempPath = path.join(tempDir, uuidv4());
-                fs.writeFileSync(tempPath, `${JSON.stringify(importJson)}\r\n`, 'utf-8');
-                OutputChannelLogging.log(`wrote package data to ${tempPath}`);
-
-                // sign json
-                await SignContentFile.signContent(signingKey.keyUtilityPath, signingKey.privateKeyFilePath, tempPath);
-                OutputChannelLogging.log(`signed package data at ${tempPath}`);
-
-                // import into Tanium server
-                const signedContent = fs.readFileSync(tempPath, {
-                    encoding: 'utf-8'
-                });
+                // get signed content
+                const signedContentData = await SigningUtils.retrieveSignedContent(importJson, signingKey);
+                const signedContent = signedContentData.content;
+                const tempPath = signedContentData.path;
 
                 try {
                     // get session
@@ -379,22 +390,7 @@ export class Packages {
                     // import package
                     OutputChannelLogging.log(`importing ${packageName} into ${destFqdn}`);
 
-                    const options = {
-                        hostname: destFqdn,
-                        port: 443,
-                        path: '/api/v2/import',
-                        method: 'POST',
-                        headers: {
-                            session: session,
-                            'Content-Type': 'text/plain',
-                            'Content-Length': signedContent.length
-                        },
-                        rejectUnauthorized: !allowSelfSignedCerts,
-                        timeout: httpTimeout
-                    };
-
-                    const data = await RestClient.postTextPlain(signedContent, options);
-                    const dataAsString = data.toString();
+                    SigningUtils.postSignedContent(destFqdn, session, signedContent, allowSelfSignedCerts, httpTimeout);
 
                     OutputChannelLogging.log(`importing ${packageName} complete`);
 
@@ -408,6 +404,7 @@ export class Packages {
                             OutputChannelLogging.log(`processing ${packageFile.name}`);
 
                             // download file to temp dir
+                            const tempDir = os.tmpdir();
                             const tempFilePath = path.join(tempDir, packageFile.hash);
                             await RestClient.downloadFile(`https://${sourceFqdn}/cache/${packageFile.hash}`, tempFilePath, {}, allowSelfSignedCerts, httpTimeout);
                             OutputChannelLogging.log(`downloaded ${packageFile.name} to ${tempFilePath}`);

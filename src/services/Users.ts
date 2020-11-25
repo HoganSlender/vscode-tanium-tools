@@ -1,13 +1,16 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import * as commands from '../common/commands';
-import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as vscode from 'vscode';
+
+import * as commands from '../common/commands';
+import { OpenType, Operation } from '../common/enums';
 import { OutputChannelLogging } from '../common/logging';
-import { RestClient } from '../common/restClient';
 import { PathUtils } from '../common/pathUtils';
-import { WebContentUtils } from '../common/webContentUtils';
+import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
-import { reject } from 'lodash';
+import { WebContentUtils } from '../common/webContentUtils';
+import { SigningKey } from '../types/signingKey';
+import { Groups } from './Groups';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -88,8 +91,10 @@ export class Users {
             items: missingUsers,
             transferIndividual: 1,
             showServerInfo: 1,
-            noSourceServer: true,
-            noSigningKeys: true,
+            showSourceServer: true,
+            showSourceCreds: true,
+            showSigningKeys: true,
+            openType: OpenType.file,
         }, panelMissing, context, config);
 
         panelModified.webview.html = WebContentUtils.getModifiedWebContent({
@@ -97,8 +102,10 @@ export class Users {
             items: modifiedUsers,
             transferIndividual: 1,
             showServerInfo: 1,
-            noSourceServer: true,
-            noSigningKeys: true,
+            showSourceServer: true,
+            showSourceCreds: true,
+            showSigningKeys: true,
+            openType: OpenType.diff,
         }, panelModified, context, config);
 
         panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
@@ -106,13 +113,18 @@ export class Users {
             items: createdUsers,
             transferIndividual: 1,
             showServerInfo: 1,
-            noSourceServer: true,
-            noSigningKeys: true,
+            showSourceServer: true,
+            showSourceCreds: true,
+            showSigningKeys: true,
+            openType: OpenType.file,
         }, panelCreated, context, config);
 
         panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
             items: unchangedUsers,
+            transferIndividual: 0,
+            showServerInfo: 0,
+            openType: OpenType.diff,
         }, panelUnchanged, context, config);
 
         panelUnchanged.webview.onDidReceiveMessage(async message => {
@@ -146,15 +158,25 @@ export class Users {
                         var path = items[0];
                         var targetPath = items[2];
 
+                        // get signing keys
+                        const signingKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
+
                         await this.transferUser(
                             allowSelfSignedCerts,
                             httpTimeout,
+                            message.sourceFqdn,
+                            message.sourceUsername,
+                            message.sourcePassword,
                             message.destFqdn,
-                            message.username,
-                            message.password,
+                            message.destUsername,
+                            message.destPassword,
                             path,
                             targetPath,
-                            message.name,
+                            signingKey!,
+                            message.name,                        
+                            Operation.update,
                         );
 
                         // send message back
@@ -191,15 +213,25 @@ export class Users {
                         var path = items[0];
                         var targetPath = items[2];
 
+                        // get signing keys
+                        const signingKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
+
                         await this.transferUser(
                             allowSelfSignedCerts,
                             httpTimeout,
+                            message.sourceFqdn,
+                            message.sourceUsername,
+                            message.sourcePassword,
                             message.destFqdn,
-                            message.username,
-                            message.password,
+                            message.destUsername,
+                            message.destPassword,
                             path,
                             targetPath,
+                            signingKey!,
                             message.name,
+                            Operation.insert,
                         );
 
                         // send message back
@@ -260,10 +292,13 @@ export class Users {
                         return reject();
                     }
 
+                    // get groups map
+                    const groupMap = Groups.getGroupMap(allowSelfSignedCerts, httpTimeout, restBase, session);
+
                     // create map
                     for (var i = 0; i < userData.length; i++) {
                         const user = userData[i];
-                        var newObject = this.anonymizeUser(user);
+                        var newObject = this.anonymizeUser(user, groupMap);
                         users[user.id] = newObject;
                     }
 
@@ -318,22 +353,36 @@ export class Users {
         return p;
     }
 
-    static anonymizeUser(user: any): any {
-        return {
+    static async anonymizeUser(user: any, groupMap: any): Promise<any> {
+        var retVal: any = {
             name: user.name,
             display_name: user.display_name,
         };
+
+        // get computer group
+        if (user.group_id !== 0) {
+            retVal.group = {
+                name: groupMap[user.group_id].name,
+            };
+        }
+
+        return retVal;
     }
 
     static async transferUser(
         allowSelfSignedCerts: boolean,
         httpTimeout: number,
+        sourceFqdn: string,
+        sourceUsername: string,
+        sourcePassword: string,
         destFqdn: string,
-        username: string,
-        password: string,
+        destUsername: string,
+        destPassword: string,
         filePath: string,
         targetFilePath: string,
-        userName: string) {
+        signingKey: SigningKey,
+        userName: string,
+        operationType: Operation) {
         const p = new Promise(async (resolve, reject) => {
             try {
                 OutputChannelLogging.initialize();
@@ -342,21 +391,48 @@ export class Users {
                 const userFromFile = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
                 try {
-                    // get session
-                    const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
-
                     // import user
-                    const restBase = `https://${destFqdn}/api/v2`;
+                    const destRestBase = `https://${destFqdn}/api/v2`;
+
+                    const sourceSession = await Session.getSession(allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceUsername, sourcePassword);
+                    const destSession = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, destUsername, destPassword);
 
                     OutputChannelLogging.log(`importing ${userName} into ${destFqdn}`);
 
-                    const data = await RestClient.post(`${restBase}/users`, {
-                        headers: {
-                            session: session,
-                        },
-                        json: userFromFile,
-                        responseType: 'json',
-                    }, allowSelfSignedCerts, httpTimeout);
+                    // get group info from source
+                    if (userFromFile.group !== undefined) {
+                        userFromFile.group_id = await Groups.setUpGroupInDest(userFromFile.group.name, allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceSession, destFqdn, destSession, signingKey);
+                        
+                        // remove group
+                        delete userFromFile.group;
+                    } else {
+                        // group is undefined, so set group id to 0
+                        userFromFile.group_id = 0;
+                    }
+
+                    // set group info on dest
+                    if (operationType === Operation.insert) {
+                        await RestClient.post(`${destRestBase}/users`, {
+                            headers: {
+                                session: destSession,
+                            },
+                            json: userFromFile,
+                            responseType: 'json',
+                        }, allowSelfSignedCerts, httpTimeout);
+                    } else if (operationType === Operation.update) {
+                        const url = `${destRestBase}/users/by-name/${userFromFile.name}`;
+
+                        // remove name property to avoid TooManyTagsWithSameName error
+                        delete userFromFile.name;
+
+                        await RestClient.patch(url, {
+                            headers: {
+                                session: destSession,
+                            },
+                            json: userFromFile,
+                            responseType: 'json',
+                        }, allowSelfSignedCerts, httpTimeout);
+                    }
 
                     OutputChannelLogging.log(`importing ${userName} complete`);
 
@@ -365,6 +441,7 @@ export class Users {
                     fs.writeFileSync(targetFilePath, targetContents);
                 } catch (err) {
                     OutputChannelLogging.logError('error importing user', err);
+                    OutputChannelLogging.log(`import json: ${JSON.stringify(userFromFile, null, 2)}`);
                     reject();
                 }
 

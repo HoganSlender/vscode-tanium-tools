@@ -11,7 +11,7 @@ html(lang='en')
                 td #[b Unchanged #{myTitle}]
             tr
                 td
-                    select(id='unchangedlitems' name='unchangedlitems' multiple='multiple' size='40' style='min-width: 600px;min-height: 800px;')
+                    select(id='litems' name='litems' multiple='multiple' size='40' style='min-width: 600px;min-height: 800px;')
                         each item in items
                             option(value=item.path) #{item.name}
         script(nonce="" + nonce + "" src="" + scriptUri + "")

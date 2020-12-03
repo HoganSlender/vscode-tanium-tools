@@ -8,9 +8,11 @@ import { OutputChannelLogging } from '../common/logging';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { collectServerServerUserGroupsInputs } from '../parameter-collection/server-server-user-groups-parameters';
+import { Groups } from './Groups';
 import { UserGroups } from './UserGroups';
 
 import path = require('path');
+import { getgroups } from 'process';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -126,6 +128,9 @@ export class ServerServerUserGroups {
                         OutputChannelLogging.log(`there are 0 user groups for ${fqdn}`);
                         resolve();
                     } else {
+                        // get groups map
+                        const groupMap = await Groups.getGroupMapById(allowSelfSignedCerts, httpTimeout, restBase, session);
+
                         for (var i = 0; i < userGroupTotal; i++) {
                             const userGroup: any = userGroups[i];
 
@@ -146,7 +151,7 @@ export class ServerServerUserGroups {
                                     const userGroupName: string = sanitize(userGroup.name);
 
                                     try {
-                                        const anonymizedUserGroup = UserGroups.anonymizeUserGroup(userGroup);
+                                        const anonymizedUserGroup = await UserGroups.anonymizeUserGroup(userGroup, groupMap, restBase, session, allowSelfSignedCerts, httpTimeout);
                                         const content: string = JSON.stringify(anonymizedUserGroup, null, 2);
 
                                         const userGroupFile = path.join(directory, userGroupName + '.json');

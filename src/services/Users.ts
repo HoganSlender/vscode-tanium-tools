@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as vscode from 'vscode';
 
 import * as commands from '../common/commands';
-import { OpenType, Operation } from '../common/enums';
+import { MrGroupType, OpenType, Operation } from '../common/enums';
 import { OutputChannelLogging } from '../common/logging';
 import { PathUtils } from '../common/pathUtils';
 import { RestClient } from '../common/restClient';
@@ -175,7 +175,7 @@ export class Users {
                             path,
                             targetPath,
                             signingKey!,
-                            message.name,                        
+                            message.name,
                             Operation.update,
                         );
 
@@ -293,7 +293,7 @@ export class Users {
                     }
 
                     // get groups map
-                    const groupMap = Groups.getGroupMap(allowSelfSignedCerts, httpTimeout, restBase, session);
+                    const groupMap = Groups.getGroupMapById(allowSelfSignedCerts, httpTimeout, restBase, session);
 
                     // create map
                     for (var i = 0; i < userData.length; i++) {
@@ -353,7 +353,7 @@ export class Users {
         return p;
     }
 
-    static async anonymizeUser(user: any, groupMap: any): Promise<any> {
+    static anonymizeUser(user: any, groupMap: any): any {
         var retVal: any = {
             name: user.name,
             display_name: user.display_name,
@@ -382,7 +382,8 @@ export class Users {
         targetFilePath: string,
         signingKey: SigningKey,
         userName: string,
-        operationType: Operation) {
+        operationType: Operation
+    ) {
         const p = new Promise(async (resolve, reject) => {
             try {
                 OutputChannelLogging.initialize();
@@ -401,8 +402,8 @@ export class Users {
 
                     // get group info from source
                     if (userFromFile.group !== undefined) {
-                        userFromFile.group_id = await Groups.setUpGroupInDest(userFromFile.group.name, allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceSession, destFqdn, destSession, signingKey);
-                        
+                        userFromFile.group_id = await Groups.setUpMrGroupInDest(userFromFile.group.name, allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceSession, destFqdn, destSession, signingKey, MrGroupType.user, userFromFile.name);
+
                         // remove group
                         delete userFromFile.group;
                     } else {

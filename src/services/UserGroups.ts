@@ -3,12 +3,14 @@ import * as fs from 'fs';
 import * as vscode from 'vscode';
 
 import * as commands from '../common/commands';
-import { OpenType } from '../common/enums';
+import { MrGroupType, OpenType, Operation } from '../common/enums';
 import { OutputChannelLogging } from '../common/logging';
 import { PathUtils } from '../common/pathUtils';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { WebContentUtils } from '../common/webContentUtils';
+import { SigningKey } from '../types/signingKey';
+import { Groups } from './Groups';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -89,6 +91,9 @@ export class UserGroups {
             items: missingUserGroups,
             transferIndividual: 1,
             showServerInfo: 1,
+            showSourceServer: true,
+            showSourceCreds: true,
+            showSigningKeys: true,
             openType: OpenType.file,
         }, panelMissing, context, config);
 
@@ -97,6 +102,9 @@ export class UserGroups {
             items: modifiedUserGroups,
             transferIndividual: 1,
             showServerInfo: 1,
+            showSourceServer: true,
+            showSourceCreds: true,
+            showSigningKeys: true,
             openType: OpenType.diff,
         }, panelModified, context, config);
 
@@ -105,6 +113,9 @@ export class UserGroups {
             items: createdUserGroups,
             transferIndividual: 1,
             showServerInfo: 1,
+            showSourceServer: true,
+            showSourceCreds: true,
+            showSigningKeys: true,
             openType: OpenType.file,
         }, panelCreated, context, config);
 
@@ -147,15 +158,25 @@ export class UserGroups {
                         var path = items[0];
                         var targetPath = items[2];
 
+                        // get signing keys
+                        const signingKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
+
                         await this.transferUserGroup(
                             allowSelfSignedCerts,
                             httpTimeout,
+                            message.sourceFqdn,
+                            message.sourceUsername,
+                            message.sourcePassword,
                             message.destFqdn,
                             message.destUsername,
                             message.destPassword,
                             path,
                             targetPath,
+                            signingKey!,
                             message.name,
+                            Operation.update,
                         );
 
                         // send message back
@@ -192,15 +213,25 @@ export class UserGroups {
                         var path = items[0];
                         var targetPath = items[2];
 
+                        // get signing keys
+                        const signingKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
+
                         await this.transferUserGroup(
                             allowSelfSignedCerts,
                             httpTimeout,
+                            message.sourceFqdn,
+                            message.sourceUsername,
+                            message.sourcePassword,
                             message.destFqdn,
                             message.destUsername,
                             message.destPassword,
                             path,
                             targetPath,
+                            signingKey!,
                             message.name,
+                            Operation.insert,
                         );
 
                         // send message back
@@ -238,21 +269,47 @@ export class UserGroups {
         });
     }
 
-    static anonymizeUserGroup(userGroup: any): any {
-        return {
-            name: userGroup.name,
+    static async anonymizeUserGroup(userGroup: any, groupMap: any, restBase: string, session: string, allowSelfSignedCerts: boolean, httpTimeout: number): Promise<any> {
+        var retval: any = {
+            name: userGroup.name
         };
+
+        // get computer group
+        if (userGroup.group !== undefined && userGroup.group.id !== 0) {
+            retval.group = {
+                name: groupMap[userGroup.group.id].name,
+            };
+
+            // check for mrgroup_
+            if (retval.group.name.startsWith('mrgroup_')) {
+                // need to get export of group since names will never match
+                const groupExport = await Groups.getGroupExportByNames([retval.group.name], allowSelfSignedCerts, httpTimeout, restBase, session);
+
+                retval.group = groupExport.object_list.groups[0];
+
+                // replace the name since it will not match
+                retval.group.name = 'mrgroup_';
+            }
+        }
+
+        return retval;
     }
 
     static async transferUserGroup(
         allowSelfSignedCerts: boolean,
         httpTimeout: number,
+        sourceFqdn: string,
+        sourceUsername: string,
+        sourcePassword: string,
         destFqdn: string,
-        username: string,
-        password: string,
+        destUsername: string,
+        destPassword: string,
         filePath: string,
         targetFilePath: string,
-        userGroupName: string) {
+        signingKey: SigningKey,
+        userGroupName: string,
+        operationType: Operation
+    ) {
         const p = new Promise(async (resolve, reject) => {
             try {
                 OutputChannelLogging.initialize();
@@ -261,21 +318,43 @@ export class UserGroups {
                 const userGroupFromFile = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
                 try {
-                    // get session
-                    const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
-
                     // import user
-                    const restBase = `https://${destFqdn}/api/v2`;
+                    const destRestBase = `https://${destFqdn}/api/v2`;
+
+                    const sourceSession = await Session.getSession(allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceUsername, sourcePassword);
+                    const destSession = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, destUsername, destPassword);
 
                     OutputChannelLogging.log(`importing ${userGroupName} into ${destFqdn}`);
 
-                    const data = await RestClient.post(`${restBase}/user_groups`, {
-                        headers: {
-                            session: session,
-                        },
-                        json: userGroupFromFile,
-                        responseType: 'json',
-                    }, allowSelfSignedCerts, httpTimeout);
+                    // get group info from source
+                    if (userGroupFromFile.group !== undefined) {
+                        userGroupFromFile.group.id = await Groups.setUpMrGroupInDest(userGroupFromFile.group.name, allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceSession, destFqdn, destSession, signingKey, MrGroupType.userGroup, userGroupFromFile.name);
+                    } else {
+                        // group is undefined, so set group id to 0
+                        userGroupFromFile.group.id = 0;
+                    }
+
+                    if (operationType === Operation.insert) {
+                        await RestClient.post(`${destRestBase}/user_groups`, {
+                            headers: {
+                                session: destSession,
+                            },
+                            json: userGroupFromFile,
+                            responseType: 'json',
+                        }, allowSelfSignedCerts, httpTimeout);
+                    } else if (operationType === Operation.update) {
+                        // get id of target user group
+                        const targetId = await this.retrieveUserGroupByName(userGroupFromFile.name, allowSelfSignedCerts, httpTimeout, destFqdn, destSession);
+
+                        // update target
+                        await RestClient.patch(`${destRestBase}/user_groups/${targetId}`, {
+                            headers: {
+                                session: destSession
+                            },
+                            json: userGroupFromFile,
+                            responseType: 'json'
+                        }, allowSelfSignedCerts, httpTimeout);
+                    }
 
                     OutputChannelLogging.log(`importing ${userGroupName} complete`);
 
@@ -295,6 +374,12 @@ export class UserGroups {
         });
 
         return p;
+    }
+
+    static async retrieveUserGroupByName(groupName: string, allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, session: string): Promise<any> {
+        const userGroupMap = await this.retrieveUserGroupMapByName(allowSelfSignedCerts, httpTimeout, fqdn, session);
+
+        return userGroupMap[groupName];
     }
 
     static retrieveUserGroupMapByName(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, session: string): any {

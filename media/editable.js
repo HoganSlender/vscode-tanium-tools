@@ -129,7 +129,9 @@ if (!showServerInfo) {
     var taniumDestUsernameSelect = document.getElementById("taniumDestUsernameSelect");
     var taniumSigningKeySelect = document.getElementById("taniumSigningKeySelect");
 
-    sourcePassword.addEventListener("input", enableProcessPackage);
+    if (sourcePassword !== null) {
+        sourcePassword.addEventListener("input", enableProcessPackage);
+    }
     destPassword.addEventListener("input", enableProcessPackage);
 }
 
@@ -168,7 +170,11 @@ function processInput(inputArray, targetDiv, targetId, isLast) {
 
 function enableProcessPackage() {
     if (showServerInfo) {
-        processButton.disabled = rItems.options.length === 0 || destPassword.value.trim().length === 0 || sourcePassword.value.trim().length === 0;
+        if (sourcePassword !== null) {
+            processButton.disabled = rItems.options.length === 0 || destPassword.value.trim().length === 0 || sourcePassword.value.trim().length === 0;
+        } else {
+            processButton.disabled = rItems.options.length === 0 || destPassword.value.trim().length === 0;
+        }
     } else {
         processButton.disabled = rItems.options.length === 0;
     }
@@ -256,6 +262,7 @@ function processItems() {
     console.log(`destUsername: ${destUsername}`);
     const signingKey = taniumSigningKeySelect?.value ?? '';
     console.log(`signingKey: ${signingKey}`);
+    const sourcePasswordString = sourcePassword?.value ?? '';
 
     if (transferIndividual) {
         console.log('transfer individual');
@@ -268,7 +275,7 @@ function processItems() {
                 command: 'transferItem',
                 sourceFqdn: sourceFqdn,
                 sourceUsername: sourceUsername,
-                sourcePassword: sourcePassword.value,
+                sourcePassword: sourcePasswordString,
                 destFqdn: destFqdn,
                 destUsername: destUsername,
                 destPassword: destPassword.value,

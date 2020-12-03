@@ -390,7 +390,7 @@ export class Packages {
                     // import package
                     OutputChannelLogging.log(`importing ${packageName} into ${destFqdn}`);
 
-                    SigningUtils.postSignedContent(destFqdn, session, signedContent, allowSelfSignedCerts, httpTimeout);
+                    const res = SigningUtils.postSignedContent(destFqdn, session, signedContent, allowSelfSignedCerts, httpTimeout);
 
                     OutputChannelLogging.log(`importing ${packageName} complete`);
 

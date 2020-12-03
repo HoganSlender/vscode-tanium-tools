@@ -6,15 +6,32 @@ const got = require('got');
 const { promisify } = require('util');
 const stream = require('stream');
 
+export interface PostTextPlainData {
+    statusCode: number,
+    data: any
+}
+
 export class RestClient {
     static postTextPlain(data: string, options: any) {
-        const p: Promise<any> = new Promise(async (resolve, reject) => {
+        const p: Promise<PostTextPlainData> = new Promise<PostTextPlainData>(async (resolve, reject) => {
             try {
+                var statusCode: number;
+                var responseData: string = '';
                 const req = https.request(options, res => {
+                    statusCode = res.statusCode!;
                     console.log(`statusCode: ${res.statusCode}`);
 
                     res.on('data', d => {
-                        return resolve(d);
+                        console.log(`data: ${d.toString()}`);
+                        responseData = responseData + d.toString();
+                    });
+
+                    res.on('close', () => {
+                        console.log('close');
+                        resolve({
+                            statusCode: statusCode,
+                            data: JSON.parse(responseData),
+                        });
                     });
                 });
 

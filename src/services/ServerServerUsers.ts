@@ -128,7 +128,7 @@ class ServerServerUsers {
                         resolve();
                     } else {
                         // get groups map
-                        const groupMap = await Groups.getGroupMap(allowSelfSignedCerts, httpTimeout, restBase, session);
+                        const groupMap = await Groups.getGroupMapById(allowSelfSignedCerts, httpTimeout, restBase, session);
 
                         for (var i = 0; i < userTotal; i++) {
                             const user: any = users[i];

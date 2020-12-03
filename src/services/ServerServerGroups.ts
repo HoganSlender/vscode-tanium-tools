@@ -140,12 +140,15 @@ class ServerServerGroups {
 
                     // get groups
                     try {
-                        const body = await RestClient.get(`${restBase}/groups`, {
+                        const options: any = {
                             headers: {
                                 session: session,
                             },
                             responseType: 'json',
-                        }, allowSelfSignedCerts, httpTimeout);
+                        };
+                        options.headers['tanium-options'] = `{"cache_filters":[{"field":"type","operator":"Equal","value":"${targetGroupType}"}]}`;
+
+                        const body = await RestClient.get(`${restBase}/groups`, options, allowSelfSignedCerts, httpTimeout);
 
                         OutputChannelLogging.log(`group retrieval - complete for ${fqdn}`);
                         groups = body.data;

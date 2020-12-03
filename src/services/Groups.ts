@@ -23,8 +23,14 @@ export function activate(context: vscode.ExtensionContext) {
         'hoganslendertanium.analyzeActionGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
             Groups.analyzeGroups(uris[0], uris[1], 1, context);
         },
-        'hoganslendertanium.analyzeActionGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            Groups.analyzeGroups(uris[0], uris[1], 1, context);
+        'hoganslendertanium.analyzeActionPolicyGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+            Groups.analyzeGroups(uris[0], uris[1], 2, context);
+        },
+        'hoganslendertanium.analyzeAdHocGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+            Groups.analyzeGroups(uris[0], uris[1], 3, context);
+        },
+        'hoganslendertanium.analyzeManualGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+            Groups.analyzeGroups(uris[0], uris[1], 4, context);
         },
     });
 }

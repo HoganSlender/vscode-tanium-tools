@@ -127,25 +127,19 @@ class ServerServerContentSetRoleMemberships {
                     }
 
                     // iterate through each download export
-                    var contentSetRoleMembershipCounter = 0;
                     var contentSetRoleMembershipTotal: number = content_set_role_memberships.length;
 
                     if (contentSetRoleMembershipTotal === 0) {
                         OutputChannelLogging.log(`there are 0 content set role memberships for ${fqdn}`);
                         resolve();
                     } else {
-                        for (var i = 0; i < content_set_role_memberships.length; i++) {
-                            const contentSetRoleMembership: any = content_set_role_memberships[i];
-
+                        var i = 0;
+                        
+                        content_set_role_memberships.forEach(contentSetRoleMembership => {
+                            i++;
+                            
                             // check for deleted
-                            if (contentSetRoleMembership.deleted_flag === 1) {
-                                contentSetRoleMembershipCounter++;
-
-                                if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
-                                    OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role memberships from ${fqdn}`);
-                                    resolve();
-                                }
-                            } else {
+                            if (contentSetRoleMembership.deleted_flag === 0) {
                                 var newObject: any = {};
 
                                 newObject['content_set_role'] = {
@@ -155,7 +149,7 @@ class ServerServerContentSetRoleMemberships {
                                 newObject['user'] = users[contentSetRoleMembership.user.id];
 
                                 if (i % 30 === 0 || i === contentSetRoleMembershipTotal) {
-                                    OutputChannelLogging.log(`processing ${i + 1} of ${contentSetRoleMembershipTotal}`);
+                                    OutputChannelLogging.log(`processing ${i} of ${contentSetRoleMembershipTotal}`);
                                 }
 
                                 // get export
@@ -170,34 +164,17 @@ class ServerServerContentSetRoleMemberships {
                                             if (err) {
                                                 OutputChannelLogging.logError(`could not write ${contentSetRoleMembershipFile}`, err);
                                             }
-
-                                            contentSetRoleMembershipCounter++;
-
-                                            if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
-                                                OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role memberships from ${fqdn}`);
-                                                resolve();
-                                            }
                                         });
                                     } catch (err) {
                                         OutputChannelLogging.logError(`error processing ${label} content set role memberships ${contentSetRoleMembershipName}`, err);
-                                        contentSetRoleMembershipCounter++;
-
-                                        if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
-                                            OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role membership from ${fqdn}`);
-                                            resolve();
-                                        }
                                     }
                                 } catch (err) {
                                     OutputChannelLogging.logError(`saving content set role membership file for ${contentSetRoleMembership.name} from ${fqdn}`, err);
-                                    contentSetRoleMembershipCounter++;
-
-                                    if (contentSetRoleMembershipTotal === contentSetRoleMembershipCounter) {
-                                        OutputChannelLogging.log(`processed ${contentSetRoleMembershipTotal} content set role memberships from ${fqdn}`);
-                                        resolve();
-                                    }
                                 }
                             }
-                        }
+                        });
+
+                        resolve();
                     }
                 })();
             } catch (err) {

@@ -121,7 +121,6 @@ export class ServerServerUserGroups {
                     }
 
                     // iterate through each download export
-                    var userGroupCounter = 0;
                     var userGroupTotal: number = userGroups.length;
 
                     if (userGroupTotal === 0) {
@@ -131,21 +130,16 @@ export class ServerServerUserGroups {
                         // get groups map
                         const groupMap = await Groups.getGroupMapById(allowSelfSignedCerts, httpTimeout, restBase, session);
 
-                        for (var i = 0; i < userGroupTotal; i++) {
-                            const userGroup: any = userGroups[i];
+                        var i = 0;
+
+                        userGroups.forEach(async userGroup => {
+                            i++;
 
                             if (i % 30 === 0 || i === userGroupTotal) {
-                                OutputChannelLogging.log(`processing ${i + 1} of ${userGroupTotal}`);
+                                OutputChannelLogging.log(`processing ${i} of ${userGroupTotal}`);
                             }
 
-                            if (userGroup.deleted_flag) {
-                                userGroupCounter++;
-
-                                if (userGroupTotal === userGroupCounter) {
-                                    OutputChannelLogging.log(`processed ${userGroupTotal} user groups from ${fqdn}`);
-                                    resolve();
-                                }
-                            } else {
+                            if (userGroup.deleted_flag !== 1) {
                                 // get export
                                 try {
                                     const userGroupName: string = sanitize(userGroup.name);
@@ -159,34 +153,17 @@ export class ServerServerUserGroups {
                                             if (err) {
                                                 OutputChannelLogging.logError(`could not write ${userGroupFile}`, err);
                                             }
-
-                                            userGroupCounter++;
-
-                                            if (userGroupTotal === userGroupCounter) {
-                                                OutputChannelLogging.log(`processed ${userGroupTotal} user groups from ${fqdn}`);
-                                                resolve();
-                                            }
                                         });
                                     } catch (err) {
                                         OutputChannelLogging.logError(`error processing ${label} user group ${userGroupName}`, err);
-                                        userGroupCounter++;
-
-                                        if (userGroupTotal === userGroupCounter) {
-                                            OutputChannelLogging.log(`processed ${userGroupTotal} user group from ${fqdn}`);
-                                            resolve();
-                                        }
                                     }
                                 } catch (err) {
                                     OutputChannelLogging.logError(`saving user group file for ${userGroup.name} from ${fqdn}`, err);
-                                    userGroupCounter++;
-
-                                    if (userGroupTotal === userGroupCounter) {
-                                        OutputChannelLogging.log(`processed ${userGroupTotal} user groups from ${fqdn}`);
-                                        resolve();
-                                    }
                                 }
                             }
-                        }
+                        });
+
+                        resolve();
                     }
                 })();
             } catch (err) {
@@ -219,10 +196,9 @@ export class ServerServerUserGroups {
             }
 
             // create map
-            for (var i = 0; i < user_groups.length; i++) {
-                const userGroup = user_groups[i];
+            user_groups.forEach(userGroup => {
                 userGroups[userGroup.id] = userGroup.name;
-            }
+            });
 
             resolve(userGroups);
         });

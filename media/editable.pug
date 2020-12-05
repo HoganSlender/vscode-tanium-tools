@@ -6,6 +6,7 @@ html(lang='en')
         title #{myType} #{myTitle}
         meta(http-equiv='Content-Security-Policy' content="default-src 'none'; img-src " + panelWebviewCspSource + " https:; script-src 'nonce-" + nonce + "'; style-src 'unsafe-inline';")
     body
+        div(id='divType' style='visibility: hidden;') #{myType}
         table(style='border: 1px solid black;')
             tr
                 td #[b #{myType} #{myTitle}]
@@ -47,19 +48,21 @@ html(lang='en')
                                                 td 
                                                     input(id='sourcePassword' type='password')
                                 td
+                                    if showDestServer || showSigningKeys
                                     table
-                                        tr
-                                            td Destination Tanium Server FQDN
-                                            td
-                                                div(id='divDestFqdn')
-                                        tr
-                                            td Destination Tanium Server Username
-                                            td
-                                                div(id='divDestUsername')
-                                        tr
-                                            td Destination Tanium Server Password
-                                            td
-                                                input(id='destPassword' type='password')
+                                        if showDestServer
+                                            tr
+                                                td Destination Tanium Server FQDN
+                                                td
+                                                    div(id='divDestFqdn')
+                                            tr
+                                                td Destination Tanium Server Username
+                                                td
+                                                    div(id='divDestUsername')
+                                            tr
+                                                td Destination Tanium Server Password
+                                                td
+                                                    input(id='destPassword' type='password')
                                         if showSigningKeys
                                             tr
                                                 td Destination Tanium Server Signing Keys

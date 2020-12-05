@@ -131,25 +131,19 @@ class ServerServerContentSetRolePrivileges {
                     }
 
                     // iterate through each download export
-                    var contentSetRolePrivilegeCounter = 0;
                     var contentSetRolePrivilegeTotal: number = content_set_role_privileges.length;
 
                     if (contentSetRolePrivilegeTotal === 0) {
                         OutputChannelLogging.log(`there are 0 content set user group role privileges for ${fqdn}`);
                         resolve();
                     } else {
-                        for (var i = 0; i < content_set_role_privileges.length; i++) {
-                            const contentSetRolePrivilege: any = content_set_role_privileges[i];
+                        var i = 0;
 
+                        content_set_role_privileges.forEach(contentSetRolePrivilege => {
+                            i++;
+                            
                             // check for deleted
-                            if (contentSetRolePrivilege.deleted_flag === 1) {
-                                contentSetRolePrivilegeCounter++;
-
-                                if (contentSetRolePrivilegeTotal === contentSetRolePrivilegeCounter) {
-                                    OutputChannelLogging.log(`processed ${contentSetRolePrivilegeTotal} content set role privileges from ${fqdn}`);
-                                    resolve();
-                                }
-                            } else {
+                            if (contentSetRolePrivilege.deleted_flag === 0) {
                                 var newObject: any = {};
 
                                 if (contentSetRolePrivilege.content_set === null) {
@@ -177,7 +171,7 @@ class ServerServerContentSetRolePrivileges {
                                 }
 
                                 if (i % 30 === 0 || i === contentSetRolePrivilegeTotal) {
-                                    OutputChannelLogging.log(`processing ${i + 1} of ${contentSetRolePrivilegeTotal}`);
+                                    OutputChannelLogging.log(`processing ${i} of ${contentSetRolePrivilegeTotal}`);
                                 }
 
                                 // get export
@@ -192,34 +186,17 @@ class ServerServerContentSetRolePrivileges {
                                             if (err) {
                                                 OutputChannelLogging.logError(`could not write ${contentSetRolePrivilegeFile}`, err);
                                             }
-
-                                            contentSetRolePrivilegeCounter++;
-
-                                            if (contentSetRolePrivilegeTotal === contentSetRolePrivilegeCounter) {
-                                                OutputChannelLogging.log(`processed ${contentSetRolePrivilegeTotal} content set role privileges from ${fqdn}`);
-                                                resolve();
-                                            }
                                         });
                                     } catch (err) {
                                         OutputChannelLogging.logError(`error processing ${label} content set role privileges ${contentSetRolePrivilegeName}`, err);
-                                        contentSetRolePrivilegeCounter++;
-
-                                        if (contentSetRolePrivilegeTotal === contentSetRolePrivilegeCounter) {
-                                            OutputChannelLogging.log(`processed ${contentSetRolePrivilegeTotal} content set role privilege from ${fqdn}`);
-                                            resolve();
-                                        }
                                     }
                                 } catch (err) {
                                     OutputChannelLogging.logError(`saving content set role privilege file for ${contentSetRolePrivilege.name} from ${fqdn}`, err);
-                                    contentSetRolePrivilegeCounter++;
-
-                                    if (contentSetRolePrivilegeTotal === contentSetRolePrivilegeCounter) {
-                                        OutputChannelLogging.log(`processed ${contentSetRolePrivilegeTotal} content set role privileges from ${fqdn}`);
-                                        resolve();
-                                    }
                                 }
                             }
-                        }
+                        });
+
+                        resolve();
                     }
                 })();
             } catch (err) {

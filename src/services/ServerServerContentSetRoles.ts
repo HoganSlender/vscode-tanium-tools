@@ -124,18 +124,19 @@ export class ServerServerContentSetRoles {
                     }
 
                     // iterate through each download export
-                    var contentSetRoleCounter = 0;
                     var contentSetRoleTotal: number = content_set_roles.length;
 
                     if (contentSetRoleTotal === 0) {
                         OutputChannelLogging.log(`there are 0 content set roles for ${fqdn}`);
                         resolve();
                     } else {
-                        for (var i = 0; i < content_set_roles.length; i++) {
-                            const contentSetRole: any = content_set_roles[i];
+                        var i = 0;
+
+                        content_set_roles.forEach(contentSetRole => {
+                            i++;
 
                             if (i % 30 === 0 || i === contentSetRoleTotal) {
-                                OutputChannelLogging.log(`processing ${i + 1} of ${contentSetRoleTotal}`);
+                                OutputChannelLogging.log(`processing ${i} of ${contentSetRoleTotal}`);
                             }
 
                             // get export
@@ -150,33 +151,16 @@ export class ServerServerContentSetRoles {
                                         if (err) {
                                             OutputChannelLogging.logError(`could not write ${contentSetRoleFile}`, err);
                                         }
-
-                                        contentSetRoleCounter++;
-
-                                        if (contentSetRoleTotal === contentSetRoleCounter) {
-                                            OutputChannelLogging.log(`processed ${contentSetRoleTotal} content set roles from ${fqdn}`);
-                                            resolve();
-                                        }
                                     });
                                 } catch (err) {
                                     OutputChannelLogging.logError(`error processing ${label} content set roles ${contentSetRoleName}`, err);
-                                    contentSetRoleCounter++;
-
-                                    if (contentSetRoleTotal === contentSetRoleCounter) {
-                                        OutputChannelLogging.log(`processed ${contentSetRoleTotal} content set role from ${fqdn}`);
-                                        resolve();
-                                    }
                                 }
                             } catch (err) {
                                 OutputChannelLogging.logError(`saving content set role file for ${contentSetRole.name} from ${fqdn}`, err);
-                                contentSetRoleCounter++;
-
-                                if (contentSetRoleTotal === contentSetRoleCounter) {
-                                    OutputChannelLogging.log(`processed ${contentSetRoleTotal} content set roles from ${fqdn}`);
-                                    resolve();
-                                }
                             }
-                        }
+                        });
+
+                        resolve();
                     }
                 })();
             } catch (err) {
@@ -212,10 +196,9 @@ export class ServerServerContentSetRoles {
                     }
 
                     // create map
-                    for (var i = 0; i < content_set_roles.length; i++) {
-                        const contentSetRole = content_set_roles[i];
+                    content_set_roles.forEach(contentSetRole => {
                         contentSetRoles[contentSetRole.id] = contentSetRole.name;
-                    }
+                    });
 
                     resolve(contentSetRoles);
                 })();

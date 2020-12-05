@@ -11,6 +11,7 @@ import { collectServerServerPackageInputs } from '../parameter-collection/server
 import { Packages } from './Packages';
 
 import path = require('path');
+import { ServerServerSensors } from './ServerServerSensors';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -119,28 +120,22 @@ class ServerServerPackages {
                     }
 
                     // iterate through each download export
-                    var packageSpecCounter = 0;
                     var packageSpecTotal: number = package_specs.length - 1;
 
                     if (packageSpecTotal === 0) {
                         OutputChannelLogging.log(`there are 0 packages for ${fqdn}`);
                         resolve();
                     } else {
-                        for (var i = 0; i < package_specs.length - 1; i++) {
-                            const packageSpec: any = package_specs[i];
+                        var i = 0;
+                        
+                        package_specs.forEach(async packageSpec => {
+                            i++;
 
                             if (i % 30 === 0 || i === packageSpecTotal) {
-                                OutputChannelLogging.log(`processing ${i + 1} of ${packageSpecTotal}`);
+                                OutputChannelLogging.log(`processing ${i} of ${packageSpecTotal}`);
                             }
 
-                            if (packageSpec.deleted_flag) {
-                                packageSpecCounter++;
-
-                                if (packageSpecTotal === packageSpecCounter) {
-                                    OutputChannelLogging.log(`processed ${packageSpecTotal} packages from ${fqdn}`);
-                                    resolve();
-                                }
-                            } else {
+                            if (!packageSpec.deleted_flag && packageSpec.cache_id === undefined) {
                                 // get export
                                 try {
                                     const body = await RestClient.post(`${restBase}/export`, {
@@ -161,6 +156,8 @@ class ServerServerPackages {
                                     const packageName: string = sanitize(taniumPackage.name);
 
                                     try {
+                                        // transform sensors
+                                        body.data.object_list.sensors = ServerServerSensors.transformSensors(body.data.object_list.sensors);
                                         const content: string = JSON.stringify(body.data.object_list, null, 2);
 
                                         const packageFile = path.join(directory, packageName + '.json');
@@ -168,34 +165,17 @@ class ServerServerPackages {
                                             if (err) {
                                                 OutputChannelLogging.logError(`could not write ${packageFile}`, err);
                                             }
-
-                                            packageSpecCounter++;
-
-                                            if (packageSpecTotal === packageSpecCounter) {
-                                                OutputChannelLogging.log(`processed ${packageSpecTotal} packages from ${fqdn}`);
-                                                resolve();
-                                            }
                                         });
                                     } catch (err) {
                                         OutputChannelLogging.logError(`error processing ${label} package ${packageName}`, err);
-                                        packageSpecCounter++;
-
-                                        if (packageSpecTotal === packageSpecCounter) {
-                                            OutputChannelLogging.log(`processed ${packageSpecTotal} packages from ${fqdn}`);
-                                            resolve();
-                                        }
                                     }
                                 } catch (err) {
                                     OutputChannelLogging.logError(`retrieving packageExport for ${packageSpec.name} from ${fqdn}`, err);
-                                    packageSpecCounter++;
-
-                                    if (packageSpecTotal === packageSpecCounter) {
-                                        OutputChannelLogging.log(`processed ${packageSpecTotal} packages from ${fqdn}`);
-                                        resolve();
-                                    }
                                 }
                             }
-                        }
+                        });
+
+                        resolve();
                     }
                 })();
             } catch (err) {

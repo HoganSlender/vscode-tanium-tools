@@ -158,28 +158,22 @@ class ServerServerGroups {
                     }
 
                     // iterate through each download export
-                    var groupCounter = 0;
                     var groupTotal: number = groups.length - 1;
 
                     if (groupTotal === 0) {
                         OutputChannelLogging.log(`there are 0 groups for ${fqdn}`);
                         resolve();
                     } else {
-                        for (var i = 0; i < groups.length - 1; i++) {
-                            const group: any = groups[i];
+                        var i = 0;
+                        
+                        groups.forEach(async group => {
+                            i++;
 
                             if (i % 30 === 0 || i === groupTotal) {
-                                OutputChannelLogging.log(`processing ${i + 1} of ${groupTotal}`);
+                                OutputChannelLogging.log(`processing ${i} of ${groupTotal}`);
                             }
 
-                            if (group.deleted_flag || group.type !== targetGroupType) {
-                                groupCounter++;
-
-                                if (groupTotal === groupCounter) {
-                                    OutputChannelLogging.log(`processed ${groupTotal} groups from ${fqdn}`);
-                                    resolve();
-                                }
-                            } else {
+                            if (group.deleted_flag !== 1 &&  group.cache_id === undefined) {
                                 // get export
                                 try {
                                     const body = await RestClient.post(`${restBase}/export`, {
@@ -207,34 +201,17 @@ class ServerServerGroups {
                                             if (err) {
                                                 OutputChannelLogging.logError(`could not write ${groupFile}`, err);
                                             }
-
-                                            groupCounter++;
-
-                                            if (groupTotal === groupCounter) {
-                                                OutputChannelLogging.log(`processed ${groupTotal} groups from ${fqdn}`);
-                                                resolve();
-                                            }
                                         });
                                     } catch (err) {
                                         OutputChannelLogging.logError(`error processing ${label} group ${groupName}`, err);
-                                        groupCounter++;
-
-                                        if (groupTotal === groupCounter) {
-                                            OutputChannelLogging.log(`processed ${groupTotal} groups from ${fqdn}`);
-                                            resolve();
-                                        }
                                     }
                                 } catch (err) {
                                     OutputChannelLogging.logError(`retrieving groupExport for ${group.name} from ${fqdn}`, err);
-                                    groupCounter++;
-
-                                    if (groupTotal === groupCounter) {
-                                        OutputChannelLogging.log(`processed ${groupTotal} groups from ${fqdn}`);
-                                        resolve();
-                                    }
                                 }
                             }
-                        }
+                        });
+
+                        resolve();
                     }
                 })();
             } catch (err) {

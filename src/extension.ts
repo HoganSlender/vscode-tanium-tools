@@ -11,7 +11,8 @@ import * as contentSetUserGroupRoleMemberships from './services/ContentSetUserGr
 import * as groups from './services/Groups';
 import * as packages from './services/Packages';
 import * as sensor from './services/Sensor';
-import * as serverServer from './services/ServerServer';
+import * as sensors from './services/Sensors';
+//import * as serverServer from './services/ServerServer';
 import * as serverServerContentSetPrivileges from './services/ServerServerContentSetPrivileges';
 import * as serverServerContentSetRoleMemberships from './services/ServerServerContentSetRoleMemberships';
 import * as serverServerContentSetRolePrivileges from './services/ServerServerContentSetRolePrivileges';
@@ -20,6 +21,7 @@ import * as serverServerContentSets from './services/ServerServerContentSets';
 import * as serverServerContentSetUserGroupRoleMemberships from './services/ServerServerContentSetUserGroupRoleMemberships';
 import * as serverServerGroups from './services/ServerServerGroups';
 import * as serverServerPackages from './services/ServerServerPackages';
+import * as serverServerSensors from './services/ServerServerSensors';
 import * as serverServerUserGroups from './services/ServerServerUserGroups';
 import * as serverServerUsers from './services/ServerServerUsers';
 import * as signContentFile from './services/SignContentFile';
@@ -41,7 +43,8 @@ export function activate(context: ExtensionContext) {
 	groups.activate(context);
 	packages.activate(context);
 	sensor.activate(context);
-	serverServer.activate(context);
+	sensors.activate(context);
+	//serverServer.activate(context);
 	serverServerContentSetPrivileges.activate(context);
 	serverServerContentSetRoleMemberships.activate(context);
 	serverServerContentSetRolePrivileges.activate(context);
@@ -50,6 +53,7 @@ export function activate(context: ExtensionContext) {
 	serverServerContentSetUserGroupRoleMemberships.activate(context);
 	serverServerGroups.activate(context);
 	serverServerPackages.activate(context);
+	serverServerSensors.activate(context);
 	serverServerUserGroups.activate(context);
 	serverServerUsers.activate(context);
 	signContentFile.activate(context);

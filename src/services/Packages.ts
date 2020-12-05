@@ -21,77 +21,10 @@ export function activate(context: vscode.ExtensionContext) {
         'hoganslendertanium.analyzePackages': (uri: vscode.Uri, uris: vscode.Uri[]) => {
             Packages.analyzePackages(uris[0], uris[1], context);
         },
-        'hoganslendertanium.downloadPackageFiles': () => {
-            Packages.downloadPackageFiles(context);
-        }
     });
 }
 
 export class Packages {
-    static async downloadPackageFiles(context: vscode.ExtensionContext) {
-        // get the current folder
-        const folderPath = vscode.workspace.rootPath;
-
-        // define output channel
-        OutputChannelLogging.initialize();
-
-        // get configurations
-        const config = vscode.workspace.getConfiguration('hoganslender.tanium');
-        const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
-        const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
-
-        const state = await collectPackageFilesInputs(config, context);
-
-        // collect values
-        const leftFqdn: string = state.leftFqdn;
-        const leftUsername: string = state.leftUsername;
-        const leftPassword: string = state.leftPassword;
-        OutputChannelLogging.showClear();
-
-        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
-        OutputChannelLogging.log(`left username: ${leftUsername}`);
-        OutputChannelLogging.log(`left password: XXXXXXXX`);
-
-        const restBase = `https://${leftFqdn}/api/v2`;
-
-        // get session
-        var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword);
-
-        OutputChannelLogging.log(`package retrieval - initialized for ${leftFqdn}`);
-
-        try {
-            const body = await RestClient.get(`${restBase}/packages`, {
-                headers: {
-                    session: session,
-                },
-                responseType: 'json'
-            }, allowSelfSignedCerts, httpTimeout);
-            OutputChannelLogging.log(`package retrieval - complete for ${leftFqdn}`);
-
-            const packageSpecs: any[] = body.data;
-
-            for (var i = 0; i < packageSpecs.length; i++) {
-                const packageSpec = packageSpecs[i];
-
-                OutputChannelLogging.log(`processing ${i + 1} of ${packageSpecs.length}: ${packageSpec.name} files`);
-
-                // iterate through files
-                for (var j = 0; j < packageSpec?.files?.length; j++) {
-                    const packageFile = packageSpec.files[j];
-
-                    if (packageFile.source.length === 0) {
-                        OutputChannelLogging.log(`\tprocessing ${j + 1} of ${packageSpec.files.length}: ${packageFile.name}`);
-                        // download the file
-                        await RestClient.downloadFile(`https://${leftFqdn}/cache/${packageFile.hash}`, path.join(folderPath!, packageFile.name), {}, allowSelfSignedCerts, httpTimeout);
-                        OutputChannelLogging.log(`\tdownloaded ${packageFile.name}`);
-                    }
-                }
-            }
-        } catch (err) {
-            OutputChannelLogging.logError(`processing packages from ${leftFqdn}`, err);
-        }
-    }
-
     static async analyzePackages(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
         const panelMissing = vscode.window.createWebviewPanel(
             'hoganslenderMissingPackages',
@@ -144,50 +77,50 @@ export class Packages {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const missingPackages = await PathUtils.getMissingItems(left.fsPath, right.fsPath);
-        const modifiedPackages = await PathUtils.getModifiedItems(left.fsPath, right.fsPath);
-        const createdPackages = await PathUtils.getCreatedItems(left.fsPath, right.fsPath);
-        const unchangedPackages = await PathUtils.getUnchangedItems(left.fsPath, right.fsPath);
-
-        OutputChannelLogging.log(`missing packages: ${missingPackages.length}`);
-        OutputChannelLogging.log(`modified packages: ${modifiedPackages.length}`);
-        OutputChannelLogging.log(`created packages: ${createdPackages.length}`);
-        OutputChannelLogging.log(`unchanged packages: ${unchangedPackages.length}`);
+        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath, true);
+        OutputChannelLogging.log(`missing packages: ${diffItems.missing.length}`);
+        OutputChannelLogging.log(`modified packages: ${diffItems.modified.length}`);
+        OutputChannelLogging.log(`created packages: ${diffItems.created.length}`);
+        OutputChannelLogging.log(`unchanged packages: ${diffItems.unchanged.length}`);
 
         const title = 'Packages';
 
         panelMissing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
-            items: missingPackages,
+            items: diffItems.missing,
             transferIndividual: 1,
             showServerInfo: 1,
             showSourceServer: true,
+            showDestServer: true,
             openType: OpenType.file,
         }, panelMissing, context, config);
 
         panelModified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
-            items: modifiedPackages,
+            items: diffItems.modified,
             transferIndividual: 1,
             showServerInfo: 1,
             showSourceServer: true,
+            showDestServer: true,
             openType: OpenType.diff,
         }, panelModified, context, config);
 
         panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
             myTitle: title,
-            items: createdPackages,
+            items: diffItems.created,
             transferIndividual: 1,
             showServerInfo: 1,
             showSourceServer: true,
+            showDestServer: true,
             openType: OpenType.file,
         }, panelCreated, context, config);
 
         panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
-            items: unchangedPackages,
+            items: diffItems.unchanged,
             transferIndividual: 0,
             showServerInfo: 0,
+            showDestServer: false,
             openType: OpenType.diff,
         }, panelUnchanged, context, config);
 
@@ -397,9 +330,7 @@ export class Packages {
                     // process package files
                     const packageSpec = packageSpecFromFile.package_specs[0];
 
-                    for (var i = 0; i < packageSpec.files.length; i++) {
-                        var packageFile = packageSpec.files[i];
-
+                    packageSpec.files.forEach(async (packageFile: any) => {
                         if (packageFile.source.length === 0) {
                             OutputChannelLogging.log(`processing ${packageFile.name}`);
 
@@ -417,7 +348,7 @@ export class Packages {
                             // delete temp file
                             fs.unlinkSync(tempFilePath);
                         }
-                    }
+                    });
                     OutputChannelLogging.log(`all files processed for ${packageSpec.name}`);
 
                     // delete package temp file

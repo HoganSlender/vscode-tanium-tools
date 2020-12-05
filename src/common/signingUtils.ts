@@ -93,7 +93,7 @@ export class SigningUtils {
 
                 const analyzeRes = await RestClient.postTextPlain(signedContent, options);
 
-                const conflictData = analyzeRes.data.data.object_list.import_conflict_details;
+                const conflictData: any = analyzeRes.data.data.object_list.import_conflict_details;
 
                 const conflictOptions: any = {
                     import_existing_ignore_content_set: 1,
@@ -103,9 +103,7 @@ export class SigningUtils {
 
                 // iterate though conflict details and generate options
                 const target = conflictOptions.import_conflict_options_by_type_and_name;
-                for (var i = 0; i < conflictData.length; i++) {
-                    const conflict = conflictData[i];
-
+                conflictData.forEach((conflict: any) => {
                     switch (conflict.type) {
                         case 'group':
                             // check for changes to the group only
@@ -127,7 +125,7 @@ export class SigningUtils {
                         default:
                             break;
                     }
-                }
+                });
 
                 // import
                 headers.tanium_options = JSON.stringify(conflictOptions);

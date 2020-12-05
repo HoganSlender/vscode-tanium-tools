@@ -9,12 +9,10 @@ interface ServerServerSensorState {
     rightFqdnQp: QuickPickItem | string;
     rightUsernameQp: QuickPickItem | string;
     rightPassword: string;
-    extractCommentWhitespaceQp: QuickPickItem;
     leftFqdn: string;
     leftUsername: string;
     rightFqdn: string;
     rightUsername: string;
-    extractCommentWhitespace: boolean;
 }
 
 export async function collectServerServerSensorInputs(config: WorkspaceConfiguration, context: ExtensionContext) {
@@ -34,7 +32,7 @@ export async function collectServerServerSensorInputs(config: WorkspaceConfigura
         {
             stepType: StepType.quickPick,
             step: 1,
-            totalSteps: 7,
+            totalSteps: 6,
             quickPickItems: fqdns.map(label => ({ label })),
             quickPickButtons: [
                 addButton
@@ -47,7 +45,7 @@ export async function collectServerServerSensorInputs(config: WorkspaceConfigura
         {
             stepType: StepType.quickPick,
             step: 2,
-            totalSteps: 7,
+            totalSteps: 6,
             quickPickItems: usernames.map(label => ({ label })),
             quickPickButtons: [
                 addButton
@@ -60,7 +58,7 @@ export async function collectServerServerSensorInputs(config: WorkspaceConfigura
         {
             stepType: StepType.inputBox,
             step: 3,
-            totalSteps: 7,
+            totalSteps: 6,
             activeItemPropertyName: 'leftPassword',
             inputPrompt: 'Please enter the source Tanium server password',
             password: true
@@ -68,7 +66,7 @@ export async function collectServerServerSensorInputs(config: WorkspaceConfigura
         {
             stepType: StepType.quickPick,
             step: 4,
-            totalSteps: 7,
+            totalSteps: 6,
             quickPickItems: fqdns.map(label => ({ label })),
             quickPickButtons: [
                 addButton
@@ -81,7 +79,7 @@ export async function collectServerServerSensorInputs(config: WorkspaceConfigura
         {
             stepType: StepType.quickPick,
             step: 5,
-            totalSteps: 7,
+            totalSteps: 6,
             quickPickItems: usernames.map(label => ({ label })),
             quickPickButtons: [
                 addButton
@@ -94,18 +92,10 @@ export async function collectServerServerSensorInputs(config: WorkspaceConfigura
         {
             stepType: StepType.inputBox,
             step: 6,
-            totalSteps: 7,
+            totalSteps: 6,
             activeItemPropertyName: 'rightPassword',
             inputPrompt: 'Please enter the dest Tanium server password',
             password: true
-        },
-        {
-            stepType: StepType.quickPick,
-            step: 7,
-            totalSteps: 7,
-            quickPickItems: ['Yes', 'No'].map(label => ({ label })),
-            quickPickPlaceholder: 'Extract/group sensors with only comment and whitespace differences?',
-            activeItemPropertyName: 'extractCommentWhitespaceQp',
         }
     ];
 
@@ -151,8 +141,6 @@ export async function collectServerServerSensorInputs(config: WorkspaceConfigura
     } else {
         state.rightUsername = state.rightUsernameQp!.label;
     }
-
-    state.extractCommentWhitespace = state.extractCommentWhitespaceQp!.label === 'Yes';
 
     // store data
     return state as ServerServerSensorState;

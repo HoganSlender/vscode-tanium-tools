@@ -31,6 +31,7 @@
 		"onCommand:hoganslendertanium.analyzeFilterGroups",
 		"onCommand:hoganslendertanium.analyzeManualGroups",
 		"onCommand:hoganslendertanium.analyzePackages",
+		"onCommand:hoganslendertanium.analyzeSensors",
 		"onCommand:hoganslendertanium.analyzeUserGroups",
 		"onCommand:hoganslendertanium.analyzeUsers",
 		"onCommand:hoganslendertanium.compareContentSetSensors",
@@ -49,7 +50,6 @@
 		"onCommand:hoganslendertanium.compareServerServerSensors",
 		"onCommand:hoganslendertanium.compareServerServerUserGroups",
 		"onCommand:hoganslendertanium.compareServerServerUsers",
-		"onCommand:hoganslendertanium.downloadPackageFiles",
 		"onCommand:hoganslendertanium.generateExportFileMissingSensors",
 		"onCommand:hoganslendertanium.generateExportFileModifiedSensors",
 		"onCommand:hoganslendertanium.retrieveSensorByHash",
@@ -118,6 +118,11 @@
 			{
 				"command": "hoganslendertanium.analyzePackages",
 				"title": "Analyze Packages",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.analyzeSensors",
+				"title": "Analyze Sensors",
 				"category": "Tanium"
 			},
 			{
@@ -211,11 +216,6 @@
 				"category": "Tanium"
 			},
 			{
-				"command": "hoganslendertanium.downloadPackageFiles",
-				"title": "Download Package Files",
-				"category": "Tanium"
-			},
-			{
 				"command": "hoganslendertanium.generateExportFileMissingSensors",
 				"title": "Generate Export File for Missing Sensors",
 				"category": "Tanium"
@@ -294,6 +294,10 @@
 				},
 				{
 					"command": "hoganslendertanium.analyzePackages",
+					"when": "false"
+				},
+				{
+					"command": "hoganslendertanium.analyzeSensors",
 					"when": "false"
 				},
 				{
@@ -377,6 +381,11 @@
 					"command": "hoganslendertanium.analyzePackages",
 					"group": "3_compare@1",
 					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%Packages$/"
+				},
+				{
+					"command": "hoganslendertanium.analyzeSensors",
+					"group": "3_compare@1",
+					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%Sensors$/"
 				},
 				{
 					"command": "hoganslendertanium.analyzeUserGroups",

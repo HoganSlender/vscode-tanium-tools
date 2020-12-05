@@ -2,7 +2,9 @@ const vscode = acquireVsCodeApi();
 
 var divOpenType = document.getElementById('divOpenType');
 var openType = divOpenType.innerHTML;
-console.log(`openType: ${openType}`);
+
+var divType = document.getElementById('divType');
+console.log(divType.innerHTML);
 
 var addButton = document.getElementById("addButton");
 var removeButton = document.getElementById("removeButton");
@@ -11,6 +13,7 @@ var processButton = document.getElementById("processButton");
 if (processButton !== null) {
     console.log(`processButtons !== null`);
     processButton.disabled = true;
+    processButton.addEventListener("click", processItems);
 } else {
     console.log(`processButtons === null`);
 }
@@ -69,13 +72,6 @@ if (removeButton !== null) {
     console.log(`RemoveButton === null`);
 }
 
-if (processButton !== null) {
-    console.log(`processButton !== null`);
-    processButton.addEventListener("click", processItems);
-} else {
-    console.log(`processButton === null`);
-}
-
 var divFqdns = document.getElementById("divFqdns");
 var divUsernames = document.getElementById("divUsernames");
 var divSigningKeys = document.getElementById("divSigningKeys");
@@ -113,8 +109,13 @@ if (!showServerInfo) {
         processInput(usernames, divSourceUsername, 'taniumSourceUsernameSelect', false);
     }
 
-    processInput(fqdns, divDestFqdn, 'taniumDestFqdnSelect', true);
-    processInput(usernames, divDestUsername, 'taniumDestUsernameSelect', true);
+    if (divDestFqdn !== null) {
+        processInput(fqdns, divDestFqdn, 'taniumDestFqdnSelect', true);
+    }
+
+    if (divDestUsername !== null) {
+        processInput(usernames, divDestUsername, 'taniumDestUsernameSelect', true);
+    }
     
     if (divSigningKey !== null) {
         processInput(signingKeys, divSigningKey, 'taniumSigningKeySelect', true);
@@ -132,7 +133,10 @@ if (!showServerInfo) {
     if (sourcePassword !== null) {
         sourcePassword.addEventListener("input", enableProcessPackage);
     }
-    destPassword.addEventListener("input", enableProcessPackage);
+
+    if (destPassword !== null) {
+        destPassword.addEventListener("input", enableProcessPackage);
+    }
 }
 
 // handle messages from extension to webview
@@ -153,14 +157,13 @@ function processInput(inputArray, targetDiv, targetId, isLast) {
     tag.setAttribute("id", `${targetId}`);
     targetDiv.appendChild(tag);
 
-    for (var i = 0; i < inputArray.length; i++) {
-        var item = inputArray[i];
+    inputArray.forEach(item => {
         var option = document.createElement("option");
         option.setAttribute("value", item);
         var text = document.createTextNode(item);
         option.appendChild(text);
         tag.appendChild(option);
-    }
+    });
 
     // set selected index
     if (isLast) {
@@ -170,9 +173,11 @@ function processInput(inputArray, targetDiv, targetId, isLast) {
 
 function enableProcessPackage() {
     if (showServerInfo) {
-        if (sourcePassword !== null) {
+        if (sourcePassword !== null && destPassword !== null) {
             processButton.disabled = rItems.options.length === 0 || destPassword.value.trim().length === 0 || sourcePassword.value.trim().length === 0;
-        } else {
+        } else if (sourcePassword !== null) {
+            processButton.disabled = rItems.options.length === 0 || sourcePassword.value.trim().length === 0;
+        } else if (destPassword !== null) {
             processButton.disabled = rItems.options.length === 0 || destPassword.value.trim().length === 0;
         }
     } else {
@@ -195,25 +200,23 @@ function removeButtonEvent(from, to) {
 }
 
 function moveItems(from, to) {
+    console.log('inside moveItems');
     if (from.selectedIndex === -1) {
         return;
     }
 
-    for (var i = 0; i < from.options.length; i++) {
-        var o = from.options[i];
-
+    Array.from(from.options).forEach(o => {
+        console.log('inside');
         if (o.selected) {
             to.options[to.options.length] = new Option(o.text, o.value);
         }
-    }
+    });
 
-    for (var i = from.options.length - 1; i >= 0; i--) {
-        var o = from.options[i];
-
+    Array.from(from.options).slice().reverse().forEach(o => {
         if (o.selected) {
-            from.options[i] = null;
+            from.removeChild(o);
         }
-    }
+    });
 }
 
 function openDiff(from) {
@@ -294,20 +297,24 @@ function processItems() {
         // gather all values and send
         if (rItems.options.length !== 0) {
             var items = [];
-            for (var i = 0; i < rItems.options.length; i++) {
-                var o = rItems.options[i];
+
+            Array.from(rItems.options).forEach(o => {
                 items.push({
                     path: o.value,
                     name: o.text,
                 });
-            }
+            });
 
             console.log(`items: ${JSON.stringify(items, null, 2)}`);
 
             // send message
             vscode.postMessage({
                 command: 'transferItems',
+                sourceFqdn: sourceFqdn,
+                sourceUsername: sourceUsername,
+                sourcePassword: sourcePasswordString,
                 items: items,
+                signingServerLabel: signingKey,
             });
             processButton.disabled = false;
         }

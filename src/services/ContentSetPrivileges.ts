@@ -10,6 +10,8 @@ import { PathUtils } from '../common/pathUtils';
 import { WebContentUtils } from '../common/webContentUtils';
 
 import path = require('path');
+import { SignContentFile } from './SignContentFile';
+import { SigningKey } from '../types/signingKey';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -70,47 +72,56 @@ export class ContentSetPrivileges {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const missingContentSetPrivileges = await PathUtils.getMissingItems(left.fsPath, right.fsPath);
-        const modifiedContentSetPrivileges = await PathUtils.getModifiedItems(left.fsPath, right.fsPath);
-        const createdContentSetPrivileges = await PathUtils.getCreatedItems(left.fsPath, right.fsPath);
-        const unchangedContentSetPrivileges = await PathUtils.getUnchangedItems(left.fsPath, right.fsPath);
-
-        OutputChannelLogging.log(`missing content set privileges: ${missingContentSetPrivileges.length}`);
-        OutputChannelLogging.log(`modified content set privileges: ${modifiedContentSetPrivileges.length}`);
-        OutputChannelLogging.log(`created content set privileges: ${createdContentSetPrivileges.length}`);
-        OutputChannelLogging.log(`unchanged content set privileges: ${unchangedContentSetPrivileges.length}`);
+        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
+        OutputChannelLogging.log(`missing content set privileges: ${diffItems.missing.length}`);
+        OutputChannelLogging.log(`modified content set privileges: ${diffItems.modified.length}`);
+        OutputChannelLogging.log(`created content set privileges: ${diffItems.created.length}`);
+        OutputChannelLogging.log(`unchanged content set privileges: ${diffItems.unchanged.length}`);
 
         const title = 'Content Set Privileges';
 
         panelMissing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
-            items: missingContentSetPrivileges,
+            items: diffItems.missing,
             transferIndividual: 0,
             showServerInfo: 0,
+            showSourceServer: false,
+            showSourceCreds: false,
+            showDestServer: false,
+            showSigningKeys: true,
             openType: OpenType.file,
         }, panelMissing, context, config);
 
         panelModified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
-            items: modifiedContentSetPrivileges,
+            items: diffItems.modified,
             transferIndividual: 0,
             showServerInfo: 0,
+            showSourceServer: false,
+            showSourceCreds: false,
+            showDestServer: false,
+            showSigningKeys: true,
             openType: OpenType.diff,
         }, panelModified, context, config);
 
         panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
             myTitle: title,
-            items: createdContentSetPrivileges,
+            items: diffItems.created,
             transferIndividual: 0,
             showServerInfo: 0,
+            showSourceServer: false,
+            showSourceCreds: false,
+            showDestServer: false,
+            showSigningKeys: true,
             openType: OpenType.file,
         }, panelCreated, context, config);
 
         panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
-            items: unchangedContentSetPrivileges,
+            items: diffItems.unchanged,
             transferIndividual: 0,
             showServerInfo: 0,
+            showDestServer: false,
             openType: OpenType.diff,
         }, panelUnchanged, context, config);
 
@@ -141,7 +152,13 @@ export class ContentSetPrivileges {
                         break;
 
                     case 'transferItems':
+                        // get signing keys
+                        const signingKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
+
                         await this.transferItems(
+                            signingKey!,
                             message.items,
                         );
                         break;
@@ -170,7 +187,13 @@ export class ContentSetPrivileges {
                         break;
 
                     case 'transferItems':
+                        // get signing keys
+                        const signingKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
+
                         await this.transferItems(
+                            signingKey!,
                             message.items,
                         );
                         break;
@@ -204,7 +227,10 @@ export class ContentSetPrivileges {
         });
     }
 
-    static async transferItems(items: any[]) {
+    static async transferItems(
+        signingKey: SigningKey,
+        items: any[],
+        ) {
         const p = new Promise((resolve, reject) => {
             try {
                 // generate json
@@ -217,9 +243,7 @@ export class ContentSetPrivileges {
 
                 var content_set_privileges: any = [];
 
-                for (var i = 0; i < items.length; i++) {
-                    const item = items[i];
-
+                items.forEach(item => {
                     const path = item.path.split('~')[0];
                     const name = item.name;
 
@@ -228,7 +252,7 @@ export class ContentSetPrivileges {
 
                     // add to importJson
                     content_set_privileges.push(contentSetFromFile);
-                }
+                });
 
                 importJson.object_list.content_set_privileges = content_set_privileges;
 
@@ -236,6 +260,9 @@ export class ContentSetPrivileges {
                 const baseDir = PathUtils.getPath(PathUtils.getPath(items[0].path.split('~')[0]));
                 const tempPath = path.join(baseDir, uuidv4() + '.json');
                 fs.writeFileSync(tempPath, `${JSON.stringify(importJson, null, 2)}\r\n`, 'utf-8');
+
+                // sign the file
+                SignContentFile.signContent(signingKey.keyUtilityPath, signingKey.privateKeyFilePath, tempPath);
 
                 // open file
                 vscode.commands.executeCommand('vscode.open', vscode.Uri.file(tempPath), {

@@ -39,7 +39,6 @@ export class Groups {
     static async analyzeGroups(left: vscode.Uri, right: vscode.Uri, targetGroupType: number, context: vscode.ExtensionContext) {        
         var title = 'Groups';
 
-
         switch(targetGroupType) {
             case 0:
                 title = 'Filter Groups';
@@ -113,48 +112,48 @@ export class Groups {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const missingGroups = await this.filterGroupType(await PathUtils.getMissingItems(left.fsPath, right.fsPath), targetGroupType);
-        const modifiedGroups = await this.filterGroupType(await PathUtils.getModifiedItems(left.fsPath, right.fsPath), targetGroupType);
-        const createdGroups = await this.filterGroupType(await PathUtils.getCreatedItems(left.fsPath, right.fsPath), targetGroupType);
-        const unchangedGroups = await this.filterGroupType(await PathUtils.getUnchangedItems(left.fsPath, right.fsPath), targetGroupType);
-
-        OutputChannelLogging.log(`missing groups: ${missingGroups.length}`);
-        OutputChannelLogging.log(`modified groups: ${modifiedGroups.length}`);
-        OutputChannelLogging.log(`created groups: ${createdGroups.length}`);
-        OutputChannelLogging.log(`unchanged groups: ${unchangedGroups.length}`);
+        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
+        OutputChannelLogging.log(`missing groups: ${diffItems.missing.length}`);
+        OutputChannelLogging.log(`modified groups: ${diffItems.modified.length}`);
+        OutputChannelLogging.log(`created groups: ${diffItems.created.length}`);
+        OutputChannelLogging.log(`unchanged groups: ${diffItems.unchanged.length}`);
 
         panelMissing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
-            items: missingGroups,
+            items: diffItems.missing,
             transferIndividual: 1,
             showServerInfo: 1,
+            showDestServer: true,
             showSigningKeys: true,
             openType: OpenType.file,
         }, panelMissing, context, config);
 
         panelModified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
-            items: modifiedGroups,
+            items: diffItems.modified,
             transferIndividual: 1,
             showServerInfo: 1,
+            showDestServer: true,
             showSigningKeys: true,
             openType: OpenType.diff,
         }, panelModified, context, config);
 
         panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
             myTitle: title,
-            items: createdGroups,
+            items: diffItems.created,
             transferIndividual: 1,
             showServerInfo: 1,
+            showDestServer: true,
             showSigningKeys: true,
             openType: OpenType.file,
         }, panelCreated, context, config);
 
         panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
-            items: unchangedGroups,
+            items: diffItems.unchanged,
             transferIndividual: 0,
             showServerInfo: 0,
+            showDestServer: false,
             openType: OpenType.diff,
         }, panelUnchanged, context, config);
 
@@ -459,10 +458,10 @@ export class Groups {
 
                             // iterate through sub_groups and get names
                             const subGroupNames: string[] = [];
-                            for (var i = 0; i < mrGroup.sub_groups.length; i++) {
-                                var name = mrGroup.sub_groups[i].name;
-                                subGroupNames.push(name);
-                            }
+
+                            mrGroup.sub_groups.forEach((subGroup: any) => {
+                                subGroupNames.push(subGroup.name);
+                            });
 
                             // get group export
                             const groupExport = await this.getGroupExportByNames(subGroupNames, allowSelfSignedCerts, httpTimeout, sourceRestBase, sourceSession);
@@ -482,13 +481,13 @@ export class Groups {
                             // generate update name for group
                             var ids: string[] = [];
                             const subGroupArray: any[] = [];
-                            for (var i = 0; i < mrGroup.sub_groups.length; i++) {
-                                const subGroup = mrGroup.sub_groups[i];
+
+                            mrGroup.sub_groups.forEach((subGroup:any) => {
                                 ids.push(String(destGroupMap[subGroup.name].id));
                                 subGroupArray.push({
                                     id: destGroupMap[subGroup.name].id
                                 });
-                            }
+                            });
 
                             // sort ids
                             ids.sort();
@@ -565,10 +564,10 @@ export class Groups {
 
 
                 var groups: any = {};
-                for (var i = 0; i < body.data.length; i++) {
-                    const groupEntity: any = body.data[i];
+
+                body.data.forEach((groupEntity: any) => {
                     groups[groupEntity.name] = groupEntity;
-                }
+                });
 
                 resolve(groups);
             } catch (err) {
@@ -592,10 +591,10 @@ export class Groups {
 
 
                 var groups: any = {};
-                for (var i = 0; i < body.data.length; i++) {
-                    const groupEntity: any = body.data[i];
+
+                body.data.forEach((groupEntity: any) => {
                     groups[groupEntity.id] = groupEntity;
-                }
+                });
 
                 resolve(groups);
             } catch (err) {
@@ -612,9 +611,7 @@ export class Groups {
             try {
                 const retval: any[] = [];
 
-                for (var i = 0; i < fileInfos.length; i++) {
-                    const fileInfo: any = fileInfos[i];
-
+                fileInfos.forEach(fileInfo => {
                     // load group
                     const items = fileInfo.path.split('~');
 
@@ -629,7 +626,7 @@ export class Groups {
                     if (group.type === targetGroupType) {
                         retval.push(fileInfo);
                     }
-                }
+                });
 
                 resolve(retval);
             } catch (err) {

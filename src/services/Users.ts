@@ -74,56 +74,56 @@ export class Users {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const missingUsers = await PathUtils.getMissingItems(left.fsPath, right.fsPath);
-        const modifiedUsers = await PathUtils.getModifiedItems(left.fsPath, right.fsPath);
-        const createdUsers = await PathUtils.getCreatedItems(left.fsPath, right.fsPath);
-        const unchangedUsers = await PathUtils.getUnchangedItems(left.fsPath, right.fsPath);
-
-        OutputChannelLogging.log(`missing users: ${missingUsers.length}`);
-        OutputChannelLogging.log(`modified users: ${modifiedUsers.length}`);
-        OutputChannelLogging.log(`created users: ${createdUsers.length}`);
-        OutputChannelLogging.log(`unchanged users: ${unchangedUsers.length}`);
+        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
+        OutputChannelLogging.log(`missing users: ${diffItems.missing.length}`);
+        OutputChannelLogging.log(`modified users: ${diffItems.modified.length}`);
+        OutputChannelLogging.log(`created users: ${diffItems.created.length}`);
+        OutputChannelLogging.log(`unchanged users: ${diffItems.unchanged.length}`);
 
         const title = 'Users';
 
         panelMissing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
-            items: missingUsers,
+            items: diffItems.missing,
             transferIndividual: 1,
             showServerInfo: 1,
             showSourceServer: true,
             showSourceCreds: true,
+            showDestServer: true,
             showSigningKeys: true,
             openType: OpenType.file,
         }, panelMissing, context, config);
 
         panelModified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
-            items: modifiedUsers,
+            items: diffItems.modified,
             transferIndividual: 1,
             showServerInfo: 1,
             showSourceServer: true,
             showSourceCreds: true,
+            showDestServer: true,
             showSigningKeys: true,
             openType: OpenType.diff,
         }, panelModified, context, config);
 
         panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
             myTitle: title,
-            items: createdUsers,
+            items: diffItems.created,
             transferIndividual: 1,
             showServerInfo: 1,
             showSourceServer: true,
             showSourceCreds: true,
+            showDestServer: true,
             showSigningKeys: true,
             openType: OpenType.file,
         }, panelCreated, context, config);
 
         panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
-            items: unchangedUsers,
+            items: diffItems.unchanged,
             transferIndividual: 0,
             showServerInfo: 0,
+            showDestServer: false,
             openType: OpenType.diff,
         }, panelUnchanged, context, config);
 
@@ -296,11 +296,10 @@ export class Users {
                     const groupMap = Groups.getGroupMapById(allowSelfSignedCerts, httpTimeout, restBase, session);
 
                     // create map
-                    for (var i = 0; i < userData.length; i++) {
-                        const user = userData[i];
+                    userData.forEach(user => {
                         var newObject = this.anonymizeUser(user, groupMap);
                         users[user.id] = newObject;
-                    }
+                    });
 
                     resolve(users);
                 })();
@@ -337,10 +336,9 @@ export class Users {
                     }
 
                     // create map
-                    for (var i = 0; i < userData.length; i++) {
-                        const user = userData[i];
+                    userData.forEach(user => {
                         users[user.name] = user;
-                    }
+                    });
 
                     resolve(users);
                 })();

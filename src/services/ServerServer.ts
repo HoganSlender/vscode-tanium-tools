@@ -18,9 +18,6 @@ const diffMatchPatch = require('diff-match-patch');
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.compareServerServerSensors': () => {
-            ServerServer.processSensors(context);
-        },
         'hoganslendertanium.generateExportFileMissingSensors': (uri: vscode.Uri, uris: vscode.Uri[]) => {
             ServerServer.processMissingSensors(uris[0], uris[1], context);
         },
@@ -266,7 +263,7 @@ class ServerServer {
         const rightFqdn: string = state.rightFqdn;
         const rightUsername: string = state.rightUsername;
         const rightPassword: string = state.rightPassword;
-        const extractCommentWhitespaceBoolean: boolean = state.extractCommentWhitespace;
+        //const extractCommentWhitespaceBoolean: boolean = state.extractCommentWhitespace;
 
         const leftRestBase = `https://${leftFqdn}/api/v2`;
         const rightRestBase = `https://${rightFqdn}/api/v2`;
@@ -279,7 +276,7 @@ class ServerServer {
         OutputChannelLogging.log(`right fqdn: ${rightFqdn}`);
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
-        OutputChannelLogging.log(`commentWhitespace: ${extractCommentWhitespaceBoolean.toString()}`);
+        //OutputChannelLogging.log(`commentWhitespace: ${extractCommentWhitespaceBoolean.toString()}`);
 
         // create folders
         const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}`);
@@ -296,19 +293,19 @@ class ServerServer {
             fs.mkdirSync(rightDir);
         }
 
-        if (extractCommentWhitespaceBoolean) {
-            if (!fs.existsSync(commentDir)) {
-                fs.mkdirSync(commentDir);
-            }
+        // if (extractCommentWhitespaceBoolean) {
+        //     if (!fs.existsSync(commentDir)) {
+        //         fs.mkdirSync(commentDir);
+        //     }
 
-            if (!fs.existsSync(commentLeftDir)) {
-                fs.mkdirSync(commentLeftDir);
-            }
+        //     if (!fs.existsSync(commentLeftDir)) {
+        //         fs.mkdirSync(commentLeftDir);
+        //     }
 
-            if (!fs.existsSync(commentRightDir)) {
-                fs.mkdirSync(commentRightDir);
-            }
-        }
+        //     if (!fs.existsSync(commentRightDir)) {
+        //         fs.mkdirSync(commentRightDir);
+        //     }
+        // }
 
         vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
@@ -317,35 +314,36 @@ class ServerServer {
         }, async (progress, token) => {
             progress.report({ increment: 0 });
 
-            const increment = extractCommentWhitespaceBoolean ? 33 : 50;
+            // const increment = extractCommentWhitespaceBoolean ? 33 : 50;
+            const increment = 50;
 
-            if (extractCommentWhitespaceBoolean) {
-                progress.report({ increment: increment, message: `sensor retrieval from ${leftFqdn}` });
-                await this.processServerSensors(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-                progress.report({ increment: increment, message: `sensor retrieval from ${rightFqdn}` });
-                await this.processServerSensors(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
-                progress.report({ increment: increment, message: 'extracting comments/whitespace only differences' });
-                this.extractCommentWhitespaceSensors(leftDir, rightDir, commentLeftDir, commentRightDir);
-                const p = new Promise(resolve => {
-                    setTimeout(() => {
-                        resolve();
-                    }, 3000);
-                });
+            // if (extractCommentWhitespaceBoolean) {
+            //     progress.report({ increment: increment, message: `sensor retrieval from ${leftFqdn}` });
+            //     await this.processServerSensors(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
+            //     progress.report({ increment: increment, message: `sensor retrieval from ${rightFqdn}` });
+            //     await this.processServerSensors(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
+            //     progress.report({ increment: increment, message: 'extracting comments/whitespace only differences' });
+            //     this.extractCommentWhitespaceSensors(leftDir, rightDir, commentLeftDir, commentRightDir);
+            //     const p = new Promise(resolve => {
+            //         setTimeout(() => {
+            //             resolve();
+            //         }, 3000);
+            //     });
 
-                return p;
-            } else {
-                progress.report({ increment: increment, message: `sensor retrieval from ${leftFqdn}` });
-                await this.processServerSensors(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-                progress.report({ increment: increment, message: `sensor retrieval from ${rightFqdn}` });
-                await this.processServerSensors(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
-                const p = new Promise(resolve => {
-                    setTimeout(() => {
-                        resolve();
-                    }, 3000);
-                });
+            //     return p;
+            // } else {
+            progress.report({ increment: increment, message: `sensor retrieval from ${leftFqdn}` });
+            await this.processServerSensors(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
+            progress.report({ increment: increment, message: `sensor retrieval from ${rightFqdn}` });
+            await this.processServerSensors(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
+            const p = new Promise(resolve => {
+                setTimeout(() => {
+                    resolve();
+                }, 3000);
+            });
 
-                return p;
-            }
+            return p;
+            //            }
         });
     }
 
@@ -365,51 +363,29 @@ class ServerServer {
 
                     const sensors: [any] = body.data;
                     const sensorTotal = sensors.length - 1;
-                    var sensorCounter = 0;
+                    //var sensorCounter = 0;
 
-                    for (var i = 0; i < sensors.length - 1; i++) {
-                        const sensor: any = sensors[i];
+                    sensors.forEach(sensor => {
+                        if (sensor.category !== 'Reserved' && sensor.cache_id === undefined) {
+                            const sensorName: string = sanitize(sensor.name);
 
-                        if (sensor.category === 'Reserved') {
-                            sensorCounter++;
+                            try {
+                                const transformedSensor = TransformSensor.transform(sensor);
+                                const content: string = JSON.stringify(transformedSensor, null, 2);
 
-                            if (sensorTotal === sensorCounter) {
-                                OutputChannelLogging.log(`processed ${sensorTotal} sensors`);
-                                resolve();
-                            }
-                            continue;
-                        }
-
-                        const sensorName: string = sanitize(sensor.name);
-
-                        try {
-                            const transformedSensor = TransformSensor.transform(sensor);
-                            const content: string = JSON.stringify(transformedSensor, null, 2);
-
-                            const sensorFile = path.join(directory, sensorName + '.json');
-                            fs.writeFile(sensorFile, content, (err) => {
-                                if (err) {
-                                    OutputChannelLogging.logError(`could not write ${sensorFile}`, err);
-                                }
-
-                                sensorCounter++;
-
-                                if (sensorTotal === sensorCounter) {
-                                    OutputChannelLogging.log(`processed ${sensorTotal} sensors`);
-                                    resolve();
-                                }
-                            });
-                        } catch (err) {
-                            OutputChannelLogging.logError(`error processing ${label} sensor ${sensorName}`, err);
-
-                            sensorCounter++;
-
-                            if (sensorTotal === sensorCounter) {
-                                OutputChannelLogging.log(`processed ${sensorTotal} sensors`);
-                                resolve();
+                                const sensorFile = path.join(directory, sensorName + '.json');
+                                fs.writeFile(sensorFile, content, (err) => {
+                                    if (err) {
+                                        OutputChannelLogging.logError(`could not write ${sensorFile}`, err);
+                                    }
+                                });
+                            } catch (err) {
+                                OutputChannelLogging.logError(`error processing ${label} sensor ${sensorName}`, err);
                             }
                         }
-                    }
+                    });
+
+                    resolve();
                 })();
             } catch (err) {
                 OutputChannelLogging.logError(`error downloading sensors from ${fqdn}`, err);

@@ -11,6 +11,8 @@ import { WebContentUtils } from '../common/webContentUtils';
 
 import path = require('path');
 import { OpenType } from '../common/enums';
+import { SignContentFile } from './SignContentFile';
+import { SigningKey } from '../types/signingKey';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -71,47 +73,51 @@ export class ContentSetRoles {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const missingContentSetRoles = await PathUtils.getMissingItems(left.fsPath, right.fsPath);
-        const modifiedContentSetRoles = await PathUtils.getModifiedItems(left.fsPath, right.fsPath);
-        const createdContentSetRoles = await PathUtils.getCreatedItems(left.fsPath, right.fsPath);
-        const unchangedContentSetRoles = await PathUtils.getUnchangedItems(left.fsPath, right.fsPath);
-
-        OutputChannelLogging.log(`missing content set roles: ${missingContentSetRoles.length}`);
-        OutputChannelLogging.log(`modified content set roles: ${modifiedContentSetRoles.length}`);
-        OutputChannelLogging.log(`created content set roles: ${createdContentSetRoles.length}`);
-        OutputChannelLogging.log(`unchanged content set roles: ${unchangedContentSetRoles.length}`);
+        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
+        OutputChannelLogging.log(`missing content set roles: ${diffItems.missing.length}`);
+        OutputChannelLogging.log(`modified content set roles: ${diffItems.modified.length}`);
+        OutputChannelLogging.log(`created content set roles: ${diffItems.created.length}`);
+        OutputChannelLogging.log(`unchanged content set roles: ${diffItems.unchanged.length}`);
 
         const title = 'Content Set Roles';
 
         panelMissing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
-            items: missingContentSetRoles,
+            items: diffItems.missing,
             transferIndividual: 0,
             showServerInfo: 0,
+            showDestServer: false,
+            showSigningKeys: true,
             openType: OpenType.file,
         }, panelMissing, context, config);
 
         panelModified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
-            items: modifiedContentSetRoles,
+            items: diffItems.modified,
             transferIndividual: 0,
             showServerInfo: 0,
+            showDestServer: false,
+            showSigningKeys: true,
             openType: OpenType.diff,
         }, panelModified, context, config);
 
         panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
             myTitle: title,
-            items: createdContentSetRoles,
+            items: diffItems.created,
             transferIndividual: 0,
             showServerInfo: 0,
+            showDestServer: false,
+            showSigningKeys: true,
             openType: OpenType.file,
         }, panelCreated, context, config);
 
         panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
-            items: unchangedContentSetRoles,
+            items: diffItems.unchanged,
             transferIndividual: 0,
             showServerInfo: 0,
+            showDestServer: false,
+            showSigningKeys: false,
             openType: OpenType.diff,
         }, panelUnchanged, context, config);
 
@@ -142,7 +148,13 @@ export class ContentSetRoles {
                         break;
 
                     case 'transferItems':
+                        // get signing keys
+                        const signingKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
+
                         await this.transferItems(
+                            signingKey!,
                             message.items,
                         );
                         break;
@@ -171,7 +183,13 @@ export class ContentSetRoles {
                         break;
 
                     case 'transferItems':
+                        // get signing keys
+                        const signingKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
+
                         await this.transferItems(
+                            signingKey!,
                             message.items,
                         );
                         break;
@@ -205,7 +223,10 @@ export class ContentSetRoles {
         });
     }
 
-    static async transferItems(items: any[]) {
+    static async transferItems(
+        signingKey: SigningKey,
+        items: any[]
+        ) {
         const p = new Promise((resolve, reject) => {
             try {
                 // generate json
@@ -218,9 +239,7 @@ export class ContentSetRoles {
 
                 var content_set_roles: any = [];
 
-                for (var i = 0; i < items.length; i++) {
-                    const item = items[i];
-
+                items.forEach(item => {
                     const path = item.path.split('~')[0];
                     const name = item.name;
 
@@ -229,7 +248,7 @@ export class ContentSetRoles {
 
                     // add to importJson
                     content_set_roles.push(contentSetFromFile);
-                }
+                });
 
                 importJson.object_list.content_set_roles = content_set_roles;
 
@@ -237,6 +256,9 @@ export class ContentSetRoles {
                 const baseDir = PathUtils.getPath(PathUtils.getPath(items[0].path.split('~')[0]));
                 const tempPath = path.join(baseDir, uuidv4() + '.json');
                 fs.writeFileSync(tempPath, `${JSON.stringify(importJson, null, 2)}\r\n`, 'utf-8');
+
+                // sign the file
+                SignContentFile.signContent(signingKey.keyUtilityPath, signingKey.privateKeyFilePath, tempPath);
 
                 // open file
                 vscode.commands.executeCommand('vscode.open', vscode.Uri.file(tempPath), {

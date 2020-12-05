@@ -125,29 +125,23 @@ class ServerServerContentSetUserGroupRoleMemberships {
                     }
 
                     // iterate through each download export
-                    var contentSetUserGroupRoleMembershipCounter = 0;
                     var contentSetUserGroupRoleMembershipTotal: number = content_set_user_group_role_memberships.length;
 
                     if (contentSetUserGroupRoleMembershipTotal === 0) {
                         OutputChannelLogging.log(`there are 0 content set user group role memberships for ${fqdn}`);
                         resolve();
                     } else {
-                        for (var i = 0; i < content_set_user_group_role_memberships.length; i++) {
-                            const contentSetUserGroupRoleMembership: any = content_set_user_group_role_memberships[i];
+                        var i = 0;
+
+                        content_set_user_group_role_memberships.forEach(contentSetUserGroupRoleMembership => {
+                            i++;
 
                             if (i % 30 === 0 || i === contentSetUserGroupRoleMembershipTotal) {
-                                OutputChannelLogging.log(`processing ${i + 1} of ${contentSetUserGroupRoleMembershipTotal}`);
+                                OutputChannelLogging.log(`processing ${i} of ${contentSetUserGroupRoleMembershipTotal}`);
                             }
 
                             // check for deleted
-                            if (contentSetUserGroupRoleMembership.deleted_flag === 1) {
-                                contentSetUserGroupRoleMembershipCounter++;
-
-                                if (contentSetUserGroupRoleMembershipTotal === contentSetUserGroupRoleMembershipCounter) {
-                                    OutputChannelLogging.log(`processed ${contentSetUserGroupRoleMembershipTotal} content set user group role memberships from ${fqdn}`);
-                                    resolve();
-                                }
-                            } else {
+                            if (contentSetUserGroupRoleMembership.deleted_flag !== 1) {
                                 var newObject: any = {
                                     content_set_role: {
                                         name: contentSetRoleMap[contentSetUserGroupRoleMembership.content_set_role.id]
@@ -169,34 +163,17 @@ class ServerServerContentSetUserGroupRoleMemberships {
                                             if (err) {
                                                 OutputChannelLogging.logError(`could not write ${contentSetFile}`, err);
                                             }
-
-                                            contentSetUserGroupRoleMembershipCounter++;
-
-                                            if (contentSetUserGroupRoleMembershipTotal === contentSetUserGroupRoleMembershipCounter) {
-                                                OutputChannelLogging.log(`processed ${contentSetUserGroupRoleMembershipTotal} content set user group role memberships from ${fqdn}`);
-                                                resolve();
-                                            }
                                         });
                                     } catch (err) {
                                         OutputChannelLogging.logError(`error processing ${label} content set user group role membership ${contentSetName}`, err);
-                                        contentSetUserGroupRoleMembershipCounter++;
-
-                                        if (contentSetUserGroupRoleMembershipTotal === contentSetUserGroupRoleMembershipCounter) {
-                                            OutputChannelLogging.log(`processed ${contentSetUserGroupRoleMembershipTotal} content set user group role membership from ${fqdn}`);
-                                            resolve();
-                                        }
                                     }
                                 } catch (err) {
                                     OutputChannelLogging.logError(`saving content set user group role membership file for ${contentSetUserGroupRoleMembership.name} from ${fqdn}`, err);
-                                    contentSetUserGroupRoleMembershipCounter++;
-
-                                    if (contentSetUserGroupRoleMembershipTotal === contentSetUserGroupRoleMembershipCounter) {
-                                        OutputChannelLogging.log(`processed ${contentSetUserGroupRoleMembershipTotal} content set user group role memberships from ${fqdn}`);
-                                        resolve();
-                                    }
                                 }
                             }
-                        }
+                        });
+
+                        resolve();
                     }
                 })();
             } catch (err) {

@@ -74,47 +74,47 @@ export class ContentSetRoleMemberships {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const missingContentSetRoleMemberships = await PathUtils.getMissingItems(left.fsPath, right.fsPath);
-        const modifiedContentSetRoleMemberships = await PathUtils.getModifiedItems(left.fsPath, right.fsPath);
-        const createdContentSetRoleMemberships = await PathUtils.getCreatedItems(left.fsPath, right.fsPath);
-        const unchangedContentSetRoleMemberships = await PathUtils.getUnchangedItems(left.fsPath, right.fsPath);
-
-        OutputChannelLogging.log(`missing content set role memberships: ${missingContentSetRoleMemberships.length}`);
-        OutputChannelLogging.log(`modified content set role memberships: ${modifiedContentSetRoleMemberships.length}`);
-        OutputChannelLogging.log(`created content set role memberships: ${createdContentSetRoleMemberships.length}`);
-        OutputChannelLogging.log(`unchanged content set role memberships: ${unchangedContentSetRoleMemberships.length}`);
+        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
+        OutputChannelLogging.log(`missing content set role memberships: ${diffItems.missing.length}`);
+        OutputChannelLogging.log(`modified content set role memberships: ${diffItems.modified.length}`);
+        OutputChannelLogging.log(`created content set role memberships: ${diffItems.created.length}`);
+        OutputChannelLogging.log(`unchanged content set role memberships: ${diffItems.unchanged.length}`);
 
         const title = 'Content Set Role Memberships';
 
         panelMissing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
-            items: missingContentSetRoleMemberships,
+            items: diffItems.missing,
             transferIndividual: 1,
             showServerInfo: 1,
+            showDestServer: true,
             openType: OpenType.file,
         }, panelMissing, context, config);
 
         panelModified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
-            items: modifiedContentSetRoleMemberships,
+            items: diffItems.modified,
             transferIndividual: 1,
             showServerInfo: 1,
+            showDestServer: true,
             openType: OpenType.diff,
         }, panelModified, context, config);
 
         panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
             myTitle: title,
-            items: createdContentSetRoleMemberships,
+            items: diffItems.created,
             transferIndividual: 1,
             showServerInfo: 1,
+            showDestServer: true,
             openType: OpenType.file,
         }, panelCreated, context, config);
 
         panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
-            items: unchangedContentSetRoleMemberships,
+            items: diffItems.unchanged,
             transferIndividual: 0,
             showServerInfo: 0,
+            showDestServer: false,
             openType: OpenType.diff,
         }, panelUnchanged, context, config);
 

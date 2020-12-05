@@ -4,28 +4,33 @@ import { v4 as uuidv4 } from 'uuid';
 import * as vscode from 'vscode';
 
 import * as commands from '../common/commands';
-import { OpenType } from '../common/enums';
-import { OutputChannelLogging } from '../common/logging';
+import { OpenType } from "../common/enums";
+import { OutputChannelLogging } from "../common/logging";
 import { PathUtils } from '../common/pathUtils';
+import { RestClient } from '../common/restClient';
+import { Session } from '../common/session';
 import { WebContentUtils } from '../common/webContentUtils';
+import { SigningKey } from "../types/signingKey";
 
 import path = require('path');
 import { SignContentFile } from './SignContentFile';
-import { SigningKey } from '../types/signingKey';
+
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.analyzeContentSetRolePrivileges': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            ContentSetRolePrivileges.analyzeContentSetRolePrivileges(uris[0], uris[1], context);
+        'hoganslendertanium.analyzeSensors': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+            Sensors.analyzeSensors(uris[0], uris[1], context);
         },
     });
 }
 
-export class ContentSetRolePrivileges {
-    static async analyzeContentSetRolePrivileges(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
+export class Sensors {
+    static async analyzeSensors(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
+        var title = 'Sensors';
+
         const panelMissing = vscode.window.createWebviewPanel(
-            'hoganslenderMissingContentSetRolePrivileges',
-            'Missing Content Set Role Privileges',
+            'hoganslenderMissingSensors',
+            `Missing ${title}`,
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -34,8 +39,8 @@ export class ContentSetRolePrivileges {
         );
 
         const panelModified = vscode.window.createWebviewPanel(
-            'hoganslenderModifiedContentSetRolePrivileges',
-            'Modified Content Set Role Privileges',
+            'hoganslenderModifiedSensors',
+            `Modified ${title}`,
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -44,8 +49,8 @@ export class ContentSetRolePrivileges {
         );
 
         const panelCreated = vscode.window.createWebviewPanel(
-            'hoganslenderCreatedContentSetRolePrivileges',
-            'Created Content Set Role Privileges',
+            'hoganslenderCreatedSensors',
+            `Created ${title}`,
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -54,8 +59,8 @@ export class ContentSetRolePrivileges {
         );
 
         const panelUnchanged = vscode.window.createWebviewPanel(
-            'hoganslenderUnchangedContentSetRolePrivileges',
-            'Unchanged Content Set Role Privileges',
+            'hoganslenderUnchangedSensors',
+            `Unchanged ${title}`,
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -68,26 +73,27 @@ export class ContentSetRolePrivileges {
 
         // get configurations
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');
+        const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
+        const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
 
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
-        OutputChannelLogging.log(`missing content set role privileges: ${diffItems.missing.length}`);
-        OutputChannelLogging.log(`modified content set role privileges: ${diffItems.modified.length}`);
-        OutputChannelLogging.log(`created content set role privileges: ${diffItems.created.length}`);
-        OutputChannelLogging.log(`unchanged content set role privileges: ${diffItems.unchanged.length}`);
-
-        const title = 'Content Set Role Privileges';
+        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath, true);
+        OutputChannelLogging.log(`missing sensors: ${diffItems.missing.length}`);
+        OutputChannelLogging.log(`modified sensors: ${diffItems.modified.length}`);
+        OutputChannelLogging.log(`created sensors: ${diffItems.created.length}`);
+        OutputChannelLogging.log(`unchanged sensors: ${diffItems.unchanged.length}`);
 
         panelMissing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
             items: diffItems.missing,
             transferIndividual: 0,
-            showServerInfo: 0,
+            showServerInfo: 1,
+            showSourceServer: true,
+            showSourceCreds: true,
             showDestServer: false,
             showSigningKeys: true,
-            readOnly: true,
             openType: OpenType.file,
         }, panelMissing, context, config);
 
@@ -95,10 +101,11 @@ export class ContentSetRolePrivileges {
             myTitle: title,
             items: diffItems.modified,
             transferIndividual: 0,
-            showServerInfo: 0,
+            showServerInfo: 1,
+            showSourceServer: true,
+            showSourceCreds: true,
             showDestServer: false,
             showSigningKeys: true,
-            readOnly: true,
             openType: OpenType.diff,
         }, panelModified, context, config);
 
@@ -106,10 +113,11 @@ export class ContentSetRolePrivileges {
             myTitle: title,
             items: diffItems.created,
             transferIndividual: 0,
-            showServerInfo: 0,
-            showDestServer: false,
+            showServerInfo: 1,
+            showSourceServer: true,
+            showSourceCreds: true,
+            showDestServer: true,
             showSigningKeys: true,
-            readOnly: true,
             openType: OpenType.file,
         }, panelCreated, context, config);
 
@@ -145,7 +153,7 @@ export class ContentSetRolePrivileges {
             try {
                 switch (message.command) {
                     case 'completeProcess':
-                        vscode.window.showInformationMessage("Selected packages have been migrated");
+                        vscode.window.showInformationMessage("Selected sensors have been migrated");
                         break;
 
                     case 'transferItems':
@@ -155,7 +163,12 @@ export class ContentSetRolePrivileges {
                         const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
 
                         await this.transferItems(
+                            message.sourceFqdn,
+                            message.sourceUsername,
+                            message.sourcePassword,
                             signingKey!,
+                            allowSelfSignedCerts,
+                            httpTimeout,
                             message.items,
                         );
                         break;
@@ -180,7 +193,7 @@ export class ContentSetRolePrivileges {
             try {
                 switch (message.command) {
                     case 'completeProcess':
-                        vscode.window.showInformationMessage("Selected packages have been migrated");
+                        vscode.window.showInformationMessage("Selected sensors have been migrated");
                         break;
 
                     case 'transferItems':
@@ -190,7 +203,12 @@ export class ContentSetRolePrivileges {
                         const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
 
                         await this.transferItems(
+                            message.sourceFqdn,
+                            message.sourceUsername,
+                            message.sourcePassword,
                             signingKey!,
+                            allowSelfSignedCerts,
+                            httpTimeout,
                             message.items,
                         );
                         break;
@@ -223,35 +241,45 @@ export class ContentSetRolePrivileges {
             }
         });
     }
-
-    static async transferItems(
+    static transferItems(
+        sourceFqdn: string,
+        sourceUsername: string,
+        sourcePassword: string,
         signingKey: SigningKey,
-        items: any[]
-        ) {
-        const p = new Promise((resolve, reject) => {
+        allowSelfSignedCerts: boolean,
+        httpTimeout: number,
+        items: any[]) {
+        const p = new Promise(async (resolve, reject) => {
             try {
-                // generate json
-                var importJson = {
-                    object_list: {
-                        content_set_privileges: []
-                    },
-                    version: 2
-                };
-
-                var content_set_privileges: any = [];
-
-                items.forEach(item => {
+                // get names from each item
+                const sensorNames: string[] = [];
+                items.forEach((item) => {
                     const path = item.path.split('~')[0];
-                    const name = item.name;
 
-                    // get content set data from file
-                    const contentSetFromFile: any = JSON.parse(fs.readFileSync(path, 'utf-8'));
-
-                    // add to importJson
-                    content_set_privileges.push(contentSetFromFile);
+                    // get sensor from file
+                    const sensorFromFile: any = JSON.parse(fs.readFileSync(path, 'utf-8'));
+                    sensorNames.push(sensorFromFile.name);
                 });
 
-                importJson.object_list.content_set_privileges = content_set_privileges;
+                // generate json
+                var exportJson = {
+                    sensors: {
+                        include: sensorNames
+                    }
+                };
+
+                const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceUsername, sourcePassword);
+
+                const body = await RestClient.post(`https://${sourceFqdn}/api/v2/export`, {
+                    headers: {
+                        session: session,
+                    },
+                    json: exportJson,
+                    responseType: 'json',
+                }, allowSelfSignedCerts, httpTimeout);
+
+                // generate import json
+                var importJson = body.data;
 
                 // save file to base
                 const baseDir = PathUtils.getPath(PathUtils.getPath(items[0].path.split('~')[0]));
@@ -268,8 +296,9 @@ export class ContentSetRolePrivileges {
                 });
 
                 resolve();
+
             } catch (err) {
-                OutputChannelLogging.logError('error transferring content set role privileges', err);
+                OutputChannelLogging.logError('error in transferItems', err);
                 reject();
             }
         });

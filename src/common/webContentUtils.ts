@@ -11,6 +11,7 @@ export interface WebContentData {
     showServerInfo: number,
     showSourceServer?: boolean,
     showSourceCreds?: boolean,
+    showDestServer: boolean,
     showSigningKeys?: boolean,
     openType: OpenType,
     panelWebviewCspSource?: string,

@@ -74,56 +74,56 @@ export class UserGroups {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const missingUserGroups = await PathUtils.getMissingItems(left.fsPath, right.fsPath);
-        const modifiedUserGroups = await PathUtils.getModifiedItems(left.fsPath, right.fsPath);
-        const createdUserGroups = await PathUtils.getCreatedItems(left.fsPath, right.fsPath);
-        const unchangedUserGroups = await PathUtils.getUnchangedItems(left.fsPath, right.fsPath);
-
-        OutputChannelLogging.log(`missing user groups: ${missingUserGroups.length}`);
-        OutputChannelLogging.log(`modified user groups: ${modifiedUserGroups.length}`);
-        OutputChannelLogging.log(`created user groups: ${createdUserGroups.length}`);
-        OutputChannelLogging.log(`unchanged user groups: ${unchangedUserGroups.length}`);
+        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
+        OutputChannelLogging.log(`missing user groups: ${diffItems.missing.length}`);
+        OutputChannelLogging.log(`modified user groups: ${diffItems.modified.length}`);
+        OutputChannelLogging.log(`created user groups: ${diffItems.created.length}`);
+        OutputChannelLogging.log(`unchanged user groups: ${diffItems.unchanged.length}`);
 
         const title = 'User Groups';
 
         panelMissing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
-            items: missingUserGroups,
+            items: diffItems.missing,
             transferIndividual: 1,
             showServerInfo: 1,
             showSourceServer: true,
             showSourceCreds: true,
+            showDestServer: true,
             showSigningKeys: true,
             openType: OpenType.file,
         }, panelMissing, context, config);
 
         panelModified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
-            items: modifiedUserGroups,
+            items: diffItems.modified,
             transferIndividual: 1,
             showServerInfo: 1,
             showSourceServer: true,
             showSourceCreds: true,
+            showDestServer: true,
             showSigningKeys: true,
             openType: OpenType.diff,
         }, panelModified, context, config);
 
         panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
             myTitle: title,
-            items: createdUserGroups,
+            items: diffItems.created,
             transferIndividual: 1,
             showServerInfo: 1,
             showSourceServer: true,
             showSourceCreds: true,
+            showDestServer: true,
             showSigningKeys: true,
             openType: OpenType.file,
         }, panelCreated, context, config);
 
         panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
-            items: unchangedUserGroups,
+            items: diffItems.unchanged,
             transferIndividual: 0,
             showServerInfo: 0,
+            showDestServer: false,
             openType: OpenType.diff,
         }, panelUnchanged, context, config);
 
@@ -402,10 +402,9 @@ export class UserGroups {
             }
 
             // create map
-            for (var i = 0; i < userGroupData.length; i++) {
-                const userGroup = userGroupData[i];
+            userGroupData.forEach(userGroup => {
                 userGroups[userGroup.name] = userGroup;
-            }
+            });
 
             resolve(userGroups);
         });

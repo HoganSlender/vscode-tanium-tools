@@ -125,18 +125,19 @@ export class ServerServerContentSets {
                     }
 
                     // iterate through each download export
-                    var contentSetCounter = 0;
                     var contentSetTotal: number = content_sets.length;
 
                     if (contentSetTotal === 0) {
                         OutputChannelLogging.log(`there are 0 content sets for ${fqdn}`);
                         resolve();
                     } else {
-                        for (var i = 0; i < content_sets.length; i++) {
-                            const contentSet: any = content_sets[i];
+                        var i = 0;
+                        
+                        content_sets.forEach(contentSet => {
+                            i++;
 
                             if (i % 30 === 0 || i === contentSetTotal) {
-                                OutputChannelLogging.log(`processing ${i + 1} of ${contentSetTotal}`);
+                                OutputChannelLogging.log(`processing ${i} of ${contentSetTotal}`);
                             }
 
                             // get export
@@ -151,33 +152,16 @@ export class ServerServerContentSets {
                                         if (err) {
                                             OutputChannelLogging.logError(`could not write ${contentSetFile}`, err);
                                         }
-
-                                        contentSetCounter++;
-
-                                        if (contentSetTotal === contentSetCounter) {
-                                            OutputChannelLogging.log(`processed ${contentSetTotal} content sets from ${fqdn}`);
-                                            resolve();
-                                        }
                                     });
                                 } catch (err) {
                                     OutputChannelLogging.logError(`error processing ${label} content set ${contentSetName}`, err);
-                                    contentSetCounter++;
-
-                                    if (contentSetTotal === contentSetCounter) {
-                                        OutputChannelLogging.log(`processed ${contentSetTotal} content set from ${fqdn}`);
-                                        resolve();
-                                    }
                                 }
                             } catch (err) {
                                 OutputChannelLogging.logError(`saving content set file for ${contentSet.name} from ${fqdn}`, err);
-                                contentSetCounter++;
-
-                                if (contentSetTotal === contentSetCounter) {
-                                    OutputChannelLogging.log(`processed ${contentSetTotal} content sets from ${fqdn}`);
-                                    resolve();
-                                }
                             }
-                        }
+                        });
+
+                        resolve();
                     }
                 })();
             } catch (err) {
@@ -213,10 +197,9 @@ export class ServerServerContentSets {
                     }
 
                     // create map
-                    for (var i = 0; i < content_sets.length; i++) {
-                        const contentSet = content_sets[i];
+                    content_sets.forEach(contentSet => {
                         contentSets[contentSet.id] = contentSet.name;
-                    }
+                    });
 
                     resolve(contentSets);
                 })();

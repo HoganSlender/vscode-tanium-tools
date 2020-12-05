@@ -124,18 +124,18 @@ export class ServerServerContentSetPrivileges {
                     }
 
                     // iterate through each download export
-                    var contentSetPrivilegeCounter = 0;
                     var contentSetPrivilegeTotal: number = content_set_privileges.length;
 
                     if (contentSetPrivilegeTotal === 0) {
                         OutputChannelLogging.log(`there are 0 content set privileges for ${fqdn}`);
                         resolve();
                     } else {
-                        for (var i = 0; i < content_set_privileges.length; i++) {
-                            const contentSetPrivilege: any = content_set_privileges[i];
+                        var i = 0;
 
+                        content_set_privileges.forEach(contentSetPrivilege => {
+                            i++;
                             if (i % 30 === 0 || i === contentSetPrivilegeTotal) {
-                                OutputChannelLogging.log(`processing ${i + 1} of ${contentSetPrivilegeTotal}`);
+                                OutputChannelLogging.log(`processing ${i} of ${contentSetPrivilegeTotal}`);
                             }
 
                             // get export
@@ -150,33 +150,16 @@ export class ServerServerContentSetPrivileges {
                                         if (err) {
                                             OutputChannelLogging.logError(`could not write ${contentSetPrivilegeFile}`, err);
                                         }
-
-                                        contentSetPrivilegeCounter++;
-
-                                        if (contentSetPrivilegeTotal === contentSetPrivilegeCounter) {
-                                            OutputChannelLogging.log(`processed ${contentSetPrivilegeTotal} content set privileges from ${fqdn}`);
-                                            resolve();
-                                        }
                                     });
                                 } catch (err) {
                                     OutputChannelLogging.logError(`error processing ${label} content set privilege ${contentSetPrivilegeName}`, err);
-                                    contentSetPrivilegeCounter++;
-
-                                    if (contentSetPrivilegeTotal === contentSetPrivilegeCounter) {
-                                        OutputChannelLogging.log(`processed ${contentSetPrivilegeTotal} content set privilege from ${fqdn}`);
-                                        resolve();
-                                    }
                                 }
                             } catch (err) {
                                 OutputChannelLogging.logError(`saving content set privilege file for ${contentSetPrivilege.name} from ${fqdn}`, err);
-                                contentSetPrivilegeCounter++;
-
-                                if (contentSetPrivilegeTotal === contentSetPrivilegeCounter) {
-                                    OutputChannelLogging.log(`processed ${contentSetPrivilegeTotal} content sets from ${fqdn}`);
-                                    resolve();
-                                }
                             }
-                        }
+                        });
+
+                        resolve();
                     }
 
                 })();
@@ -213,10 +196,9 @@ export class ServerServerContentSetPrivileges {
                     }
 
                     // create map
-                    for (var i = 0; i < content_set_privileges.length; i++) {
-                        const contentSetPrivilege = content_set_privileges[i];
+                    content_set_privileges.forEach(contentSetPrivilege => {
                         contentSetPrivileges[contentSetPrivilege.id] = contentSetPrivilege.name;
-                    }
+                    });
 
                     resolve(contentSetPrivileges);
                 })();

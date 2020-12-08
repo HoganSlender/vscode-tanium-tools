@@ -19,6 +19,7 @@
 		"Other"
 	],
 	"activationEvents": [
+		"onView:hoganslendertaniumdiff",
 		"onCommand:hoganslendertanium.analyzeContentSetPrivileges",
 		"onCommand:hoganslendertanium.analyzeContentSetRoleMemberships",
 		"onCommand:hoganslendertanium.analyzeContentSetRolePrivileges",
@@ -61,6 +62,14 @@
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
+		"views": {
+			"explorer": [
+				{
+					"id": "hoganslendertaniumdiff",
+					"name": "Tanium Diff"
+				}
+			]
+		},
 		"commands": [
 			{
 				"command": "hoganslendertanium.analyzeContentSetPrivileges",

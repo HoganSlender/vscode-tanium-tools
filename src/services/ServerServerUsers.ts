@@ -12,6 +12,7 @@ import { Groups } from './Groups';
 import { Users } from './Users';
 
 import path = require('path');
+import { checkResolve } from '../common/checkResolve';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -120,6 +121,7 @@ class ServerServerUsers {
                     }
 
                     // iterate through each download export
+                    var userCounter: number = 0;
                     var userTotal: number = users.length;
 
                     if (userTotal === 0) {
@@ -138,7 +140,11 @@ class ServerServerUsers {
                                 OutputChannelLogging.log(`processing ${i} of ${userTotal}`);
                             }
 
-                            if (!user.deleted_flag || user.locked_out === 0) {
+                            if (user.deleted_flag || user.locked_out !== 0) {
+                                if (checkResolve(++userCounter, userTotal, 'users', fqdn)) {
+                                    return resolve();
+                                }
+                            } else {
                                 // get export
                                 try {
                                     const userName: string = sanitize(user.display_name.trim().length === 0 ? user.name : user.display_name);
@@ -152,17 +158,27 @@ class ServerServerUsers {
                                             if (err) {
                                                 OutputChannelLogging.logError(`could not write ${userFile}`, err);
                                             }
+
+                                            if (checkResolve(++userCounter, userTotal, 'users', fqdn)) {
+                                                return resolve();
+                                            }
                                         });
                                     } catch (err) {
                                         OutputChannelLogging.logError(`error processing ${label} user ${userName}`, err);
+
+                                        if (checkResolve(++userCounter, userTotal, 'users', fqdn)) {
+                                            return resolve();
+                                        }
                                     }
                                 } catch (err) {
                                     OutputChannelLogging.logError(`saving user file for ${user.name} from ${fqdn}`, err);
+
+                                    if (checkResolve(++userCounter, userTotal, 'users', fqdn)) {
+                                        return resolve();
+                                    }
                                 }
                             }
                         });
-
-                        resolve();
                     }
                 })();
             } catch (err) {

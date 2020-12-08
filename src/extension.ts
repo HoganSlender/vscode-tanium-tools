@@ -8,6 +8,7 @@ import * as contentSetRolePrivileges from './services/ContentSetRolePrivileges';
 import * as contentSetRoles from './services/ContentSetRoles';
 import * as contentSets from './services/ContentSets';
 import * as contentSetUserGroupRoleMemberships from './services/ContentSetUserGroupRoleMemberships';
+import * as dashboards from './services/Dashboards';
 import * as groups from './services/Groups';
 import * as packages from './services/Packages';
 import * as sensor from './services/Sensor';
@@ -19,6 +20,7 @@ import * as serverServerContentSetRolePrivileges from './services/ServerServerCo
 import * as serverServerContentSetRoles from './services/ServerServerContentSetRoles';
 import * as serverServerContentSets from './services/ServerServerContentSets';
 import * as serverServerContentSetUserGroupRoleMemberships from './services/ServerServerContentSetUserGroupRoleMemberships';
+import * as serverServerDashboards from './services/ServerServerDashboards';
 import * as serverServerGroups from './services/ServerServerGroups';
 import * as serverServerPackages from './services/ServerServerPackages';
 import * as serverServerSensors from './services/ServerServerSensors';
@@ -40,6 +42,7 @@ export function activate(context: ExtensionContext) {
 	contentSetRoles.activate(context);
 	contentSets.activate(context);
 	contentSetUserGroupRoleMemberships.activate(context);
+	dashboards.activate(context);
 	groups.activate(context);
 	packages.activate(context);
 	sensor.activate(context);
@@ -51,6 +54,7 @@ export function activate(context: ExtensionContext) {
 	serverServerContentSetRoles.activate(context);
 	serverServerContentSets.activate(context);
 	serverServerContentSetUserGroupRoleMemberships.activate(context);
+	serverServerDashboards.activate(context);
 	serverServerGroups.activate(context);
 	serverServerPackages.activate(context);
 	serverServerSensors.activate(context);

@@ -11,7 +11,6 @@ import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { SigningUtils } from '../common/signingUtils';
 import { WebContentUtils } from '../common/webContentUtils';
-import { collectPackageFilesInputs } from '../parameter-collection/package-download-files-parameters';
 import { SigningKey } from '../types/signingKey';
 
 import path = require('path');

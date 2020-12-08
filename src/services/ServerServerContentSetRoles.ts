@@ -11,6 +11,7 @@ import { collectServerServerContentSetRoleInputs } from '../parameter-collection
 import { ContentSetRoles } from './ContentSetRoles';
 
 import path = require('path');
+import { checkResolve } from '../common/checkResolve';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -124,6 +125,7 @@ export class ServerServerContentSetRoles {
                     }
 
                     // iterate through each download export
+                    var contentSetRoleCounter: number = 0;
                     var contentSetRoleTotal: number = content_set_roles.length;
 
                     if (contentSetRoleTotal === 0) {
@@ -139,28 +141,44 @@ export class ServerServerContentSetRoles {
                                 OutputChannelLogging.log(`processing ${i} of ${contentSetRoleTotal}`);
                             }
 
-                            // get export
-                            try {
-                                const contentSetRoleName: string = sanitize(contentSetRole.name);
-
-                                try {
-                                    const content: string = JSON.stringify(contentSetRole, null, 2);
-
-                                    const contentSetRoleFile = path.join(directory, contentSetRoleName + '.json');
-                                    fs.writeFile(contentSetRoleFile, content, (err) => {
-                                        if (err) {
-                                            OutputChannelLogging.logError(`could not write ${contentSetRoleFile}`, err);
-                                        }
-                                    });
-                                } catch (err) {
-                                    OutputChannelLogging.logError(`error processing ${label} content set roles ${contentSetRoleName}`, err);
+                            if (contentSetRole.deleted_flag === 1) {
+                                if (checkResolve(++contentSetRoleCounter, contentSetRoleTotal, 'content set roles', fqdn)) {
+                                    return resolve();
                                 }
-                            } catch (err) {
-                                OutputChannelLogging.logError(`saving content set role file for ${contentSetRole.name} from ${fqdn}`, err);
+                            } else {
+                                // get export
+                                try {
+                                    const contentSetRoleName: string = sanitize(contentSetRole.name);
+
+                                    try {
+                                        const content: string = JSON.stringify(contentSetRole, null, 2);
+
+                                        const contentSetRoleFile = path.join(directory, contentSetRoleName + '.json');
+                                        fs.writeFile(contentSetRoleFile, content, (err) => {
+                                            if (err) {
+                                                OutputChannelLogging.logError(`could not write ${contentSetRoleFile}`, err);
+                                            }
+
+                                            if (checkResolve(++contentSetRoleCounter, contentSetRoleTotal, 'content set roles', fqdn)) {
+                                                return resolve();
+                                            }
+                                        });
+                                    } catch (err) {
+                                        OutputChannelLogging.logError(`error processing ${label} content set roles ${contentSetRoleName}`, err);
+
+                                        if (checkResolve(++contentSetRoleCounter, contentSetRoleTotal, 'content set roles', fqdn)) {
+                                            return resolve();
+                                        }
+                                    }
+                                } catch (err) {
+                                    OutputChannelLogging.logError(`saving content set role file for ${contentSetRole.name} from ${fqdn}`, err);
+
+                                    if (checkResolve(++contentSetRoleCounter, contentSetRoleTotal, 'content set roles', fqdn)) {
+                                        return resolve();
+                                    }
+                                }
                             }
                         });
-
-                        resolve();
                     }
                 })();
             } catch (err) {

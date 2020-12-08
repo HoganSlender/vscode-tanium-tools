@@ -13,6 +13,7 @@ import { ServerServerContentSetRoles } from './ServerServerContentSetRoles';
 import { Users } from './Users';
 
 import path = require('path');
+import { checkResolve } from '../common/checkResolve';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -82,7 +83,7 @@ class ServerServerContentSetRoleMemberships {
             await this.processServerContentSetRoleMemberships(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise(resolve => {
                 setTimeout(() => {
-                    resolve();
+                    return resolve();
                 }, 3000);
             });
 
@@ -127,19 +128,28 @@ class ServerServerContentSetRoleMemberships {
                     }
 
                     // iterate through each download export
+                    var contentSetRoleMembershipCounter: number = 0;
                     var contentSetRoleMembershipTotal: number = content_set_role_memberships.length;
 
                     if (contentSetRoleMembershipTotal === 0) {
                         OutputChannelLogging.log(`there are 0 content set role memberships for ${fqdn}`);
-                        resolve();
+                        return resolve();
                     } else {
                         var i = 0;
-                        
+
                         content_set_role_memberships.forEach(contentSetRoleMembership => {
                             i++;
-                            
+
+                            if (i % 30 === 0 || i === contentSetRoleMembershipTotal) {
+                                OutputChannelLogging.log(`processing ${i} of ${contentSetRoleMembershipTotal}`);
+                            }
+
                             // check for deleted
-                            if (contentSetRoleMembership.deleted_flag === 0) {
+                            if (contentSetRoleMembership.deleted_flag === 1) {
+                                if (checkResolve(++contentSetRoleMembershipCounter, contentSetRoleMembershipTotal, 'content set role memberships', fqdn)) {
+                                    return resolve();
+                                }
+                            } else {
                                 var newObject: any = {};
 
                                 newObject['content_set_role'] = {
@@ -147,10 +157,6 @@ class ServerServerContentSetRoleMemberships {
                                 };
 
                                 newObject['user'] = users[contentSetRoleMembership.user.id];
-
-                                if (i % 30 === 0 || i === contentSetRoleMembershipTotal) {
-                                    OutputChannelLogging.log(`processing ${i} of ${contentSetRoleMembershipTotal}`);
-                                }
 
                                 // get export
                                 try {
@@ -164,17 +170,27 @@ class ServerServerContentSetRoleMemberships {
                                             if (err) {
                                                 OutputChannelLogging.logError(`could not write ${contentSetRoleMembershipFile}`, err);
                                             }
+
+                                            if (checkResolve(++contentSetRoleMembershipCounter, contentSetRoleMembershipTotal, 'content set role memberships', fqdn)) {
+                                                return resolve();
+                                            }
                                         });
                                     } catch (err) {
                                         OutputChannelLogging.logError(`error processing ${label} content set role memberships ${contentSetRoleMembershipName}`, err);
+
+                                        if (checkResolve(++contentSetRoleMembershipCounter, contentSetRoleMembershipTotal, 'content set role memberships', fqdn)) {
+                                            return resolve();
+                                        }
                                     }
                                 } catch (err) {
                                     OutputChannelLogging.logError(`saving content set role membership file for ${contentSetRoleMembership.name} from ${fqdn}`, err);
+
+                                    if (checkResolve(++contentSetRoleMembershipCounter, contentSetRoleMembershipTotal, 'content set role memberships', fqdn)) {
+                                        return resolve();
+                                    }
                                 }
                             }
                         });
-
-                        resolve();
                     }
                 })();
             } catch (err) {

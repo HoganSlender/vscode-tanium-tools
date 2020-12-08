@@ -13,6 +13,7 @@ import { ServerServerContentSetRoles } from './ServerServerContentSetRoles';
 import { ServerServerUserGroups } from './ServerServerUserGroups';
 
 import path = require('path');
+import { checkResolve } from '../common/checkResolve';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -125,11 +126,12 @@ class ServerServerContentSetUserGroupRoleMemberships {
                     }
 
                     // iterate through each download export
+                    var contentSetUserGroupRoleMembershipCounter: number = 0;
                     var contentSetUserGroupRoleMembershipTotal: number = content_set_user_group_role_memberships.length;
 
                     if (contentSetUserGroupRoleMembershipTotal === 0) {
                         OutputChannelLogging.log(`there are 0 content set user group role memberships for ${fqdn}`);
-                        resolve();
+                        return resolve();
                     } else {
                         var i = 0;
 
@@ -141,7 +143,11 @@ class ServerServerContentSetUserGroupRoleMemberships {
                             }
 
                             // check for deleted
-                            if (contentSetUserGroupRoleMembership.deleted_flag !== 1) {
+                            if (contentSetUserGroupRoleMembership.deleted_flag === 1) {
+                                if (checkResolve(++contentSetUserGroupRoleMembershipCounter, contentSetUserGroupRoleMembershipTotal, 'content set user group role memberships', fqdn)) {
+                                    return resolve();
+                                }
+                            } else {
                                 var newObject: any = {
                                     content_set_role: {
                                         name: contentSetRoleMap[contentSetUserGroupRoleMembership.content_set_role.id]
@@ -163,17 +169,27 @@ class ServerServerContentSetUserGroupRoleMemberships {
                                             if (err) {
                                                 OutputChannelLogging.logError(`could not write ${contentSetFile}`, err);
                                             }
+
+                                            if (checkResolve(++contentSetUserGroupRoleMembershipCounter, contentSetUserGroupRoleMembershipTotal, 'content set user group role memberships', fqdn)) {
+                                                return resolve();
+                                            }
                                         });
                                     } catch (err) {
                                         OutputChannelLogging.logError(`error processing ${label} content set user group role membership ${contentSetName}`, err);
+
+                                        if (checkResolve(++contentSetUserGroupRoleMembershipCounter, contentSetUserGroupRoleMembershipTotal, 'content set user group role memberships', fqdn)) {
+                                            return resolve();
+                                        }
                                     }
                                 } catch (err) {
                                     OutputChannelLogging.logError(`saving content set user group role membership file for ${contentSetUserGroupRoleMembership.name} from ${fqdn}`, err);
+
+                                    if (checkResolve(++contentSetUserGroupRoleMembershipCounter, contentSetUserGroupRoleMembershipTotal, 'content set user group role memberships', fqdn)) {
+                                        return resolve();
+                                    }
                                 }
                             }
                         });
-
-                        resolve();
                     }
                 })();
             } catch (err) {

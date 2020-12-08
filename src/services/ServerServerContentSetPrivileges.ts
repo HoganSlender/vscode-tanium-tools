@@ -11,6 +11,7 @@ import { collectServerServerContentSetPrivilegeInputs } from '../parameter-colle
 import { ContentSetPrivileges } from './ContentSetPrivileges';
 
 import path = require('path');
+import { checkResolve } from '../common/checkResolve';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -79,7 +80,7 @@ export class ServerServerContentSetPrivileges {
             await this.processServerContentSetPrivileges(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise(resolve => {
                 setTimeout(() => {
-                    resolve();
+                    return resolve();
                 }, 3000);
             });
 
@@ -124,16 +125,18 @@ export class ServerServerContentSetPrivileges {
                     }
 
                     // iterate through each download export
+                    var contentSetPrivilegesCounter: number = 0;
                     var contentSetPrivilegeTotal: number = content_set_privileges.length;
 
                     if (contentSetPrivilegeTotal === 0) {
                         OutputChannelLogging.log(`there are 0 content set privileges for ${fqdn}`);
-                        resolve();
+                        return resolve();
                     } else {
                         var i = 0;
 
                         content_set_privileges.forEach(contentSetPrivilege => {
                             i++;
+
                             if (i % 30 === 0 || i === contentSetPrivilegeTotal) {
                                 OutputChannelLogging.log(`processing ${i} of ${contentSetPrivilegeTotal}`);
                             }
@@ -150,16 +153,26 @@ export class ServerServerContentSetPrivileges {
                                         if (err) {
                                             OutputChannelLogging.logError(`could not write ${contentSetPrivilegeFile}`, err);
                                         }
+
+                                        if (checkResolve(++contentSetPrivilegesCounter, contentSetPrivilegeTotal, 'content set privileges', fqdn)) {
+                                            return resolve();
+                                        }
                                     });
                                 } catch (err) {
                                     OutputChannelLogging.logError(`error processing ${label} content set privilege ${contentSetPrivilegeName}`, err);
+
+                                    if (checkResolve(++contentSetPrivilegesCounter, contentSetPrivilegeTotal, 'content set privileges', fqdn)) {
+                                        return resolve();
+                                    }
                                 }
                             } catch (err) {
                                 OutputChannelLogging.logError(`saving content set privilege file for ${contentSetPrivilege.name} from ${fqdn}`, err);
+
+                                if (checkResolve(++contentSetPrivilegesCounter, contentSetPrivilegeTotal, 'content set privileges', fqdn)) {
+                                    return resolve();
+                                }
                             }
                         });
-
-                        resolve();
                     }
 
                 })();

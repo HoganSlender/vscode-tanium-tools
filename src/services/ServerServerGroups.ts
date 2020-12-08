@@ -11,6 +11,7 @@ import { Session } from '../common/session';
 import path = require('path');
 import { collectServerServerGroupInputs } from '../parameter-collection/server-server-group-parameters';
 import { Groups } from './Groups';
+import { checkResolve } from '../common/checkResolve';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -67,7 +68,7 @@ class ServerServerGroups {
         // create folders
         var folderLabel = '%Groups';
 
-        switch(targetGroupType) {
+        switch (targetGroupType) {
             case 0:
                 folderLabel = '%FilterGroups';
                 break;
@@ -125,7 +126,7 @@ class ServerServerGroups {
         // analyze groups
         Groups.analyzeGroups(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), targetGroupType, context);
     }
-    
+
     static processServerGroups(allowSelfSignedCerts: boolean, httpTimeout: number, targetGroupType: number, fqdn: string, username: string, password: string, directory: string, label: string) {
         const restBase = `https://${fqdn}/api/v2`;
 
@@ -157,15 +158,19 @@ class ServerServerGroups {
                         return reject(`retrieving groups from ${fqdn}`);
                     }
 
+                    // remove cache object
+                    groups.pop();
+
                     // iterate through each download export
-                    var groupTotal: number = groups.length - 1;
+                    var groupCounter: number = 0;
+                    var groupTotal: number = groups.length;
 
                     if (groupTotal === 0) {
                         OutputChannelLogging.log(`there are 0 groups for ${fqdn}`);
-                        resolve();
+                        return resolve();
                     } else {
                         var i = 0;
-                        
+
                         groups.forEach(async group => {
                             i++;
 
@@ -173,7 +178,11 @@ class ServerServerGroups {
                                 OutputChannelLogging.log(`processing ${i} of ${groupTotal}`);
                             }
 
-                            if (group.deleted_flag !== 1 &&  group.cache_id === undefined) {
+                            if (group.deleted_flag) {
+                                if (checkResolve(++groupCounter, groupTotal, 'groups', fqdn)) {
+                                    return resolve();
+                                }
+                            } else {
                                 // get export
                                 try {
                                     const body = await RestClient.post(`${restBase}/export`, {
@@ -201,17 +210,27 @@ class ServerServerGroups {
                                             if (err) {
                                                 OutputChannelLogging.logError(`could not write ${groupFile}`, err);
                                             }
+
+                                            if (checkResolve(++groupCounter, groupTotal, 'groups', fqdn)) {
+                                                return resolve();
+                                            }
                                         });
                                     } catch (err) {
                                         OutputChannelLogging.logError(`error processing ${label} group ${groupName}`, err);
+
+                                        if (checkResolve(++groupCounter, groupTotal, 'groups', fqdn)) {
+                                            return resolve();
+                                        }
                                     }
                                 } catch (err) {
                                     OutputChannelLogging.logError(`retrieving groupExport for ${group.name} from ${fqdn}`, err);
+
+                                    if (checkResolve(++groupCounter, groupTotal, 'groups', fqdn)) {
+                                        return resolve();
+                                    }
                                 }
                             }
                         });
-
-                        resolve();
                     }
                 })();
             } catch (err) {

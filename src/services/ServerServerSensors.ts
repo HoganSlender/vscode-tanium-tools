@@ -11,6 +11,7 @@ import { Session } from '../common/session';
 import path = require('path');
 import { collectServerServerSensorInputs } from '../parameter-collection/server-server-sensors-parameters';
 import { Sensors } from './Sensors';
+import { checkResolve } from '../common/checkResolve';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -124,6 +125,7 @@ export class ServerServerSensors {
                     }
 
                     // iterate through each download export
+                    var sensorCounter: number = 0;
                     var sensorTotal: number = sensors.length;
 
                     if (sensorTotal === 0) {
@@ -152,16 +154,26 @@ export class ServerServerSensors {
                                         if (err) {
                                             OutputChannelLogging.logError(`could not write ${sensorFile}`, err);
                                         }
+
+                                        if (checkResolve(++sensorCounter, sensorTotal, 'sensors', fqdn)) {
+                                            return resolve();
+                                        }
                                     });
                                 } catch (err) {
                                     OutputChannelLogging.logError(`error processing ${label} sensors ${sensorName}`, err);
+
+                                    if (checkResolve(++sensorCounter, sensorTotal, 'sensors', fqdn)) {
+                                        return resolve();
+                                    }
                                 }
                             } catch (err) {
                                 OutputChannelLogging.logError(`saving sensor file for ${sensor.name} from ${fqdn}`, err);
+
+                                if (checkResolve(++sensorCounter, sensorTotal, 'sensors', fqdn)) {
+                                    return resolve();
+                                }
                             }
                         });
-
-                        resolve();
                     }
                 })();
             } catch (err) {

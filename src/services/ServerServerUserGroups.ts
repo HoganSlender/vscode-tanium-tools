@@ -12,7 +12,7 @@ import { Groups } from './Groups';
 import { UserGroups } from './UserGroups';
 
 import path = require('path');
-import { getgroups } from 'process';
+import { checkResolve } from '../common/checkResolve';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -121,6 +121,7 @@ export class ServerServerUserGroups {
                     }
 
                     // iterate through each download export
+                    var userGroupCounter: number = 0;
                     var userGroupTotal: number = userGroups.length;
 
                     if (userGroupTotal === 0) {
@@ -139,7 +140,11 @@ export class ServerServerUserGroups {
                                 OutputChannelLogging.log(`processing ${i} of ${userGroupTotal}`);
                             }
 
-                            if (userGroup.deleted_flag !== 1) {
+                            if (userGroup.deleted_flag === 1) {
+                                if (checkResolve(++userGroupCounter, userGroupTotal, 'user groups', fqdn)) {
+                                    return resolve();
+                                }
+                            } else {
                                 // get export
                                 try {
                                     const userGroupName: string = sanitize(userGroup.name);
@@ -153,17 +158,27 @@ export class ServerServerUserGroups {
                                             if (err) {
                                                 OutputChannelLogging.logError(`could not write ${userGroupFile}`, err);
                                             }
+
+                                            if (checkResolve(++userGroupCounter, userGroupTotal, 'user groups', fqdn)) {
+                                                return resolve();
+                                            }
                                         });
                                     } catch (err) {
                                         OutputChannelLogging.logError(`error processing ${label} user group ${userGroupName}`, err);
+
+                                        if (checkResolve(++userGroupCounter, userGroupTotal, 'user groups', fqdn)) {
+                                            return resolve();
+                                        }
                                     }
                                 } catch (err) {
                                     OutputChannelLogging.logError(`saving user group file for ${userGroup.name} from ${fqdn}`, err);
+
+                                    if (checkResolve(++userGroupCounter, userGroupTotal, 'user groups', fqdn)) {
+                                        return resolve();
+                                    }
                                 }
                             }
                         });
-
-                        resolve();
                     }
                 })();
             } catch (err) {

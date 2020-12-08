@@ -14,6 +14,7 @@ import { ServerServerContentSetRoles } from './ServerServerContentSetRoles';
 import { ServerServerContentSets } from './ServerServerContentSets';
 
 import path = require('path');
+import { checkResolve } from '../common/checkResolve';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -82,7 +83,7 @@ class ServerServerContentSetRolePrivileges {
             await this.processServerContentSetRolePrivileges(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise(resolve => {
                 setTimeout(() => {
-                    resolve();
+                    return resolve();
                 }, 3000);
             });
 
@@ -131,19 +132,28 @@ class ServerServerContentSetRolePrivileges {
                     }
 
                     // iterate through each download export
+                    var contentSetRolePrivilegeCounter: number = 0;
                     var contentSetRolePrivilegeTotal: number = content_set_role_privileges.length;
 
                     if (contentSetRolePrivilegeTotal === 0) {
                         OutputChannelLogging.log(`there are 0 content set user group role privileges for ${fqdn}`);
-                        resolve();
+                        return resolve();
                     } else {
                         var i = 0;
 
                         content_set_role_privileges.forEach(contentSetRolePrivilege => {
                             i++;
-                            
+
+                            if (i % 30 === 0 || i === contentSetRolePrivilegeTotal) {
+                                OutputChannelLogging.log(`processing ${i} of ${contentSetRolePrivilegeTotal}`);
+                            }
+
                             // check for deleted
-                            if (contentSetRolePrivilege.deleted_flag === 0) {
+                            if (contentSetRolePrivilege.deleted_flag === 1) {
+                                if (checkResolve(++contentSetRolePrivilegeCounter, contentSetRolePrivilegeTotal, 'content set role privileges', fqdn)) {
+                                    return resolve();
+                                }
+                            } else {
                                 var newObject: any = {};
 
                                 if (contentSetRolePrivilege.content_set === null) {
@@ -170,10 +180,6 @@ class ServerServerContentSetRolePrivileges {
                                     };
                                 }
 
-                                if (i % 30 === 0 || i === contentSetRolePrivilegeTotal) {
-                                    OutputChannelLogging.log(`processing ${i} of ${contentSetRolePrivilegeTotal}`);
-                                }
-
                                 // get export
                                 try {
                                     const contentSetRolePrivilegeName: string = sanitize(newObject.content_set.name + '-' + newObject.content_set_role.name + '-' + newObject.content_set_privilege.name);
@@ -186,18 +192,28 @@ class ServerServerContentSetRolePrivileges {
                                             if (err) {
                                                 OutputChannelLogging.logError(`could not write ${contentSetRolePrivilegeFile}`, err);
                                             }
+
+                                            if (checkResolve(++contentSetRolePrivilegeCounter, contentSetRolePrivilegeTotal, 'content set role privileges', fqdn)) {
+                                                return resolve();
+                                            }
                                         });
                                     } catch (err) {
                                         OutputChannelLogging.logError(`error processing ${label} content set role privileges ${contentSetRolePrivilegeName}`, err);
+
+                                        if (checkResolve(++contentSetRolePrivilegeCounter, contentSetRolePrivilegeTotal, 'content set role privileges', fqdn)) {
+                                            return resolve();
+                                        }
                                     }
                                 } catch (err) {
                                     OutputChannelLogging.logError(`saving content set role privilege file for ${contentSetRolePrivilege.name} from ${fqdn}`, err);
+
+                                    if (checkResolve(++contentSetRolePrivilegeCounter, contentSetRolePrivilegeTotal, 'content set role privileges', fqdn)) {
+                                        return resolve();
+                                    }
                                 }
                             }
                         });
-
-                        resolve();
-                    }
+                   }
                 })();
             } catch (err) {
                 OutputChannelLogging.logError(`error downloading content set role privileges from ${restBase}`, err);

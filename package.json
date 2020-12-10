@@ -29,6 +29,7 @@
 		"onCommand:hoganslendertanium.analyzeActionGroups",
 		"onCommand:hoganslendertanium.analyzeActionPolicyGroups",
 		"onCommand:hoganslendertanium.analyzeAdHocGroups",
+		"onCommand:hoganslendertanium.analyzeDashboardGroups",
 		"onCommand:hoganslendertanium.analyzeDashboards",
 		"onCommand:hoganslendertanium.analyzeFilterGroups",
 		"onCommand:hoganslendertanium.analyzeManualGroups",
@@ -46,6 +47,7 @@
 		"onCommand:hoganslendertanium.compareServerServerActionGroups",
 		"onCommand:hoganslendertanium.compareServerServerActionPolicyGroups",
 		"onCommand:hoganslendertanium.compareServerServerAdHocGroups",
+		"onCommand:hoganslendertanium.compareServerServerDashboardGroups",
 		"onCommand:hoganslendertanium.compareServerServerDashboards",
 		"onCommand:hoganslendertanium.compareServerServerFilterGroups",
 		"onCommand:hoganslendertanium.compareServerServerManualGroups",
@@ -114,6 +116,11 @@
 			{
 				"command": "hoganslendertanium.analyzeAdHocGroups",
 				"title": "Analyze Ad Hoc Groups",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.analyzeDashboardGroups",
+				"title": "Analyze Dashboard Groups",
 				"category": "Tanium"
 			},
 			{
@@ -199,6 +206,11 @@
 			{
 				"command": "hoganslendertanium.compareServerServerAdHocGroups",
 				"title": "Compare Tanium Server Groups - Ad Hoc",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.compareServerServerDashboardGroups",
+				"title": "Compare Tanium Server Dashboard Groups",
 				"category": "Tanium"
 			},
 			{
@@ -306,6 +318,10 @@
 					"when": "false"
 				},
 				{
+					"command": "hoganslendertanium.analyzeDashboardGroups",
+					"when": "false"
+				},
+				{
 					"command": "hoganslendertanium.analyzeDashboards",
 					"when": "false"
 				},
@@ -391,6 +407,11 @@
 					"command": "hoganslendertanium.analyzeAdHocGroups",
 					"group": "3_compare@1",
 					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%AdHocGroups$/"
+				},
+				{
+					"command": "hoganslendertanium.analyzeDashboardGroups",
+					"group": "3_compare@1",
+					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%DashboardGroups$/"
 				},
 				{
 					"command": "hoganslendertanium.analyzeDashboards",

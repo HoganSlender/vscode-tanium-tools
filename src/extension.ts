@@ -8,6 +8,7 @@ import * as contentSetRolePrivileges from './services/ContentSetRolePrivileges';
 import * as contentSetRoles from './services/ContentSetRoles';
 import * as contentSets from './services/ContentSets';
 import * as contentSetUserGroupRoleMemberships from './services/ContentSetUserGroupRoleMemberships';
+import * as dashboardGroups from './services/DashboardGroups';
 import * as dashboards from './services/Dashboards';
 import * as groups from './services/Groups';
 import * as packages from './services/Packages';
@@ -20,6 +21,7 @@ import * as serverServerContentSetRolePrivileges from './services/ServerServerCo
 import * as serverServerContentSetRoles from './services/ServerServerContentSetRoles';
 import * as serverServerContentSets from './services/ServerServerContentSets';
 import * as serverServerContentSetUserGroupRoleMemberships from './services/ServerServerContentSetUserGroupRoleMemberships';
+import * as serverServerDashboardGroups from './services/ServerServerDashboardGroups';
 import * as serverServerDashboards from './services/ServerServerDashboards';
 import * as serverServerGroups from './services/ServerServerGroups';
 import * as serverServerPackages from './services/ServerServerPackages';
@@ -27,9 +29,9 @@ import * as serverServerSensors from './services/ServerServerSensors';
 import * as serverServerUserGroups from './services/ServerServerUserGroups';
 import * as serverServerUsers from './services/ServerServerUsers';
 import * as signContentFile from './services/SignContentFile';
-import * as taniumNodeProvider from './trees/TaniumNodeProvider';
 import * as userGroups from './services/UserGroups';
 import * as users from './services/Users';
+import * as taniumNodeProvider from './trees/TaniumNodeProvider';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -43,6 +45,7 @@ export function activate(context: ExtensionContext) {
 	contentSetRoles.activate(context);
 	contentSets.activate(context);
 	contentSetUserGroupRoleMemberships.activate(context);
+	dashboardGroups.activate(context);
 	dashboards.activate(context);
 	groups.activate(context);
 	packages.activate(context);
@@ -55,6 +58,7 @@ export function activate(context: ExtensionContext) {
 	serverServerContentSetRoles.activate(context);
 	serverServerContentSets.activate(context);
 	serverServerContentSetUserGroupRoleMemberships.activate(context);
+	serverServerDashboardGroups.activate(context);
 	serverServerDashboards.activate(context);
 	serverServerGroups.activate(context);
 	serverServerPackages.activate(context);

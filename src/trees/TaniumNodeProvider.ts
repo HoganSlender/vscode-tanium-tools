@@ -62,32 +62,36 @@ export class TaniumNodeProvider implements vscode.TreeDataProvider<TaniumTreeIte
                         'title': 'Compare Tanium Server Groups - Ad Hoc',
                     }));
                     children.push(new TaniumTreeItem('Compare Groups - Filter', 'Compare Tanium Server Groups - Filter', vscode.TreeItemCollapsibleState.None, undefined, {
-                        "command": "hoganslendertanium.compareServerServerFilterGroups",
-                        "title": "Compare Tanium Server Groups - Filter",
+                        'command': 'hoganslendertanium.compareServerServerFilterGroups',
+                        'title': 'Compare Tanium Server Groups - Filter',
                     }));
                     children.push(new TaniumTreeItem('Compare Groups - Manual', 'Compare Tanium Server Groups - Manual', vscode.TreeItemCollapsibleState.None, undefined, {
-                        "command": "hoganslendertanium.compareServerServerManualGroups",
-                        "title": "Compare Tanium Server Groups - Manual",
+                        'command': 'hoganslendertanium.compareServerServerManualGroups',
+                        'title': 'Compare Tanium Server Groups - Manual',
                     }));
                     children.push(new TaniumTreeItem('Compare Users', 'Compare Tanium Server Users', vscode.TreeItemCollapsibleState.None, undefined, {
-                        "command": "hoganslendertanium.compareServerServerUsers",
-                        "title": "Compare Tanium Server Users",
+                        'command': 'hoganslendertanium.compareServerServerUsers',
+                        'title': 'Compare Tanium Server Users',
                     }));
                     children.push(new TaniumTreeItem('Compare User Groups', 'Compare Tanium Server User Groups', vscode.TreeItemCollapsibleState.None, undefined, {
-                        "command": "hoganslendertanium.compareServerServerUserGroups",
-                        "title": "Compare Tanium Server User Groups",
+                        'command': 'hoganslendertanium.compareServerServerUserGroups',
+                        'title': 'Compare Tanium Server User Groups',
                     }));
                     children.push(new TaniumTreeItem('Compare Content Set Role Memberships', 'Compare Tanium Server Content Set Role Memberships', vscode.TreeItemCollapsibleState.None, undefined, {
-                        "command": "hoganslendertanium.compareServerServerContentSetRoleMemberships",
-                        "title": "Compare Tanium Server Content Set Role Memberships",
+                        'command': 'hoganslendertanium.compareServerServerContentSetRoleMemberships',
+                        'title': 'Compare Tanium Server Content Set Role Memberships',
                     }));
                     children.push(new TaniumTreeItem('Compare Content Set User Group Role Memberships', 'Compare Tanium Server Content Set User Group Role Memberships', vscode.TreeItemCollapsibleState.None, undefined, {
-                        "command": "hoganslendertanium.compareServerServerContentSetUserGroupRoleMemberships",
-                        "title": "Compare Tanium Server Content Set User Group Role Memberships",
+                        'command': 'hoganslendertanium.compareServerServerContentSetUserGroupRoleMemberships',
+                        'title': 'Compare Tanium Server Content Set User Group Role Memberships',
                     }));
                     children.push(new TaniumTreeItem('Compare Dashboards', 'Compare Tanium Server Dashboards', vscode.TreeItemCollapsibleState.None, undefined, {
-                        "command": "hoganslendertanium.compareServerServerDashboards",
-                        "title": "Compare Tanium Server Dashboards",
+                        'command': 'hoganslendertanium.compareServerServerDashboards',
+                        'title': 'Compare Tanium Server Dashboards',
+                    }));
+                    children.push(new TaniumTreeItem('Compare Dashboard Groups', 'Compare Tanium Server Dashboard Groups', vscode.TreeItemCollapsibleState.None, undefined, {
+                        'command': 'hoganslendertanium.compareServerServerDashboardGroups',
+                        'title': 'Compare Tanium Server Dashboard Groups',
                     }));
                     break;
 

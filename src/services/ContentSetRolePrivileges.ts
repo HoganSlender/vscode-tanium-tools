@@ -84,7 +84,7 @@ export class ContentSetRolePrivileges {
             myTitle: title,
             items: diffItems.missing,
             transferIndividual: 0,
-            showServerInfo: 0,
+            showServerInfo: 1,
             showDestServer: false,
             showSigningKeys: true,
             readOnly: true,
@@ -95,7 +95,7 @@ export class ContentSetRolePrivileges {
             myTitle: title,
             items: diffItems.modified,
             transferIndividual: 0,
-            showServerInfo: 0,
+            showServerInfo: 1,
             showDestServer: false,
             showSigningKeys: true,
             readOnly: true,
@@ -106,7 +106,7 @@ export class ContentSetRolePrivileges {
             myTitle: title,
             items: diffItems.created,
             transferIndividual: 0,
-            showServerInfo: 0,
+            showServerInfo: 1,
             showDestServer: false,
             showSigningKeys: true,
             readOnly: true,
@@ -144,6 +144,20 @@ export class ContentSetRolePrivileges {
         panelModified.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
+                    case 'initSigningKeys':
+                        // collect signing key data
+                        await SignContentFile.initSigningKeys(context);
+
+                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                            panel.webview.postMessage({
+                                command: 'signingKeysInitialized',
+                                signingKey: newSigningKeys[0].serverLabel,
+                            });
+                        });
+                        break;
+
                     case 'completeProcess':
                         vscode.window.showInformationMessage("Selected packages have been migrated");
                         break;
@@ -179,6 +193,20 @@ export class ContentSetRolePrivileges {
         panelMissing.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
+                    case 'initSigningKeys':
+                        // collect signing key data
+                        await SignContentFile.initSigningKeys(context);
+
+                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                            panel.webview.postMessage({
+                                command: 'signingKeysInitialized',
+                                signingKey: newSigningKeys[0].serverLabel,
+                            });
+                        });
+                        break;
+
                     case 'completeProcess':
                         vscode.window.showInformationMessage("Selected packages have been migrated");
                         break;
@@ -211,6 +239,20 @@ export class ContentSetRolePrivileges {
         panelCreated.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
+                    case 'initSigningKeys':
+                        // collect signing key data
+                        await SignContentFile.initSigningKeys(context);
+
+                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                            panel.webview.postMessage({
+                                command: 'signingKeysInitialized',
+                                signingKey: newSigningKeys[0].serverLabel,
+                            });
+                        });
+                        break;
+
                     case "openFile":
                         vscode.commands.executeCommand('vscode.open', vscode.Uri.file(message.path), {
                             preview: false,
@@ -228,7 +270,7 @@ export class ContentSetRolePrivileges {
         signingKey: SigningKey,
         items: any[]
         ) {
-        const p = new Promise((resolve, reject) => {
+        const p = new Promise<void>((resolve, reject) => {
             try {
                 // generate json
                 var importJson = {

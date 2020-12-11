@@ -270,7 +270,7 @@ export class Users {
     }
 
     static retrieveUserMapById(allowSelfSignedCerts: boolean, httpTimeout: number, restBase: string, session: string): any {
-        const p = new Promise((resolve, reject) => {
+        const p = new Promise<any>((resolve, reject) => {
             try {
                 (async () => {
                     var users: any = {};
@@ -313,7 +313,7 @@ export class Users {
     }
 
     static retrieveUserMapByName(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, session: string): any {
-        const p = new Promise((resolve, reject) => {
+        const p = new Promise<any>((resolve, reject) => {
             try {
                 (async () => {
                     var users: any = {};
@@ -382,7 +382,7 @@ export class Users {
         userName: string,
         operationType: Operation
     ) {
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<void>(async (resolve, reject) => {
             try {
                 OutputChannelLogging.initialize();
 

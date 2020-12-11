@@ -53,7 +53,7 @@ export class WebContentUtils {
 
         // get signing keys
         const signingKeys: any[] = config.get<any>('signingPaths', []);
-        const signingKeysString: string = signingKeys.map(key => key.serverLabel).join();
+        const signingKeysString: string = signingKeys.length !== 0 ? signingKeys.map(key => key.serverLabel).join() : '';
 
         // Local path to main script run in the webview
         const scriptPathOnDisk = vscode.Uri.joinPath(context.extensionUri, 'media', scriptFile);

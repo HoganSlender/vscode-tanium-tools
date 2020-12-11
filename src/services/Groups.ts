@@ -302,7 +302,7 @@ export class Groups {
         signingKey: SigningKey,
         groupName: string
     ) {
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<void>(async (resolve, reject) => {
             try {
                 OutputChannelLogging.initialize();
 
@@ -358,7 +358,7 @@ export class Groups {
     }
 
     static getGroupByName(groupName: string, allowSelfSignedCerts: boolean, httpTimeout: number, restBase: string, session: string): any {
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<any>(async (resolve, reject) => {
             try {
                 const body = await RestClient.get(`${restBase}/groups/by-name/${groupName}`, {
                     headers: {
@@ -379,7 +379,7 @@ export class Groups {
     }
 
     static getGroupById(groupId: string, allowSelfSignedCerts: boolean, httpTimeout: number, restBase: string, session: string): any {
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<any>(async (resolve, reject) => {
             try {
                 const body = await RestClient.get(`${restBase}/groups/${groupId}`, {
                     headers: {
@@ -400,7 +400,7 @@ export class Groups {
     }
 
     static getGroupExportByNames(groupNames: string[], allowSelfSignedCerts: boolean, httpTimeout: number, restBase: string, session: string): any {
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<any>(async (resolve, reject) => {
             try {
                 const body = await RestClient.post(`${restBase}/export`, {
                     headers: {
@@ -553,7 +553,7 @@ export class Groups {
     }
 
     static getGroupMapByName(allowSelfSignedCerts: boolean, httpTimeout: number, restBase: string, session: string): any {
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<any>(async (resolve, reject) => {
             try {
                 const body = await RestClient.get(`${restBase}/groups`, {
                     headers: {
@@ -580,7 +580,7 @@ export class Groups {
     }
 
     static getGroupMapById(allowSelfSignedCerts: boolean, httpTimeout: number, restBase: string, session: string): any {
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<any>(async (resolve, reject) => {
             try {
                 const body = await RestClient.get(`${restBase}/groups`, {
                     headers: {

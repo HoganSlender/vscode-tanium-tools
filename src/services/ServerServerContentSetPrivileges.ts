@@ -78,7 +78,7 @@ export class ServerServerContentSetPrivileges {
             await this.processServerContentSetPrivileges(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
             progress.report({ increment: increment, message: `content set privilege retrieval from ${rightFqdn}` });
             await this.processServerContentSetPrivileges(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
-            const p = new Promise(resolve => {
+            const p = new Promise<void>(resolve => {
                 setTimeout(() => {
                     return resolve();
                 }, 3000);
@@ -94,7 +94,7 @@ export class ServerServerContentSetPrivileges {
     static processServerContentSetPrivileges(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
         const restBase = `https://${fqdn}/api/v2`;
 
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<void>(async (resolve, reject) => {
             try {
                 // get session
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
@@ -186,7 +186,7 @@ export class ServerServerContentSetPrivileges {
     }
 
     static retrieveContentSetPrivilegeMap(allowSelfSignedCerts: boolean, httpTimeout: number, restBase: string, session: string): any {
-        const p = new Promise((resolve, reject) => {
+        const p = new Promise<any>((resolve, reject) => {
             try {
                 (async () => {
                     var contentSetPrivileges: any = {};

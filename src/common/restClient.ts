@@ -50,7 +50,7 @@ export class RestClient {
     }
 
     static post(url: string, options: any, allowSelfSignedCerts: boolean, httpTimeout: number) {
-        const p: Promise<any> = new Promise(async (resolve, reject) => {
+        const p: Promise<any> = new Promise<any>(async (resolve, reject) => {
             try {
                 options = this._wrapOption(allowSelfSignedCerts, httpTimeout, options);
                 const { body } = await got.post(url, options);
@@ -65,7 +65,7 @@ export class RestClient {
     }
 
     static patch(url: string, options: any, allowSelfSignedCerts: boolean, httpTimeout: number) {
-        const p: Promise<any> = new Promise(async (resolve, reject) => {
+        const p: Promise<any> = new Promise<any>(async (resolve, reject) => {
             try {
                 options = this._wrapOption(allowSelfSignedCerts, httpTimeout, options);
                 const { body } = await got.patch(url, options);
@@ -80,7 +80,7 @@ export class RestClient {
     }
 
     static delete(url: string, options: any, allowSelfSignedCerts: boolean, httpTimeout: number) {
-        const p: Promise<any> = new Promise(async (resolve, reject) => {
+        const p: Promise<any> = new Promise<any>(async (resolve, reject) => {
             try {
                 options = this._wrapOption(allowSelfSignedCerts, httpTimeout, options);
                 const { body } = await got.delete(url, options);
@@ -95,7 +95,7 @@ export class RestClient {
     }
 
     static get(url: string, options: any, allowSelfSignedCerts: boolean, httpTimeout: number) {
-        const p: Promise<any> = new Promise(async (resolve, reject) => {
+        const p: Promise<any> = new Promise<any>(async (resolve, reject) => {
             try {
                 options = this._wrapOption(allowSelfSignedCerts, httpTimeout, options);
                 const { body } = await got.get(url, options);
@@ -110,7 +110,7 @@ export class RestClient {
     }
 
     static downloadFile(url: string, filePath: string, options: any, allowSelfSignedCerts: boolean, httpTimeout: number) {
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<void>(async (resolve, reject) => {
             const pipeline = promisify(stream.pipeline);
             try {
                 options = this._wrapOption(allowSelfSignedCerts, httpTimeout, options);

@@ -250,7 +250,7 @@ export class ContentSetUserGroupRoleMemberships {
         targetFilePath: any,
         name: any) {
 
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<void>(async (resolve, reject) => {
             OutputChannelLogging.initialize();
 
             // get data

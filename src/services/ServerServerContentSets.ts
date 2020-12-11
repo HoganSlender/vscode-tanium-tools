@@ -79,7 +79,7 @@ export class ServerServerContentSets {
             await this.processServerContentSets(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
             progress.report({ increment: increment, message: `content set retrieval from ${rightFqdn}` });
             await this.processServerContentSets(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
-            const p = new Promise(resolve => {
+            const p = new Promise<void>(resolve => {
                 setTimeout(() => {
                     resolve();
                 }, 3000);
@@ -95,7 +95,7 @@ export class ServerServerContentSets {
     static processServerContentSets(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
         const restBase = `https://${fqdn}/api/v2`;
 
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<void>(async (resolve, reject) => {
             try {
                 // get session
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
@@ -192,7 +192,7 @@ export class ServerServerContentSets {
     }
 
     static retrieveContentSetMap(allowSelfSignedCerts: boolean, httpTimeout: number, restBase: string, session: string): any {
-        const p = new Promise((resolve, reject) => {
+        const p = new Promise<any>((resolve, reject) => {
             try {
                 (async () => {
                     var contentSets: any = {};

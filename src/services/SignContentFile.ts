@@ -14,6 +14,24 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export class SignContentFile {
+    static async initSigningKeys(context: vscode.ExtensionContext) {
+        const p = new Promise<void>(async (resolve, reject) => {
+            // get configurations
+            const config = vscode.workspace.getConfiguration('hoganslender.tanium');
+
+            const state = await collectSignContentFileInputs(config, context);
+
+            if (state.selectedItem === undefined) {
+                // something was cancelled, exit
+                return reject();
+            }
+
+            return resolve();
+        });
+
+        return p;
+    }
+
     public static async signContentFile(target: vscode.Uri, context: vscode.ExtensionContext) {
         // define output channel
         OutputChannelLogging.initialize();
@@ -43,7 +61,7 @@ export class SignContentFile {
     }
 
     public static signContent(keyUtilityPath: string, privateKeyFilePath: string, targetPath: string) {
-        const p = new Promise((resolve, reject) => {
+        const p = new Promise<void>((resolve, reject) => {
             const commandline = `${keyUtilityPath} signcontent ${privateKeyFilePath} ${targetPath}`;
 
             OutputChannelLogging.log(`executing - ${commandline}`);

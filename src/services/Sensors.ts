@@ -249,7 +249,7 @@ export class Sensors {
         allowSelfSignedCerts: boolean,
         httpTimeout: number,
         items: any[]) {
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<void>(async (resolve, reject) => {
             try {
                 // get names from each item
                 const sensorNames: string[] = [];

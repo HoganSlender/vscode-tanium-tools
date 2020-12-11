@@ -25,28 +25,48 @@ export interface SignedContentData {
 }
 
 export class SigningUtils {
-    static async retrieveSignedContent(
-        outputJson: any,
-        signingKey: SigningKey,
-    ) {
-        const p = new Promise<SignedContentData>(async (resolve, reject) => {
+    static async writeFileAndSign(jsonObject: any, signingKey: SigningKey, targetDirectory?: string) {
+        const p = new Promise<string>(async (resolve, reject) => {
             try {
-                // save file in temp
-                const tempDir = os.tmpdir();
-                const tempPath = path.join(tempDir, uuidv4());
-                fs.writeFileSync(tempPath, `${JSON.stringify(outputJson)}\r\n`, 'utf-8');
+                if (!targetDirectory) {
+                    // save file in temp
+                    targetDirectory = os.tmpdir();
+                }
+
+                const tempPath = path.join(targetDirectory, uuidv4());
+                fs.writeFileSync(tempPath, `${JSON.stringify(jsonObject)}\r\n`, 'utf-8');
 
                 // sign json
                 await SignContentFile.signContent(signingKey.keyUtilityPath, signingKey.privateKeyFilePath, tempPath);
 
+                resolve(tempPath);
+
+            } catch (err) {
+                OutputChannelLogging.logError(`error in writeFileAndSign`, err);
+                reject();
+            }
+        });
+
+        return p;
+    }
+
+    static async retrieveSignedContent(
+        jsonObject: any,
+        signingKey: SigningKey,
+        targetDirectory?: string,
+    ) {
+        const p = new Promise<SignedContentData>(async (resolve, reject) => {
+            try {
+                const filePath = await this.writeFileAndSign(jsonObject, signingKey, targetDirectory);
+
                 // import into Tanium server
-                const signedContent = fs.readFileSync(tempPath, {
+                const signedContent = fs.readFileSync(filePath, {
                     encoding: 'utf-8'
                 });
 
                 resolve({
                     content: signedContent,
-                    path: tempPath
+                    path: filePath
                 });
             } catch (err) {
                 OutputChannelLogging.logError(`error signing content`, err);
@@ -111,7 +131,7 @@ export class SigningUtils {
                                 if (!target.hasOwnProperty(conflict.type)) {
                                     target[conflict.type] = {};
                                 }
-    
+
                                 if (conflict.diff.includes('flag')) {
                                     // need to include
                                     target.group[conflict.name] = 1;

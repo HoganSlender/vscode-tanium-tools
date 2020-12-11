@@ -79,7 +79,7 @@ export class ServerServerUserGroups {
             await this.processServerUserGroups(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
             progress.report({ increment: increment, message: `user retrieval from ${rightFqdn}` });
             await this.processServerUserGroups(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
-            const p = new Promise(resolve => {
+            const p = new Promise<void>(resolve => {
                 setTimeout(() => {
                     resolve();
                 }, 3000);
@@ -95,7 +95,7 @@ export class ServerServerUserGroups {
     static processServerUserGroups(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
         const restBase = `https://${fqdn}/api/v2`;
 
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<void>(async (resolve, reject) => {
             try {
                 // get session
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
@@ -191,7 +191,7 @@ export class ServerServerUserGroups {
     }
 
     static retrieveUserGroupMap(allowSelfSignedCerts: boolean, httpTimeout: number, restBase: string, session: string): any {
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<any>(async (resolve, reject) => {
             var userGroups: any = {};
             var user_groups: [any];
 

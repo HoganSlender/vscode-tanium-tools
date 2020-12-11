@@ -151,6 +151,20 @@ export class DashboardGroups {
         panelModified.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
+                    case 'initSigningKeys':
+                        // collect signing key data
+                        await SignContentFile.initSigningKeys(context);
+
+                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                            panel.webview.postMessage({
+                                command: 'signingKeysInitialized',
+                                signingKey: newSigningKeys[0].serverLabel,
+                            });
+                        });
+                        break;
+
                     case 'completeProcess':
                         vscode.window.showInformationMessage("Selected dashboard groups have been migrated");
                         break;
@@ -191,6 +205,20 @@ export class DashboardGroups {
         panelMissing.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
+                    case 'initSigningKeys':
+                        // collect signing key data
+                        await SignContentFile.initSigningKeys(context);
+
+                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                            panel.webview.postMessage({
+                                command: 'signingKeysInitialized',
+                                signingKey: newSigningKeys[0].serverLabel,
+                            });
+                        });
+                        break;
+
                     case 'completeProcess':
                         vscode.window.showInformationMessage("Selected dashboard groups have been migrated");
                         break;
@@ -228,6 +256,20 @@ export class DashboardGroups {
         panelCreated.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
+                    case 'initSigningKeys':
+                        // collect signing key data
+                        await SignContentFile.initSigningKeys(context);
+
+                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                            panel.webview.postMessage({
+                                command: 'signingKeysInitialized',
+                                signingKey: newSigningKeys[0].serverLabel,
+                            });
+                        });
+                        break;
+
                     case "openFile":
                         vscode.commands.executeCommand('vscode.open', vscode.Uri.file(message.path), {
                             preview: false,
@@ -250,7 +292,7 @@ export class DashboardGroups {
         signingKey: SigningKey,
         items: any[],
     ) {
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<void>(async (resolve, reject) => {
             try {
                 const dashboardGroupNames: string[] = [];
                 items.forEach(item => {

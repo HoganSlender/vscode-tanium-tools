@@ -81,7 +81,7 @@ class ServerServerContentSetRolePrivileges {
             await this.processServerContentSetRolePrivileges(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
             progress.report({ increment: increment, message: `content set role retrieval from ${rightFqdn}` });
             await this.processServerContentSetRolePrivileges(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
-            const p = new Promise(resolve => {
+            const p = new Promise<void>(resolve => {
                 setTimeout(() => {
                     return resolve();
                 }, 3000);
@@ -97,7 +97,7 @@ class ServerServerContentSetRolePrivileges {
     static processServerContentSetRolePrivileges(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
         const restBase = `https://${fqdn}/api/v2`;
 
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<void>(async (resolve, reject) => {
             try {
                 // get session
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);

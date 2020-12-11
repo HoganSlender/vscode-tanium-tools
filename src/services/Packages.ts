@@ -271,7 +271,7 @@ export class Packages {
         signingKey: SigningKey,
         packageName: string
     ) {
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<void>(async (resolve, reject) => {
             try {
                 OutputChannelLogging.initialize();
 
@@ -410,7 +410,7 @@ export class Packages {
     }
 
     static uploadFileTotal(destFqdn: string, allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, bytes: Buffer): Promise<any> {
-        const p: Promise<any> = new Promise(async (resolve, reject) => {
+        const p = new Promise<any>(async (resolve, reject) => {
             // get session
             const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
 
@@ -440,7 +440,7 @@ export class Packages {
     }
 
     static uploadFileBits(destFqdn: string, allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, uploadId: number, base64: string, fileSize: number, startPos: number, partSize: number): Promise<any> {
-        const p: Promise<any> = new Promise(async (resolve, reject) => {
+        const p = new Promise<any>(async (resolve, reject) => {
             // get session
             const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
 

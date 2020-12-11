@@ -46,9 +46,9 @@ if (rItems !== null) {
 var divShowServerInfo = document.getElementById('divShowServerInfo');
 
 if (divShowServerInfo !== null) {
-    console.log(`divShowServerInfo !== null`);    
+    console.log(`divShowServerInfo !== null`);
 } else {
-    console.log(`divShowServerInfo === null`);    
+    console.log(`divShowServerInfo === null`);
 }
 
 var showServerInfo = divShowServerInfo.innerHTML === '1';
@@ -99,7 +99,11 @@ if (!showServerInfo) {
 
     var signingKeysText = divSigningKeys.innerHTML;
 
-    var signingKeys = signingKeysText.split(',');
+    var signingKeys = [];
+
+    if (signingKeysText.trim().length !== 0) {
+        signingKeys = signingKeysText.split(',');
+    }
 
     if (divSourceFqdn !== null) {
         processInput(fqdns, divSourceFqdn, 'taniumSourceFqdnSelect', false);
@@ -116,7 +120,7 @@ if (!showServerInfo) {
     if (divDestUsername !== null) {
         processInput(usernames, divDestUsername, 'taniumDestUsernameSelect', true);
     }
-    
+
     if (divSigningKey !== null) {
         processInput(signingKeys, divSigningKey, 'taniumSigningKeySelect', true);
     }
@@ -143,6 +147,16 @@ if (!showServerInfo) {
 window.addEventListener('message', event => {
     const message = event.data; // The json data that the extension sent
     switch (message.command) {
+        case 'signingKeysInitialized':
+            // remove button
+            var target = document.getElementById('initSigningKeysButton');
+            target.parentElement.removeChild(target);
+
+            // add drop down
+            processInput([message.signingKey], divSigningKey, 'taniumSigningKeySelect', true);
+            enableProcessPackage();
+            break;
+
         case 'complete':
             // remove first item
             rItems.options[0] = null;
@@ -153,32 +167,58 @@ window.addEventListener('message', event => {
 });
 
 function processInput(inputArray, targetDiv, targetId, isLast) {
-    var tag = document.createElement("select");
-    tag.setAttribute("id", `${targetId}`);
-    targetDiv.appendChild(tag);
+    console.log(`inputArray.length: ${inputArray.length}`);
+    if (inputArray.length === 0) {
+        // this should only happen if there are no signing keys defined
+        var button = document.createElement("button");
+        button.setAttribute("id", "initSigningKeysButton");
+        button.innerHTML = "Configure";
+        button.addEventListener('click', initSigningKeys);
+        targetDiv.appendChild(button);
+    } else {
+        var tag = document.createElement("select");
+        tag.setAttribute("id", `${targetId}`);
+        targetDiv.appendChild(tag);
 
-    inputArray.forEach(item => {
-        var option = document.createElement("option");
-        option.setAttribute("value", item);
-        var text = document.createTextNode(item);
-        option.appendChild(text);
-        tag.appendChild(option);
-    });
+        inputArray.forEach(item => {
+            var option = document.createElement("option");
+            option.setAttribute("value", item);
+            var text = document.createTextNode(item);
+            option.appendChild(text);
+            tag.appendChild(option);
+        });
 
-    // set selected index
-    if (isLast) {
-        tag.selectedIndex = inputArray.length - 1;
+        // set selected index
+        if (isLast) {
+            tag.selectedIndex = inputArray.length - 1;
+        }
     }
 }
 
 function enableProcessPackage() {
+    console.log(`inside enableProcessPackage`);
+
+    console.log(`showServerInfo: ${showServerInfo}`);
     if (showServerInfo) {
+        // check for signing key button
+        var btn = document.getElementById('initSigningKeysButton');
+
+        console.log(`btn: ${btn}`);
+        if (btn !== null) {
+            console.log('btn is null');
+            return;
+        }
+
+        console.log('after btn');
+
         if (sourcePassword !== null && destPassword !== null) {
             processButton.disabled = rItems.options.length === 0 || destPassword.value.trim().length === 0 || sourcePassword.value.trim().length === 0;
         } else if (sourcePassword !== null) {
             processButton.disabled = rItems.options.length === 0 || sourcePassword.value.trim().length === 0;
         } else if (destPassword !== null) {
             processButton.disabled = rItems.options.length === 0 || destPassword.value.trim().length === 0;
+        } else {
+            processButton.disabled = false;
         }
     } else {
         processButton.disabled = rItems.options.length === 0;
@@ -187,16 +227,12 @@ function enableProcessPackage() {
 
 function addButtonEvent(from, to) {
     moveItems(from, to);
-    if (!showServerInfo) {
-        enableProcessPackage();
-    }
+    enableProcessPackage();
 }
 
 function removeButtonEvent(from, to) {
     moveItems(from, to);
-    if (!showServerInfo) {
-        enableProcessPackage();
-    }
+    enableProcessPackage();
 }
 
 function moveItems(from, to) {
@@ -248,6 +284,13 @@ function openFile(from) {
     vscode.postMessage({
         command: 'openFile',
         path: o.value,
+    });
+}
+
+function initSigningKeys() {
+    // send message
+    vscode.postMessage({
+        command: 'initSigningKeys',
     });
 }
 

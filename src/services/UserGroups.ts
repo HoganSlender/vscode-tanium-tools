@@ -310,7 +310,7 @@ export class UserGroups {
         userGroupName: string,
         operationType: Operation
     ) {
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<void>(async (resolve, reject) => {
             try {
                 OutputChannelLogging.initialize();
 
@@ -383,7 +383,7 @@ export class UserGroups {
     }
 
     static retrieveUserGroupMapByName(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, session: string): any {
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<any>(async (resolve, reject) => {
             var userGroups: any = {};
             var userGroupData: [any];
             try {

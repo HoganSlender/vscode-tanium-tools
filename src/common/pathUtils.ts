@@ -19,7 +19,7 @@ export class PathUtils {
     }
 
     static getDiffItems(leftDir: string, rightDir: string, checkForComments?: boolean) {
-        const p: Promise<DiffItemData> = new Promise((resolve, reject) => {
+        const p: Promise<DiffItemData> = new Promise<DiffItemData>((resolve, reject) => {
             try {
                 const files: string[] = fs.readdirSync(leftDir);
                 const leftTargets: string[] = [];

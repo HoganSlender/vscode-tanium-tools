@@ -113,7 +113,7 @@ class ContentSet {
 				await this.retrieveServerSensors(sensorInfo, allowSelfSignedCerts, httpTimeout, username, password, serverDir, fqdn);
 				progress.report({ increment: increment, message: 'Extracting sensors with comments/whitspaces changes only' });
 				await this.extractCommentWhitespaceSensors(contentDir, serverDir, commentContentDir, commentServerDir);
-                const p = new Promise(resolve => {
+                const p = new Promise<void>(resolve => {
                     setTimeout(() => {
                         resolve();
                     }, 3000);
@@ -125,7 +125,7 @@ class ContentSet {
 				await this.extractContentSetSensors(contentSetFile, contentDir, sensorInfo);
 				progress.report({ increment: increment, message: `retrieving sensors from ${fqdn}` });
 				await this.retrieveServerSensors(sensorInfo, allowSelfSignedCerts, httpTimeout, username, password, serverDir, fqdn);
-                const p = new Promise(resolve => {
+                const p = new Promise<void>(resolve => {
                     setTimeout(() => {
                         resolve();
                     }, 3000);
@@ -135,7 +135,7 @@ class ContentSet {
 	}
 
 	static extractCommentWhitespaceSensors(contentDir: string, serverDir: string, commentContentDir: string, commentServerDir: string) {
-		const p = new Promise(resolve => {
+		const p = new Promise<void>(resolve => {
 			const files: string[] = fs.readdirSync(contentDir);
 			const fileTotal = files.length;
 
@@ -209,7 +209,7 @@ class ContentSet {
 	}
 
 	static retrieveServerSensors(sensorInfo: any[], allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, serverDir: string, fqdn: string) {
-		const p = new Promise(async resolve => {
+		const p = new Promise<void>(async resolve => {
 			// get session
 			var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
@@ -269,7 +269,7 @@ class ContentSet {
 	}
 
 	static extractContentSetSensors(contentSetFile: string, contentDir: string, sensorInfo: any[]) {
-		const p = new Promise(resolve => {
+		const p = new Promise<void>(resolve => {
 			fs.readFile(contentSetFile, 'utf8', function (err, data) {
 				if (err) {
 					OutputChannelLogging.logError(`could ot open '${contentSetFile}'`, err);

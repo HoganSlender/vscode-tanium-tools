@@ -79,7 +79,7 @@ class ServerServerUsers {
             await this.processServerUsers(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
             progress.report({ increment: increment, message: `user retrieval from ${rightFqdn}` });
             await this.processServerUsers(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
-            const p = new Promise(resolve => {
+            const p = new Promise<void>(resolve => {
                 setTimeout(() => {
                     resolve();
                 }, 3000);
@@ -95,7 +95,7 @@ class ServerServerUsers {
     static processServerUsers(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
         const restBase = `https://${fqdn}/api/v2`;
 
-        const p = new Promise(async (resolve, reject) => {
+        const p = new Promise<void>(async (resolve, reject) => {
             try {
                 // get session
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);

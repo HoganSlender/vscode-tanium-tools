@@ -85,7 +85,7 @@ export class ContentSetRoles {
             myTitle: title,
             items: diffItems.missing,
             transferIndividual: 0,
-            showServerInfo: 0,
+            showServerInfo: 1,
             showDestServer: false,
             showSigningKeys: true,
             openType: OpenType.file,
@@ -95,7 +95,7 @@ export class ContentSetRoles {
             myTitle: title,
             items: diffItems.modified,
             transferIndividual: 0,
-            showServerInfo: 0,
+            showServerInfo: 1,
             showDestServer: false,
             showSigningKeys: true,
             openType: OpenType.diff,
@@ -105,7 +105,7 @@ export class ContentSetRoles {
             myTitle: title,
             items: diffItems.created,
             transferIndividual: 0,
-            showServerInfo: 0,
+            showServerInfo: 1,
             showDestServer: false,
             showSigningKeys: true,
             openType: OpenType.file,
@@ -143,6 +143,20 @@ export class ContentSetRoles {
         panelModified.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
+                    case 'initSigningKeys':
+                        // collect signing key data
+                        await SignContentFile.initSigningKeys(context);
+
+                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                            panel.webview.postMessage({
+                                command: 'signingKeysInitialized',
+                                signingKey: newSigningKeys[0].serverLabel,
+                            });
+                        });
+                        break;
+
                     case 'completeProcess':
                         vscode.window.showInformationMessage("Selected packages have been migrated");
                         break;
@@ -178,6 +192,20 @@ export class ContentSetRoles {
         panelMissing.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
+                    case 'initSigningKeys':
+                        // collect signing key data
+                        await SignContentFile.initSigningKeys(context);
+
+                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                            panel.webview.postMessage({
+                                command: 'signingKeysInitialized',
+                                signingKey: newSigningKeys[0].serverLabel,
+                            });
+                        });
+                        break;
+
                     case 'completeProcess':
                         vscode.window.showInformationMessage("Selected packages have been migrated");
                         break;
@@ -210,6 +238,20 @@ export class ContentSetRoles {
         panelCreated.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
+                    case 'initSigningKeys':
+                        // collect signing key data
+                        await SignContentFile.initSigningKeys(context);
+
+                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                            panel.webview.postMessage({
+                                command: 'signingKeysInitialized',
+                                signingKey: newSigningKeys[0].serverLabel,
+                            });
+                        });
+                        break;
+
                     case "openFile":
                         vscode.commands.executeCommand('vscode.open', vscode.Uri.file(message.path), {
                             preview: false,
@@ -227,7 +269,7 @@ export class ContentSetRoles {
         signingKey: SigningKey,
         items: any[]
         ) {
-        const p = new Promise((resolve, reject) => {
+        const p = new Promise<void>((resolve, reject) => {
             try {
                 // generate json
                 var importJson = {
@@ -277,7 +319,7 @@ export class ContentSetRoles {
     }
 
     static retrieveContentSetRoleByName(name: string, fqdn: string, session: string, allowSelfSignedCerts: boolean, httpTimeout: number): any {
-        const p: Promise<any> = new Promise(async (resolve, reject) => {
+        const p: Promise<any> = new Promise<any>(async (resolve, reject) => {
             try {
                 const body = await RestClient.get(`https://${fqdn}/api/v2/content_set_roles/by-name/${name}`, {
                     headers: {

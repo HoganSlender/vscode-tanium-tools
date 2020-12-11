@@ -324,7 +324,7 @@ class ServerServer {
             //     await this.processServerSensors(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             //     progress.report({ increment: increment, message: 'extracting comments/whitespace only differences' });
             //     this.extractCommentWhitespaceSensors(leftDir, rightDir, commentLeftDir, commentRightDir);
-            //     const p = new Promise(resolve => {
+            //     const p = new Promise<void>(resolve => {
             //         setTimeout(() => {
             //             resolve();
             //         }, 3000);
@@ -336,7 +336,7 @@ class ServerServer {
             await this.processServerSensors(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
             progress.report({ increment: increment, message: `sensor retrieval from ${rightFqdn}` });
             await this.processServerSensors(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
-            const p = new Promise(resolve => {
+            const p = new Promise<void>(resolve => {
                 setTimeout(() => {
                     resolve();
                 }, 3000);
@@ -348,7 +348,7 @@ class ServerServer {
     }
 
     static processServerSensors(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
-        const p = new Promise(async resolve => {
+        const p = new Promise<void>(async (resolve, reject) => {
             try {
                 // get session
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
@@ -389,6 +389,7 @@ class ServerServer {
                 })();
             } catch (err) {
                 OutputChannelLogging.logError(`error downloading sensors from ${fqdn}`, err);
+                reject();
             }
         });
 
@@ -396,7 +397,7 @@ class ServerServer {
     }
 
     static extractCommentWhitespaceSensors(leftDir: string, rightDir: string, commentLeftDir: string, commentRightDir: string) {
-        const p = new Promise(resolve => {
+        const p = new Promise<void>(resolve => {
             var files: string[];
             files = fs.readdirSync(leftDir);
 
@@ -463,6 +464,8 @@ class ServerServer {
 
                     if (fileTotal === fileCounter) {
                         OutputChannelLogging.log(`${commentsCounter} whitespace/comments only`);
+
+                        resolve();
                     }
                 } catch (err) {
                     OutputChannelLogging.logError('error comparing files', err);

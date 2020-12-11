@@ -33,13 +33,13 @@ export class SigningUtils {
                     targetDirectory = os.tmpdir();
                 }
 
-                const tempPath = path.join(targetDirectory, uuidv4());
-                fs.writeFileSync(tempPath, `${JSON.stringify(jsonObject)}\r\n`, 'utf-8');
+                const targetPath = path.join(targetDirectory, uuidv4());
+                fs.writeFileSync(targetPath, `${JSON.stringify(jsonObject)}\r\n`, 'utf-8');
 
                 // sign json
-                await SignContentFile.signContent(signingKey.keyUtilityPath, signingKey.privateKeyFilePath, tempPath);
+                await SignContentFile.signContent(signingKey.keyUtilityPath, signingKey.privateKeyFilePath, targetPath);
 
-                resolve(tempPath);
+                resolve(targetPath);
 
             } catch (err) {
                 OutputChannelLogging.logError(`error in writeFileAndSign`, err);

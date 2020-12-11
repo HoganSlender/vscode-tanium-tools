@@ -12,6 +12,7 @@ import { WebContentUtils } from '../common/webContentUtils';
 import path = require('path');
 import { SignContentFile } from './SignContentFile';
 import { SigningKey } from '../types/signingKey';
+import { SigningUtils } from '../common/signingUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -267,7 +268,7 @@ export class ContentSets {
         signingKey: SigningKey,
         items: any[]
     ) {
-        const p = new Promise<void>((resolve, reject) => {
+        const p = new Promise<void>(async (resolve, reject) => {
             try {
                 // generate json
                 var importJson = {
@@ -294,14 +295,10 @@ export class ContentSets {
 
                 // save file to base
                 const baseDir = PathUtils.getPath(PathUtils.getPath(items[0].path.split('~')[0]));
-                const tempPath = path.join(baseDir, uuidv4() + '.json');
-                fs.writeFileSync(tempPath, `${JSON.stringify(importJson, null, 2)}\r\n`, 'utf-8');
-
-                // sign the file
-                SignContentFile.signContent(signingKey.keyUtilityPath, signingKey.privateKeyFilePath, tempPath);
+                const filePath = await SigningUtils.writeFileAndSign(importJson, signingKey, baseDir);
 
                 // open file
-                vscode.commands.executeCommand('vscode.open', vscode.Uri.file(tempPath), {
+                vscode.commands.executeCommand('vscode.open', vscode.Uri.file(filePath), {
                     preview: false,
                     viewColumn: vscode.ViewColumn.Active,
                 });

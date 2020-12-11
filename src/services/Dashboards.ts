@@ -14,6 +14,7 @@ import { SignContentFile } from './SignContentFile';
 import path = require('path');
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
+import { SigningUtils } from '../common/signingUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -335,14 +336,10 @@ export class Dashboards {
 
                 // save file to base
                 const baseDir = PathUtils.getPath(PathUtils.getPath(items[0].path.split('~')[0]));
-                const tempPath = path.join(baseDir, uuidv4() + '.json');
-                fs.writeFileSync(tempPath, `${JSON.stringify(body.data, null, 2)}\r\n`, 'utf-8');
-
-                // sign the file
-                SignContentFile.signContent(signingKey.keyUtilityPath, signingKey.privateKeyFilePath, tempPath);
+                const filePath = await SigningUtils.writeFileAndSign(body.data, signingKey, baseDir);
 
                 // open file
-                vscode.commands.executeCommand('vscode.open', vscode.Uri.file(tempPath), {
+                vscode.commands.executeCommand('vscode.open', vscode.Uri.file(filePath), {
                     preview: false,
                     viewColumn: vscode.ViewColumn.Active,
                 });

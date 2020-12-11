@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
 import * as vscode from 'vscode';
 
 import * as commands from '../common/commands';
@@ -9,12 +8,10 @@ import { OutputChannelLogging } from "../common/logging";
 import { PathUtils } from '../common/pathUtils';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
+import { SigningUtils } from '../common/signingUtils';
 import { WebContentUtils } from '../common/webContentUtils';
 import { SigningKey } from "../types/signingKey";
-
-import path = require('path');
 import { SignContentFile } from './SignContentFile';
-
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -152,6 +149,20 @@ export class Sensors {
         panelModified.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
+                    case 'initSigningKeys':
+                        // collect signing key data
+                        await SignContentFile.initSigningKeys(context);
+
+                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                            panel.webview.postMessage({
+                                command: 'signingKeysInitialized',
+                                signingKey: newSigningKeys[0].serverLabel,
+                            });
+                        });
+                        break;
+
                     case 'completeProcess':
                         vscode.window.showInformationMessage("Selected sensors have been migrated");
                         break;
@@ -192,6 +203,20 @@ export class Sensors {
         panelMissing.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
+                    case 'initSigningKeys':
+                        // collect signing key data
+                        await SignContentFile.initSigningKeys(context);
+
+                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                            panel.webview.postMessage({
+                                command: 'signingKeysInitialized',
+                                signingKey: newSigningKeys[0].serverLabel,
+                            });
+                        });
+                        break;
+
                     case 'completeProcess':
                         vscode.window.showInformationMessage("Selected sensors have been migrated");
                         break;
@@ -229,6 +254,20 @@ export class Sensors {
         panelCreated.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
+                    case 'initSigningKeys':
+                        // collect signing key data
+                        await SignContentFile.initSigningKeys(context);
+
+                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                            panel.webview.postMessage({
+                                command: 'signingKeysInitialized',
+                                signingKey: newSigningKeys[0].serverLabel,
+                            });
+                        });
+                        break;
+
                     case "openFile":
                         vscode.commands.executeCommand('vscode.open', vscode.Uri.file(message.path), {
                             preview: false,
@@ -283,14 +322,10 @@ export class Sensors {
 
                 // save file to base
                 const baseDir = PathUtils.getPath(PathUtils.getPath(items[0].path.split('~')[0]));
-                const tempPath = path.join(baseDir, uuidv4() + '.json');
-                fs.writeFileSync(tempPath, `${JSON.stringify(importJson, null, 2)}\r\n`, 'utf-8');
-
-                // sign the file
-                SignContentFile.signContent(signingKey.keyUtilityPath, signingKey.privateKeyFilePath, tempPath);
+                const filePath = await SigningUtils.writeFileAndSign(importJson, signingKey, baseDir);
 
                 // open file
-                vscode.commands.executeCommand('vscode.open', vscode.Uri.file(tempPath), {
+                vscode.commands.executeCommand('vscode.open', vscode.Uri.file(filePath), {
                     preview: false,
                     viewColumn: vscode.ViewColumn.Active,
                 });

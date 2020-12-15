@@ -93,6 +93,10 @@ export class TaniumNodeProvider implements vscode.TreeDataProvider<TaniumTreeIte
                         'command': 'hoganslendertanium.compareServerServerDashboardGroups',
                         'title': 'Compare Tanium Server Dashboard Groups',
                     }));
+                    children.push(new TaniumTreeItem('Compare Saved Questions', 'Compare Tanium Server Saved Questions', vscode.TreeItemCollapsibleState.None, undefined, 			{
+                        "command": "hoganslendertanium.compareServerServerSavedQuestions",
+                        "title": "Compare Tanium Server Saved Questions",
+                    }));
                     break;
 
                 case 'Modules':

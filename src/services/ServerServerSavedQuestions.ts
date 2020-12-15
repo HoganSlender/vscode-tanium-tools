@@ -7,40 +7,34 @@ import * as commands from '../common/commands';
 import { OutputChannelLogging } from '../common/logging';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
-import { collectServerServerPackageInputs } from '../parameter-collection/server-server-package-parameters';
-import { Packages } from './Packages';
 
 import path = require('path');
-import { ServerServerSensors } from './ServerServerSensors';
 import { checkResolve } from '../common/checkResolve';
-import { ServerServerBase } from './ServerServerBase';
+import { collectServerServerSavedQuestionInputs } from '../parameter-collection/server-server-saved-questions-parameters';
+import { SavedQuestions } from './SavedQuestions';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.compareServerServerPackages': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            ServerServerPackages.processPackages(context);
+        'hoganslendertanium.compareServerServerSavedQuestions': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+            ServerServerSavedQuestions.processSavedQuestions(context);
         },
     });
 }
 
-class ServerServerPackages extends ServerServerBase {
-    static async processPackages(context: vscode.ExtensionContext) {
+export class ServerServerSavedQuestions {
+    static async processSavedQuestions(context: vscode.ExtensionContext) {
+        // get the current folder
+        const folderPath = vscode.workspace.workspaceFolders![0];
+
         // define output channel
         OutputChannelLogging.initialize();
-
-        if (this.invalidWorkspaceFolders()) {
-            return;
-        }
-
-        // get the current folder
-        const folderPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
 
         // get configurations
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');
         const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
         const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
 
-        const state = await collectServerServerPackageInputs(config, context);
+        const state = await collectServerServerSavedQuestionInputs(config, context);
 
         // collect values
         const leftFqdn: string = state.leftFqdn;
@@ -60,8 +54,8 @@ class ServerServerPackages extends ServerServerBase {
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}%Packages`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}%Packages`);
+        const leftDir = path.join(folderPath.uri.fsPath, `1 - ${sanitize(leftFqdn)}%SavedQuestions`);
+        const rightDir = path.join(folderPath.uri.fsPath, `2 - ${sanitize(rightFqdn)}%SavedQuestions`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -73,17 +67,17 @@ class ServerServerPackages extends ServerServerBase {
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: 'Package Compare',
+            title: 'Saved Question Compare',
             cancellable: false
         }, async (progress) => {
             progress.report({ increment: 0 });
 
             const increment = 50;
 
-            progress.report({ increment: increment, message: `package retrieval from ${leftFqdn}` });
-            await this.processServerPackages(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-            progress.report({ increment: increment, message: `package retrieval from ${rightFqdn}` });
-            await this.processServerPackages(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
+            progress.report({ increment: increment, message: `saved question retrieval from ${leftFqdn}` });
+            await this.processServerSavedQuestions(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
+            progress.report({ increment: increment, message: `saved question retrieval from ${rightFqdn}` });
+            await this.processServerSavedQuestions(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {
                     resolve();
@@ -93,11 +87,11 @@ class ServerServerPackages extends ServerServerBase {
             return p;
         });
 
-        // analyze packages
-        Packages.analyzePackages(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
+        // analyze saved questions
+        SavedQuestions.analyzeSavedQuestions(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
     }
 
-    static processServerPackages(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
+    static processServerSavedQuestions(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
         const restBase = `https://${fqdn}/api/v2`;
 
         const p = new Promise<void>(async (resolve, reject) => {
@@ -106,47 +100,47 @@ class ServerServerPackages extends ServerServerBase {
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
                 (async () => {
-                    OutputChannelLogging.log(`package retrieval - initialized for ${fqdn}`);
-                    var package_specs: [any];
+                    OutputChannelLogging.log(`saved question retrieval - initialized for ${fqdn}`);
+                    var saved_question: [any];
 
-                    // get packages
+                    // get saved questions
                     try {
-                        const body = await RestClient.get(`${restBase}/packages`, {
+                        const body = await RestClient.get(`${restBase}/saved_questions`, {
                             headers: {
                                 session: session,
                             },
                             responseType: 'json',
                         }, allowSelfSignedCerts, httpTimeout);
 
-                        OutputChannelLogging.log(`package_spec retrieval - complete for ${fqdn}`);
-                        package_specs = body.data;
+                        OutputChannelLogging.log(`saved question retrieval - complete for ${fqdn}`);
+                        saved_question = body.data;
                     } catch (err) {
-                        OutputChannelLogging.logError(`retrieving package_specs from ${fqdn}`, err);
-                        return reject(`retrieving package_specs from ${fqdn}`);
+                        OutputChannelLogging.logError(`retrieving saved questions from ${fqdn}`, err);
+                        return reject(`retrieving saved questions from ${fqdn}`);
                     }
 
                     // remove cache object
-                    package_specs.pop();
+                    saved_question.pop();
 
                     // iterate through each download export
-                    var packageSpecCounter: number = 0;
-                    var packageSpecTotal: number = package_specs.length;
+                    var savedQuestionCounter: number = 0;
+                    var savedQuestionTotal: number = saved_question.length;
 
-                    if (packageSpecTotal === 0) {
-                        OutputChannelLogging.log(`there are 0 packages for ${fqdn}`);
+                    if (savedQuestionTotal === 0) {
+                        OutputChannelLogging.log(`there are 0 saved questions for ${fqdn}`);
                         return resolve();
                     } else {
                         var i = 0;
 
-                        package_specs.forEach(async packageSpec => {
+                        saved_question.forEach(async savedQuestion => {
                             i++;
 
-                            if (i % 30 === 0 || i === packageSpecTotal) {
-                                OutputChannelLogging.log(`processing ${i} of ${packageSpecTotal}`);
+                            if (i % 30 === 0 || i === savedQuestionTotal) {
+                                OutputChannelLogging.log(`processing ${i} of ${savedQuestionTotal}`);
                             }
 
-                            if (packageSpec.deleted_flag) {
-                                if (checkResolve(++packageSpecCounter, packageSpecTotal, 'packages', fqdn)) {
+                            if (savedQuestion.hidden_flag) {
+                                if (checkResolve(++savedQuestionCounter, savedQuestionTotal, 'saved questions', fqdn)) {
                                     return resolve();
                                 }
                             } else {
@@ -157,42 +151,42 @@ class ServerServerPackages extends ServerServerBase {
                                             session: session,
                                         },
                                         json: {
-                                            package_specs: {
+                                            saved_questions: {
                                                 include: [
-                                                    packageSpec.name
+                                                    savedQuestion.name
                                                 ]
                                             }
                                         },
                                         responseType: 'json',
                                     }, allowSelfSignedCerts, httpTimeout);
 
-                                    const taniumPackage: any = body.data.object_list.package_specs[0];
-                                    const packageName: string = sanitize(taniumPackage.name);
+                                    const taniumSavedQuestion: any = body.data.object_list.saved_questions[0];
+                                    const savedQuestionName: string = sanitize(taniumSavedQuestion.name);
 
                                     try {
-                                        const content: string = JSON.stringify(taniumPackage, null, 2);
+                                        const content: string = JSON.stringify(taniumSavedQuestion, null, 2);
 
-                                        const packageFile = path.join(directory, packageName + '.json');
-                                        fs.writeFile(packageFile, content, (err) => {
+                                        const savedQuestionFile = path.join(directory, savedQuestionName + '.json');
+                                        fs.writeFile(savedQuestionFile, content, (err) => {
                                             if (err) {
-                                                OutputChannelLogging.logError(`could not write ${packageFile}`, err);
+                                                OutputChannelLogging.logError(`could not write ${savedQuestionFile}`, err);
                                             }
                                         });
 
-                                        if (checkResolve(++packageSpecCounter, packageSpecTotal, 'packages', fqdn)) {
+                                        if (checkResolve(++savedQuestionCounter, savedQuestionTotal, 'saved questions', fqdn)) {
                                             return resolve();
                                         }
                                     } catch (err) {
-                                        OutputChannelLogging.logError(`error processing ${label} package ${packageName}`, err);
+                                        OutputChannelLogging.logError(`error processing ${label} saved question ${savedQuestionName}`, err);
 
-                                        if (checkResolve(++packageSpecCounter, packageSpecTotal, 'packages', fqdn)) {
+                                        if (checkResolve(++savedQuestionCounter, savedQuestionTotal, 'saved questions', fqdn)) {
                                             return resolve();
                                         }
                                     }
                                 } catch (err) {
-                                    OutputChannelLogging.logError(`retrieving packageExport for ${packageSpec.name} from ${fqdn}`, err);
+                                    OutputChannelLogging.logError(`retrieving saved questionExport for ${savedQuestion.name} from ${fqdn}`, err);
 
-                                    if (checkResolve(++packageSpecCounter, packageSpecTotal, 'packages', fqdn)) {
+                                    if (checkResolve(++savedQuestionCounter, savedQuestionTotal, 'saved questions', fqdn)) {
                                         return resolve();
                                     }
                                 }
@@ -201,8 +195,8 @@ class ServerServerPackages extends ServerServerBase {
                     }
                 })();
             } catch (err) {
-                OutputChannelLogging.logError(`error downloading packages from ${restBase}`, err);
-                return reject(`error downloading packages from ${restBase}`);
+                OutputChannelLogging.logError(`error downloading saved questions from ${restBase}`, err);
+                return reject(`error downloading saved questions from ${restBase}`);
             }
         });
 

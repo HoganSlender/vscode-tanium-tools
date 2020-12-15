@@ -14,6 +14,7 @@ import { ServerServerUserGroups } from './ServerServerUserGroups';
 
 import path = require('path');
 import { checkResolve } from '../common/checkResolve';
+import { ServerServerBase } from './ServerServerBase';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -23,13 +24,17 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-class ServerServerContentSetUserGroupRoleMemberships {
+class ServerServerContentSetUserGroupRoleMemberships extends ServerServerBase {
     static async processContentSetUserGroupRoleMemberships(context: vscode.ExtensionContext) {
-        // get the current folder
-        const folderPath = vscode.workspace.rootPath;
-
         // define output channel
         OutputChannelLogging.initialize();
+
+        if (this.invalidWorkspaceFolders()) {
+            return;
+        }
+
+        // get the current folder
+        const folderPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
 
         // get configurations
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');
@@ -70,7 +75,7 @@ class ServerServerContentSetUserGroupRoleMemberships {
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: 'Content Set Compare',
+            title: 'Content Set User Group Role Membership Compare',
             cancellable: false
         }, async (progress) => {
             progress.report({ increment: 0 });

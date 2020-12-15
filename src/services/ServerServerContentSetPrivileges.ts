@@ -12,6 +12,7 @@ import { ContentSetPrivileges } from './ContentSetPrivileges';
 
 import path = require('path');
 import { checkResolve } from '../common/checkResolve';
+import { ServerServerBase } from './ServerServerBase';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -21,13 +22,18 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-export class ServerServerContentSetPrivileges {
+export class ServerServerContentSetPrivileges extends ServerServerBase {
     static async processContentSetPrivileges(context: vscode.ExtensionContext) {
-        // get the current folder
-        const folderPath = vscode.workspace.rootPath;
-
         // define output channel
         OutputChannelLogging.initialize();
+
+        if (this.invalidWorkspaceFolders()) {
+            return;
+        }
+
+        // get the current folder
+        const folderPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
+
 
         // get configurations
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');

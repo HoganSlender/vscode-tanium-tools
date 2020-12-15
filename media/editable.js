@@ -359,6 +359,13 @@ function processItems() {
                 items: items,
                 signingServerLabel: signingKey,
             });
+
+            // remove items
+            Array.from(rItems.options).slice().reverse().forEach(o => {
+                rItems.removeChild(o);
+            });
+
+            // enable button
             processButton.disabled = false;
         }
     }

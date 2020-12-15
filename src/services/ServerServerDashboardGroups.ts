@@ -14,6 +14,7 @@ import path = require('path');
 import { checkResolve } from '../common/checkResolve';
 import { collectServerServerDashboardGroupInputs } from '../parameter-collection/server-server-dashboard-group-parameters';
 import { DashboardGroups } from './DashboardGroups';
+import { ServerServerBase } from './ServerServerBase';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -23,13 +24,17 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-export class ServerServerDashboardGroups {
+export class ServerServerDashboardGroups extends ServerServerBase {
     static async processDashboardGroups(context: vscode.ExtensionContext) {
-        // get the current folder
-        const folderPath = vscode.workspace.rootPath;
-
         // define output channel
         OutputChannelLogging.initialize();
+
+        if (this.invalidWorkspaceFolders()) {
+            return;
+        }
+
+        // get the current folder
+        const folderPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
 
         // get configurations
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');

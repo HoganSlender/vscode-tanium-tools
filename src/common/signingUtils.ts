@@ -33,8 +33,8 @@ export class SigningUtils {
                     targetDirectory = os.tmpdir();
                 }
 
-                const targetPath = path.join(targetDirectory, uuidv4());
-                fs.writeFileSync(targetPath, `${JSON.stringify(jsonObject)}\r\n`, 'utf-8');
+                const targetPath = path.join(targetDirectory, `${uuidv4()}.json`);
+                fs.writeFileSync(targetPath, `${JSON.stringify(jsonObject, null, 2)}\r\n`, 'utf-8');
 
                 // sign json
                 await SignContentFile.signContent(signingKey.keyUtilityPath, signingKey.privateKeyFilePath, targetPath);

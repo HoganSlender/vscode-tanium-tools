@@ -100,7 +100,7 @@ export async function collectServerServerGroupInputs(config: WorkspaceConfigurat
     ];
 
     const state = {} as Partial<ServerServerGroupState>;
-    await collectInputs('Compare Tanium Server Packages to Tanium Server Packages', state, steps);
+    await collectInputs('Compare Tanium Server Groups to Tanium Server Groups', state, steps);
 
     if (typeof state.leftFqdnQp === 'string') {
         if (fqdns.indexOf(state.leftFqdnQp) === -1) {

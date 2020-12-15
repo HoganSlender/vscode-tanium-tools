@@ -1,7 +1,8 @@
-import { collectInputs, MyButton, Step, StepType } from "./multi-step-input";
-import { QuickPickItem, WorkspaceConfiguration, ExtensionContext, Uri, ConfigurationTarget } from "vscode";
+import { ConfigurationTarget, ExtensionContext, QuickPickItem, Uri, WorkspaceConfiguration } from "vscode";
 
-interface ServerServerDashboardGroupState {
+import { collectInputs, MyButton, Step, StepType } from "./multi-step-input";
+
+interface ServerServerSavedQuestionState {
     leftFqdnQp: QuickPickItem | string;
     leftUsernameQp: QuickPickItem | string;
     leftPassword: string;
@@ -14,7 +15,7 @@ interface ServerServerDashboardGroupState {
     rightUsername: string;
 }
 
-export async function collectServerServerDashboardGroupInputs(config: WorkspaceConfiguration, context: ExtensionContext) {
+export async function collectServerServerSavedQuestionInputs(config: WorkspaceConfiguration, context: ExtensionContext) {
     const addButton = new MyButton({
         dark: Uri.file(context.asAbsolutePath('resources/dark/add.svg')),
         light: Uri.file(context.asAbsolutePath('resources/light/add.svg')),
@@ -84,7 +85,7 @@ export async function collectServerServerDashboardGroupInputs(config: WorkspaceC
                 addButton
             ],
             buttonTooltip: 'Add New Username',
-            quickPickPlaceholder: 'Please choose the dest Tanium server username or click + upper right to add new',
+            quickPickPlaceholder: 'Please choose the source Tanium server username or click + upper right to add new',
             activeItemPropertyName: 'rightUsernameQp',
             inputPrompt: 'Please enter the source Tanium server username',
         },
@@ -98,8 +99,8 @@ export async function collectServerServerDashboardGroupInputs(config: WorkspaceC
         }
     ];
 
-    const state = {} as Partial<ServerServerDashboardGroupState>;
-    await collectInputs('Compare Tanium Server Dashboard Groups to Tanium Server Dashboard Groups', state, steps);
+    const state = {} as Partial<ServerServerSavedQuestionState>;
+    await collectInputs('Compare Tanium Server Saved Questions to Tanium Server Saved Questions', state, steps);
 
     if (typeof state.leftFqdnQp === 'string') {
         if (fqdns.indexOf(state.leftFqdnQp) === -1) {
@@ -142,5 +143,5 @@ export async function collectServerServerDashboardGroupInputs(config: WorkspaceC
     }
 
     // store data
-    return state as ServerServerDashboardGroupState;
+    return state as ServerServerSavedQuestionState;
 }

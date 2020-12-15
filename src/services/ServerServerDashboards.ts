@@ -14,6 +14,7 @@ import { ServerServerSensors } from './ServerServerSensors';
 import { collectServerServerDashboardInputs } from '../parameter-collection/server-server-dashboard-parameters';
 import { checkResolve } from '../common/checkResolve';
 import { Dashboards } from './Dashboards';
+import { ServerServerBase } from './ServerServerBase';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -23,13 +24,17 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-class ServerServerDashboards {
+class ServerServerDashboards extends ServerServerBase {
     static async processDashboards(context: vscode.ExtensionContext) {
-        // get the current folder
-        const folderPath = vscode.workspace.rootPath;
-
         // define output channel
         OutputChannelLogging.initialize();
+
+        if (this.invalidWorkspaceFolders()) {
+            return;
+        }
+
+        // get the current folder
+        const folderPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
 
         // get configurations
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');

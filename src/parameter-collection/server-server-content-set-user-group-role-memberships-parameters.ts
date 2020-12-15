@@ -99,7 +99,7 @@ export async function collectServerServerContentSetUserGroupRoleMembershipInputs
     ];
 
     const state = {} as Partial<ServerServerContentSetUserGroupRoleMembershipState>;
-    await collectInputs('Compare Tanium Server Content Sets to Tanium Server Content Sets', state, steps);
+    await collectInputs('Compare Tanium Server Content Set User Group Role Memberships to Tanium Server Content Set User Group Role Memberships', state, steps);
 
     if (typeof state.leftFqdnQp === 'string') {
         if (fqdns.indexOf(state.leftFqdnQp) === -1) {

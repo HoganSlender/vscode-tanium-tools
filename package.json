@@ -34,6 +34,7 @@
 		"onCommand:hoganslendertanium.analyzeFilterGroups",
 		"onCommand:hoganslendertanium.analyzeManualGroups",
 		"onCommand:hoganslendertanium.analyzePackages",
+		"onCommand:hoganslendertanium.analyzeSavedQuestions",
 		"onCommand:hoganslendertanium.analyzeSensors",
 		"onCommand:hoganslendertanium.analyzeUserGroups",
 		"onCommand:hoganslendertanium.analyzeUsers",
@@ -52,6 +53,7 @@
 		"onCommand:hoganslendertanium.compareServerServerFilterGroups",
 		"onCommand:hoganslendertanium.compareServerServerManualGroups",
 		"onCommand:hoganslendertanium.compareServerServerPackages",
+		"onCommand:hoganslendertanium.compareServerServerSavedQuestions",
 		"onCommand:hoganslendertanium.compareServerServerSensors",
 		"onCommand:hoganslendertanium.compareServerServerUserGroups",
 		"onCommand:hoganslendertanium.compareServerServerUsers",
@@ -144,6 +146,11 @@
 				"category": "Tanium"
 			},
 			{
+				"command": "hoganslendertanium.analyzeSavedQuestions",
+				"title": "Analyze Saved Questions",
+				"category": "Tanium"
+			},
+			{
 				"command": "hoganslendertanium.analyzeSensors",
 				"title": "Analyze Sensors",
 				"category": "Tanium"
@@ -231,6 +238,11 @@
 			{
 				"command": "hoganslendertanium.compareServerServerPackages",
 				"title": "Compare Tanium Server Packages",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.compareServerServerSavedQuestions",
+				"title": "Compare Tanium Server Saved Questions",
 				"category": "Tanium"
 			},
 			{
@@ -338,6 +350,10 @@
 					"when": "false"
 				},
 				{
+					"command": "hoganslendertanium.analyzeSavedQuestions",
+					"when": "false"
+				},
+				{
 					"command": "hoganslendertanium.analyzeSensors",
 					"when": "false"
 				},
@@ -432,6 +448,11 @@
 					"command": "hoganslendertanium.analyzePackages",
 					"group": "3_compare@1",
 					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%Packages$/"
+				},
+				{
+					"command": "hoganslendertanium.analyzeSavedQuestions",
+					"group": "3_compare@1",
+					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%SavedQuestions$/"
 				},
 				{
 					"command": "hoganslendertanium.analyzeSensors",

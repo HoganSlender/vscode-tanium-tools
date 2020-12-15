@@ -12,6 +12,8 @@ import path = require('path');
 import { collectServerServerGroupInputs } from '../parameter-collection/server-server-group-parameters';
 import { Groups } from './Groups';
 import { checkResolve } from '../common/checkResolve';
+import { collectServerServerModifiedSensorInputs } from '../parameter-collection/server-server-modified-sensors-parameters';
+import { ServerServerBase } from './ServerServerBase';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -33,13 +35,17 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-class ServerServerGroups {
+class ServerServerGroups extends ServerServerBase {
     static async processGroups(targetGroupType: number, context: vscode.ExtensionContext) {
-        // get the current folder
-        const folderPath = vscode.workspace.rootPath;
-
         // define output channel
         OutputChannelLogging.initialize();
+
+        if (this.invalidWorkspaceFolders()) {
+            return;
+        }
+
+        // get the current folder
+        const folderPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
 
         // get configurations
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');

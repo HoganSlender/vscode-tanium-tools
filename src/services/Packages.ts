@@ -90,6 +90,7 @@ export class Packages {
             transferIndividual: 1,
             showServerInfo: 1,
             showSourceServer: true,
+            showSourceCreds: true,
             showDestServer: true,
             openType: OpenType.file,
         }, panelMissing, context, config);
@@ -100,6 +101,7 @@ export class Packages {
             transferIndividual: 1,
             showServerInfo: 1,
             showSourceServer: true,
+            showSourceCreds: true,
             showDestServer: true,
             openType: OpenType.diff,
         }, panelModified, context, config);
@@ -110,6 +112,7 @@ export class Packages {
             transferIndividual: 1,
             showServerInfo: 1,
             showSourceServer: true,
+            showSourceCreds: true,
             showDestServer: true,
             openType: OpenType.file,
         }, panelCreated, context, config);
@@ -163,6 +166,8 @@ export class Packages {
                             allowSelfSignedCerts,
                             httpTimeout,
                             message.sourceFqdn,
+                            message.sourceUsername,
+                            message.sourcePassword,
                             message.destFqdn,
                             message.destUsername,
                             message.destPassword,
@@ -215,6 +220,8 @@ export class Packages {
                             allowSelfSignedCerts,
                             httpTimeout,
                             message.sourceFqdn,
+                            message.sourceUsername,
+                            message.sourcePassword,
                             message.destFqdn,
                             message.destUsername,
                             message.destPassword,
@@ -263,9 +270,11 @@ export class Packages {
         allowSelfSignedCerts: boolean,
         httpTimeout: number,
         sourceFqdn: string,
+        sourceUsername: string,
+        sourcePassword: string,
         destFqdn: string,
-        username: string,
-        password: string,
+        destUsername: string,
+        destPassword: string,
         filePath: string,
         targetFilePath: string,
         signingKey: SigningKey,
@@ -278,11 +287,30 @@ export class Packages {
                 // get package data from file
                 const packageSpecFromFile = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
-                // generate import json
-                const importJson = {
-                    object_list: packageSpecFromFile,
-                    version: 2
+                // get package name
+                const packageName = packageSpecFromFile.name;
+
+                // generate export json
+                var exportJson = {
+                    package_specs: {
+                        include: [
+                            packageName
+                        ]
+                    }
                 };
+
+                const sourceSession = await Session.getSession(allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceUsername, sourcePassword);
+
+                const body = await RestClient.post(`https://${sourceFqdn}/api/v2/export`, {
+                    headers: {
+                        session: sourceSession,
+                    },
+                    json: exportJson,
+                    responseType: 'json'
+                }, allowSelfSignedCerts, httpTimeout);
+
+                // generate import json
+                const importJson = body.data;
 
                 // get signed content
                 const signedContentData = await SigningUtils.retrieveSignedContent(importJson, signingKey);
@@ -291,7 +319,7 @@ export class Packages {
 
                 try {
                     // get session
-                    const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
+                    const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, destUsername, destPassword);
 
                     // check for existing package; if exists then delete it
                     const restBase = `https://${destFqdn}/api/v2`;
@@ -341,7 +369,7 @@ export class Packages {
 
                             // upload file to tanium server
                             OutputChannelLogging.log(`uploading ${packageFile.name} to ${destFqdn}`);
-                            await this.uploadFile(destFqdn, allowSelfSignedCerts, httpTimeout, username, password, tempFilePath, packageFile.name);
+                            await this.uploadFile(destFqdn, allowSelfSignedCerts, httpTimeout, destUsername, destPassword, tempFilePath, packageFile.name);
                             OutputChannelLogging.log(`uploading ${packageFile.name} complete.`);
 
                             // delete temp file

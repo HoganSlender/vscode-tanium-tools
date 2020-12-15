@@ -99,7 +99,7 @@ export async function collectServerServerUserGroupsInputs(config: WorkspaceConfi
     ];
 
     const state = {} as Partial<ServerServerUserGroupsState>;
-    await collectInputs('Compare Tanium Server Users to Tanium Server Users', state, steps);
+    await collectInputs('Compare Tanium Server User Groups to Tanium Server User Groups', state, steps);
 
     if (typeof state.leftFqdnQp === 'string') {
         if (fqdns.indexOf(state.leftFqdnQp) === -1) {

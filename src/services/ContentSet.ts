@@ -26,7 +26,7 @@ export function activate(context: vscode.ExtensionContext) {
 class ContentSet {
 	public static async processSensors(context: vscode.ExtensionContext) {
 		// get the current folder
-		const folderPath = vscode.workspace.rootPath;
+		const folderPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
 
 		// define output channel
 		OutputChannelLogging.initialize();

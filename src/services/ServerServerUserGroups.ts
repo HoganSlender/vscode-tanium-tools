@@ -13,6 +13,7 @@ import { UserGroups } from './UserGroups';
 
 import path = require('path');
 import { checkResolve } from '../common/checkResolve';
+import { ServerServerBase } from './ServerServerBase';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -22,13 +23,17 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-export class ServerServerUserGroups {
+export class ServerServerUserGroups extends ServerServerBase {
     public static async processUserGroups(context: vscode.ExtensionContext) {
-        // get the current folder
-        const folderPath = vscode.workspace.rootPath;
-
         // define output channel
         OutputChannelLogging.initialize();
+
+        if (this.invalidWorkspaceFolders()) {
+            return;
+        }
+
+        // get the current folder
+        const folderPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
 
         // get configurations
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');
@@ -68,7 +73,7 @@ export class ServerServerUserGroups {
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: 'User Compare',
+            title: 'User Group Compare',
             cancellable: false
         }, async (progress) => {
             progress.report({ increment: 0 });

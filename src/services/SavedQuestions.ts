@@ -1,33 +1,33 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as fs from 'fs';
+import * as os from 'os';
 import * as vscode from 'vscode';
 
 import * as commands from '../common/commands';
-import { OpenType } from "../common/enums";
-import { OutputChannelLogging } from "../common/logging";
+import { OpenType } from '../common/enums';
+import { OutputChannelLogging } from '../common/logging';
 import { PathUtils } from '../common/pathUtils';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { SigningUtils } from '../common/signingUtils';
 import { WebContentUtils } from '../common/webContentUtils';
-import { SigningKey } from "../types/signingKey";
-import { SignContentFile } from './SignContentFile';
+import { SigningKey } from '../types/signingKey';
+
+import path = require('path');
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.analyzeSensors': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            Sensors.analyzeSensors(uris[0], uris[1], context);
+        'hoganslendertanium.analyzeSavedQuestions': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+            SavedQuestions.analyzeSavedQuestions(uris[0], uris[1], context);
         },
     });
 }
 
-export class Sensors {
-    static async analyzeSensors(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
-        var title = 'Sensors';
-
+export class SavedQuestions {
+    static async analyzeSavedQuestions(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
         const panelMissing = vscode.window.createWebviewPanel(
-            'hoganslenderMissingSensors',
-            `Missing ${title}`,
+            'hoganslenderMissingSavedQuestions',
+            'Missing Saved Questions',
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -36,8 +36,8 @@ export class Sensors {
         );
 
         const panelModified = vscode.window.createWebviewPanel(
-            'hoganslenderModifiedSensors',
-            `Modified ${title}`,
+            'hoganslenderModifiedSavedQuestions',
+            'Modified Saved Questions',
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -46,8 +46,8 @@ export class Sensors {
         );
 
         const panelCreated = vscode.window.createWebviewPanel(
-            'hoganslenderCreatedSensors',
-            `Created ${title}`,
+            'hoganslenderCreatedSavedQuestions',
+            'Created Saved Questions',
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -56,8 +56,8 @@ export class Sensors {
         );
 
         const panelUnchanged = vscode.window.createWebviewPanel(
-            'hoganslenderUnchangedSensors',
-            `Unchanged ${title}`,
+            'hoganslenderUnchangedSavedQuestions',
+            'Unchanged Saved Questions',
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -77,10 +77,12 @@ export class Sensors {
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
         const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath, true);
-        OutputChannelLogging.log(`missing sensors: ${diffItems.missing.length}`);
-        OutputChannelLogging.log(`modified sensors: ${diffItems.modified.length}`);
-        OutputChannelLogging.log(`created sensors: ${diffItems.created.length}`);
-        OutputChannelLogging.log(`unchanged sensors: ${diffItems.unchanged.length}`);
+        OutputChannelLogging.log(`missing saved questions: ${diffItems.missing.length}`);
+        OutputChannelLogging.log(`modified saved questions: ${diffItems.modified.length}`);
+        OutputChannelLogging.log(`created saved questions: ${diffItems.created.length}`);
+        OutputChannelLogging.log(`unchanged saved questions: ${diffItems.unchanged.length}`);
+
+        const title = 'Saved Questions';
 
         panelMissing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
@@ -113,7 +115,7 @@ export class Sensors {
             showServerInfo: 1,
             showSourceServer: true,
             showSourceCreds: true,
-            showDestServer: true,
+            showDestServer: false,
             showSigningKeys: true,
             openType: OpenType.file,
         }, panelCreated, context, config);
@@ -149,22 +151,8 @@ export class Sensors {
         panelModified.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
-                    case 'initSigningKeys':
-                        // collect signing key data
-                        await SignContentFile.initSigningKeys(context);
-
-                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
-
-                        [panelMissing, panelModified, panelCreated].forEach(panel => {
-                            panel.webview.postMessage({
-                                command: 'signingKeysInitialized',
-                                signingKey: newSigningKeys[0].serverLabel,
-                            });
-                        });
-                        break;
-
                     case 'completeProcess':
-                        vscode.window.showInformationMessage("Selected sensors have been migrated");
+                        vscode.window.showInformationMessage("Selected saved questions have been migrated");
                         break;
 
                     case 'transferItems':
@@ -203,22 +191,8 @@ export class Sensors {
         panelMissing.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
-                    case 'initSigningKeys':
-                        // collect signing key data
-                        await SignContentFile.initSigningKeys(context);
-
-                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
-
-                        [panelMissing, panelModified, panelCreated].forEach(panel => {
-                            panel.webview.postMessage({
-                                command: 'signingKeysInitialized',
-                                signingKey: newSigningKeys[0].serverLabel,
-                            });
-                        });
-                        break;
-
                     case 'completeProcess':
-                        vscode.window.showInformationMessage("Selected sensors have been migrated");
+                        vscode.window.showInformationMessage("Selected saved questions have been migrated");
                         break;
 
                     case 'transferItems':
@@ -254,20 +228,6 @@ export class Sensors {
         panelCreated.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
-                    case 'initSigningKeys':
-                        // collect signing key data
-                        await SignContentFile.initSigningKeys(context);
-
-                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
-
-                        [panelMissing, panelModified, panelCreated].forEach(panel => {
-                            panel.webview.postMessage({
-                                command: 'signingKeysInitialized',
-                                signingKey: newSigningKeys[0].serverLabel,
-                            });
-                        });
-                        break;
-
                     case "openFile":
                         vscode.commands.executeCommand('vscode.open', vscode.Uri.file(message.path), {
                             preview: false,
@@ -280,7 +240,7 @@ export class Sensors {
             }
         });
     }
-    
+
     static transferItems(
         sourceFqdn: string,
         sourceUsername: string,
@@ -293,19 +253,19 @@ export class Sensors {
         const p = new Promise<void>(async (resolve, reject) => {
             try {
                 // get names from each item
-                const sensorNames: string[] = [];
+                const savedQuestionNames: string[] = [];
                 items.forEach((item) => {
                     const path = item.path.split('~')[0];
 
                     // get sensor from file
-                    const sensorFromFile: any = JSON.parse(fs.readFileSync(path, 'utf-8'));
-                    sensorNames.push(sensorFromFile.name);
+                    const savedQuestionFromFile: any = JSON.parse(fs.readFileSync(path, 'utf-8'));
+                    savedQuestionNames.push(savedQuestionFromFile.name);
                 });
 
                 // generate json
                 var exportJson = {
-                    sensors: {
-                        include: sensorNames
+                    saved_questions: {
+                        include: savedQuestionNames
                     }
                 };
 

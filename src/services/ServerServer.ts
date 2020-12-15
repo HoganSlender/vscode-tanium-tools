@@ -30,7 +30,7 @@ export function activate(context: vscode.ExtensionContext) {
 class ServerServer {
     public static async processModifiedSensors(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
         // get the current folder
-        const folderPath = vscode.workspace.rootPath;
+        const folderPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
 
         // define output channel
         OutputChannelLogging.initialize();
@@ -139,7 +139,7 @@ class ServerServer {
 
     public static async processMissingSensors(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
         // get the current folder
-        const folderPath = vscode.workspace.rootPath;
+        const folderPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
 
         // define output channel
         OutputChannelLogging.initialize();
@@ -244,7 +244,7 @@ class ServerServer {
 
     public static async processSensors(context: vscode.ExtensionContext) {
         // get the current folder
-        const folderPath = vscode.workspace.rootPath;
+        const folderPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
 
         // define output channel
         OutputChannelLogging.initialize();

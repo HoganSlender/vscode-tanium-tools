@@ -82,9 +82,9 @@ class ServerServerContentSetUserGroupRoleMemberships extends ServerServerBase {
 
             const increment = 50;
 
-            progress.report({ increment: increment, message: `content set retrieval from ${leftFqdn}` });
+            progress.report({ increment: increment, message: `content set user group role membership retrieval from ${leftFqdn}` });
             await this.processServerContentSetUserGroupRoleMemberships(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-            progress.report({ increment: increment, message: `content set retrieval from ${rightFqdn}` });
+            progress.report({ increment: increment, message: `content set user gorup role membership retrieval from ${rightFqdn}` });
             await this.processServerContentSetUserGroupRoleMemberships(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {

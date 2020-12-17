@@ -357,7 +357,8 @@ export class Packages {
                     // process package files
                     const packageSpec = packageSpecFromFile.package_specs[0];
 
-                    packageSpec.files.forEach(async (packageFile: any) => {
+                    for(var i = 0; i < packageSpec.files.length; i++) {
+                        const packageFile = packageSpec.files[i];
                         if (packageFile.source.length === 0) {
                             OutputChannelLogging.log(`processing ${packageFile.name}`);
 
@@ -375,7 +376,8 @@ export class Packages {
                             // delete temp file
                             fs.unlinkSync(tempFilePath);
                         }
-                    });
+                    }
+
                     OutputChannelLogging.log(`all files processed for ${packageSpec.name}`);
 
                     // delete package temp file

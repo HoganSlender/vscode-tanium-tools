@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 export class TaniumTreeItem extends vscode.TreeItem {
     constructor(
+        public readonly parent: TaniumTreeItem | undefined,
         public readonly label: string,
         public readonly tooltip: string,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,

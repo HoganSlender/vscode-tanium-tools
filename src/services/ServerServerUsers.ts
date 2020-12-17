@@ -136,10 +136,8 @@ class ServerServerUsers extends ServerServerBase {
                         // get groups map
                         const groupMap = await Groups.getGroupMapById(allowSelfSignedCerts, httpTimeout, restBase, session);
 
-                        var i = 0;
-
-                        users.forEach(async user => {
-                            i++;
+                        for (var i = 0; i < users.length; i++) {
+                            const user = users[i];
 
                             if (i % 30 === 0 || i === userTotal) {
                                 OutputChannelLogging.log(`processing ${i} of ${userTotal}`);
@@ -183,7 +181,7 @@ class ServerServerUsers extends ServerServerBase {
                                     }
                                 }
                             }
-                        });
+                        }
                     }
                 })();
             } catch (err) {

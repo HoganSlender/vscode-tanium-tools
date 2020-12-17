@@ -136,10 +136,8 @@ class ServerServerPackages extends ServerServerBase {
                         OutputChannelLogging.log(`there are 0 packages for ${fqdn}`);
                         return resolve();
                     } else {
-                        var i = 0;
-
-                        package_specs.forEach(async packageSpec => {
-                            i++;
+                        for (var i = 0; i < package_specs.length; i++) {
+                            const packageSpec = package_specs[i];
 
                             if (i % 30 === 0 || i === packageSpecTotal) {
                                 OutputChannelLogging.log(`processing ${i} of ${packageSpecTotal}`);
@@ -197,7 +195,7 @@ class ServerServerPackages extends ServerServerBase {
                                     }
                                 }
                             }
-                        });
+                        }
                     }
                 })();
             } catch (err) {

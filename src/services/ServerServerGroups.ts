@@ -3,17 +3,16 @@ import * as fs from 'fs';
 import { sanitize } from 'sanitize-filename-ts';
 import * as vscode from 'vscode';
 
+import { checkResolve } from '../common/checkResolve';
 import * as commands from '../common/commands';
 import { OutputChannelLogging } from '../common/logging';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
-
-import path = require('path');
 import { collectServerServerGroupInputs } from '../parameter-collection/server-server-group-parameters';
 import { Groups } from './Groups';
-import { checkResolve } from '../common/checkResolve';
-import { collectServerServerModifiedSensorInputs } from '../parameter-collection/server-server-modified-sensors-parameters';
 import { ServerServerBase } from './ServerServerBase';
+
+import path = require('path');
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -175,10 +174,8 @@ class ServerServerGroups extends ServerServerBase {
                         OutputChannelLogging.log(`there are 0 groups for ${fqdn}`);
                         return resolve();
                     } else {
-                        var i = 0;
-
-                        groups.forEach(async group => {
-                            i++;
+                        for (var i = 0; i < groups.length; i++) {
+                            const group = groups[i];
 
                             if (i % 30 === 0 || i === groupTotal) {
                                 OutputChannelLogging.log(`processing ${i} of ${groupTotal}`);
@@ -236,7 +233,7 @@ class ServerServerGroups extends ServerServerBase {
                                     }
                                 }
                             }
-                        });
+                        }
                     }
                 })();
             } catch (err) {

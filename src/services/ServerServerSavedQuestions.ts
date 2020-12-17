@@ -101,7 +101,7 @@ export class ServerServerSavedQuestions {
 
                 (async () => {
                     OutputChannelLogging.log(`saved question retrieval - initialized for ${fqdn}`);
-                    var saved_question: [any];
+                    var saved_questions: [any];
 
                     // get saved questions
                     try {
@@ -113,27 +113,25 @@ export class ServerServerSavedQuestions {
                         }, allowSelfSignedCerts, httpTimeout);
 
                         OutputChannelLogging.log(`saved question retrieval - complete for ${fqdn}`);
-                        saved_question = body.data;
+                        saved_questions = body.data;
                     } catch (err) {
                         OutputChannelLogging.logError(`retrieving saved questions from ${fqdn}`, err);
                         return reject(`retrieving saved questions from ${fqdn}`);
                     }
 
                     // remove cache object
-                    saved_question.pop();
+                    saved_questions.pop();
 
                     // iterate through each download export
                     var savedQuestionCounter: number = 0;
-                    var savedQuestionTotal: number = saved_question.length;
+                    var savedQuestionTotal: number = saved_questions.length;
 
                     if (savedQuestionTotal === 0) {
                         OutputChannelLogging.log(`there are 0 saved questions for ${fqdn}`);
                         return resolve();
                     } else {
-                        var i = 0;
-
-                        saved_question.forEach(async savedQuestion => {
-                            i++;
+                        for (var i = 0; i < saved_questions.length; i++) {
+                            const savedQuestion = saved_questions[i];
 
                             if (i % 30 === 0 || i === savedQuestionTotal) {
                                 OutputChannelLogging.log(`processing ${i} of ${savedQuestionTotal}`);
@@ -191,7 +189,7 @@ export class ServerServerSavedQuestions {
                                     }
                                 }
                             }
-                        });
+                        }
                     }
                 })();
             } catch (err) {

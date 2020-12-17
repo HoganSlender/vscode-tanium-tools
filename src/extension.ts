@@ -31,6 +31,7 @@ import * as serverServerSensors from './services/ServerServerSensors';
 import * as serverServerUserGroups from './services/ServerServerUserGroups';
 import * as serverServerUsers from './services/ServerServerUsers';
 import * as signContentFile from './services/SignContentFile';
+import * as solutions from './services/Solutions';
 import * as userGroups from './services/UserGroups';
 import * as users from './services/Users';
 import * as taniumNodeProvider from './trees/TaniumNodeProvider';
@@ -70,6 +71,7 @@ export function activate(context: ExtensionContext) {
 	serverServerUserGroups.activate(context);
 	serverServerUsers.activate(context);
 	signContentFile.activate(context);
+	solutions.activate(context);
 	taniumNodeProvider.activate(context);
 	userGroups.activate(context);
 	users.activate(context);

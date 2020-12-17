@@ -10,8 +10,10 @@ import * as commands from '../common/commands';
 import { OutputChannelLogging } from '../common/logging';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
+import { collectContentSetContentInputs } from '../parameter-collection/content-set-content-parameters';
 import { collectContentSetSensorInputs } from '../parameter-collection/content-set-sensors-parameters';
 import { TransformSensor } from '../transform/transform-sensor';
+import { ServerServerBase } from './ServerServerBase';
 
 const diffMatchPatch = require('diff-match-patch');
 
@@ -20,10 +22,184 @@ export function activate(context: vscode.ExtensionContext) {
 		'hoganslendertanium.compareContentSetSensors': async () => {
 			ContentSet.processSensors(context);
 		},
+		'hoganslendertanium.compareContentSetContent': async (contentUrl) => {
+			ContentSet.processContentSetContent(contentUrl, context);
+		},
+
 	});
 }
 
-class ContentSet {
+class ContentSet extends ServerServerBase {
+	static async processContentSetContent(contentUrl: string, context: vscode.ExtensionContext) {
+		// define output channel
+		OutputChannelLogging.initialize();
+
+		if (this.invalidWorkspaceFolders()) {
+			return;
+		}
+
+		// get the current folder
+		const folderPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
+
+		// get configurations
+		const config = vscode.workspace.getConfiguration('hoganslender.tanium');
+		const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
+		const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
+
+		const state = await collectContentSetContentInputs(config, context);
+
+		// collect values
+		const fqdn: string = state.fqdn;
+		const username: string = state.username;
+		const password: string = state.password;
+
+		OutputChannelLogging.showClear();
+
+		OutputChannelLogging.log(`fqdn: ${fqdn}`);
+		OutputChannelLogging.log(`username: ${username}`);
+		OutputChannelLogging.log(`password: XXXXXXXX`);
+
+		// get filename from url
+		const parsed = url.parse(contentUrl);
+		const contentFilename = sanitize(path.basename(parsed.pathname!));
+		OutputChannelLogging.log(`downloading ${contentFilename}`);
+
+		// download the file
+		const contentSetFile = path.join(folderPath, contentFilename);
+
+		vscode.window.withProgress({
+			location: vscode.ProgressLocation.Notification,
+			title: 'Content Set Compare',
+			cancellable: false
+		}, async (progress, token) => {
+			progress.report({ increment: 0 });
+
+			// create folders
+			const contentDir = path.join(folderPath!, `1 - ${contentFilename.replace('.xml', '')}`);
+			const serverDir = path.join(folderPath!, `2 - ${sanitize(fqdn)}`);
+			const commentDir = path.join(folderPath!, 'Comments Only');
+			const commentContentDir = path.join(commentDir, `1 - ${contentFilename.replace('.xml', '')}`);
+			const commentServerDir = path.join(commentDir, `2 - ${sanitize(fqdn)}`);
+
+			if (!fs.existsSync(contentDir)) {
+				fs.mkdirSync(contentDir);
+			}
+
+			if (!fs.existsSync(serverDir)) {
+				fs.mkdirSync(serverDir);
+			}
+
+			const increment = 33;
+
+			progress.report({ increment: increment, message: `downloading ${contentUrl}` });
+			await RestClient.downloadFile(contentUrl, contentSetFile, {}, allowSelfSignedCerts, httpTimeout);
+			progress.report({ increment: increment, message: 'extracting content' });
+			await this.extractContentSetContent(contentSetFile, contentDir);
+			progress.report({ increment: increment, message: `retrieving sensors from ${fqdn}` });
+			// await this.retrieveServerSensors(sensorInfo, allowSelfSignedCerts, httpTimeout, username, password, serverDir, fqdn);
+			const p = new Promise<void>(resolve => {
+				setTimeout(() => {
+					resolve();
+				}, 3000);
+			});
+		});
+	}
+
+	static extractContentSetContent(contentSetFile: string, contentDir: string) {
+		const p = new Promise<void>((resolve, reject) => {
+			fs.readFile(contentSetFile, 'utf8', async (err, data) => {
+				if (err) {
+					OutputChannelLogging.logError(`could not open '${contentSetFile}'`, err);
+					return reject();
+				}
+
+				var options = {
+					attributeNamePrefix: "@_",
+					attrNodeName: "attr", //default is 'false'
+					textNodeName: "#text",
+					ignoreAttributes: true,
+					ignoreNameSpace: false,
+					allowBooleanAttributes: false,
+					parseNodeValue: true,
+					parseAttributeValue: false,
+					trimValues: true,
+					cdataTagName: "__cdata", //default is 'false'
+					cdataPositionChar: "\\c",
+					parseTrueNumberOnly: false,
+					arrayMode: false, //"strict"
+					attrValueProcessor: (val: string, attrName: string) => he.decode(val, { isAttributeValue: true }),//default is a=>a
+					tagValueProcessor: (val: string, tagName: string) => he.decode(val), //default is a=>a
+					stopNodes: ["parse-me-as-string"]
+				};
+
+				if (parser.validate(data) === true) {
+					var jsonObj = parser.parse(data, options);
+
+					// walk the content
+					for (const property in jsonObj.content) {
+						switch (property) {
+							case 'solution':
+								// do nothing
+								break;
+
+							case 'content_set':
+								var target = jsonObj.content.content_set;
+								if (Array.isArray(target)) {
+									// process each
+									for (var i = 0; i < target.length; i++) {
+										const contentSet = target[i];
+										await this.processContentSet(contentSet, contentDir);
+									}
+								} else {
+									// process one
+									await this.processContentSet(target, contentDir);
+								}
+								break;
+
+							default:
+								OutputChannelLogging.log(`${property} not set up for processing in extractContentSetContent`);
+								return reject();
+						}
+					}
+
+					console.log('helo');
+				}
+				else {
+					OutputChannelLogging.log('could not parse content set xml');
+					return reject();
+				}
+			});
+		});
+
+		return p;
+	}
+
+	static processContentSet(contentSet: any, contentDir: string) {
+		const p = new Promise<void>((resolve, reject) => {
+			try {
+				const name = sanitize(contentSet.name);
+				const content = JSON.stringify(contentSet, null, 2);
+
+				const file = path.join(contentDir, `${name}.json`);
+
+				fs.writeFile(file, content, (err) => {
+					if (err) {
+						OutputChannelLogging.logError(`error writing ${file} in processContentSet`, err);
+						return reject();
+					}
+
+					resolve();
+				});
+
+			} catch (err) {
+				OutputChannelLogging.logError(`error in processContentSet`, err);
+				return reject();
+			}
+		});
+
+		return p;
+	}
+
 	public static async processSensors(context: vscode.ExtensionContext) {
 		// get the current folder
 		const folderPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
@@ -39,7 +215,7 @@ class ContentSet {
 		const state = await collectContentSetSensorInputs(config, context);
 
 		// collect values
-		const contentSet: string = state.contentSetUrl;
+		const contentUrl: string = state.contentSetUrl;
 		const fqdn: string = state.fqdn;
 		const username: string = state.username;
 		const password: string = state.password;
@@ -49,14 +225,14 @@ class ContentSet {
 
 		OutputChannelLogging.showClear();
 
-		OutputChannelLogging.log(`contentSet: ${contentSet}`);
+		OutputChannelLogging.log(`contentSet: ${contentUrl}`);
 		OutputChannelLogging.log(`commentWhitespace: ${extractCommentWhitespace.toString()}`);
 		OutputChannelLogging.log(`fqdn: ${fqdn}`);
 		OutputChannelLogging.log(`username: ${username}`);
 		OutputChannelLogging.log(`password: XXXXXXXX`);
 
 		// get filename from url
-		const parsed = url.parse(contentSet);
+		const parsed = url.parse(contentUrl);
 		const contentFilename = sanitize(path.basename(parsed.pathname!));
 		OutputChannelLogging.log(`downloading ${contentFilename}`);
 
@@ -105,31 +281,31 @@ class ContentSet {
 			var sensorInfo: any[] = [];
 
 			if (extractCommentWhitespace) {
-				progress.report({ increment: increment, message: `downloading ${contentSet}` });
-				await RestClient.downloadFile(contentSet, contentSetFile, {}, allowSelfSignedCerts, httpTimeout);
+				progress.report({ increment: increment, message: `downloading ${contentUrl}` });
+				await RestClient.downloadFile(contentUrl, contentSetFile, {}, allowSelfSignedCerts, httpTimeout);
 				progress.report({ increment: increment, message: 'extracting sensors' });
 				await this.extractContentSetSensors(contentSetFile, contentDir, sensorInfo);
 				progress.report({ increment: increment, message: `retrieving sensors from ${fqdn}` });
 				await this.retrieveServerSensors(sensorInfo, allowSelfSignedCerts, httpTimeout, username, password, serverDir, fqdn);
 				progress.report({ increment: increment, message: 'Extracting sensors with comments/whitspaces changes only' });
 				await this.extractCommentWhitespaceSensors(contentDir, serverDir, commentContentDir, commentServerDir);
-                const p = new Promise<void>(resolve => {
-                    setTimeout(() => {
-                        resolve();
-                    }, 3000);
-                });
+				const p = new Promise<void>(resolve => {
+					setTimeout(() => {
+						resolve();
+					}, 3000);
+				});
 			} else {
-				progress.report({ increment: increment, message: `downloading ${contentSet}` });
-				await RestClient.downloadFile(contentSet, contentSetFile, {}, allowSelfSignedCerts, httpTimeout);
+				progress.report({ increment: increment, message: `downloading ${contentUrl}` });
+				await RestClient.downloadFile(contentUrl, contentSetFile, {}, allowSelfSignedCerts, httpTimeout);
 				progress.report({ increment: increment, message: 'extracting sensors' });
 				await this.extractContentSetSensors(contentSetFile, contentDir, sensorInfo);
 				progress.report({ increment: increment, message: `retrieving sensors from ${fqdn}` });
 				await this.retrieveServerSensors(sensorInfo, allowSelfSignedCerts, httpTimeout, username, password, serverDir, fqdn);
-                const p = new Promise<void>(resolve => {
-                    setTimeout(() => {
-                        resolve();
-                    }, 3000);
-                });
+				const p = new Promise<void>(resolve => {
+					setTimeout(() => {
+						resolve();
+					}, 3000);
+				});
 			}
 		});
 	}
@@ -208,17 +384,19 @@ class ContentSet {
 		return p;
 	}
 
-	static retrieveServerSensors(sensorInfo: any[], allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, serverDir: string, fqdn: string) {
+	static retrieveServerSensors(sensorInfos: any[], allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, serverDir: string, fqdn: string) {
 		const p = new Promise<void>(async resolve => {
 			// get session
 			var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
-			const sensorTotal = sensorInfo.length;
+			const sensorTotal = sensorInfos.length;
 
 			var sensorCounter = 0;
 
-			sensorInfo.forEach(async (sensorInfo: any) => {
-				try {
+			for (var i = 0; i < sensorInfos.length; i++) {
+				const sensorInfo = sensorInfos[i];
+
+				try {					
 					const hash = sensorInfo.hash;
 					const options = {
 						headers: {
@@ -262,7 +440,7 @@ class ContentSet {
 						resolve();
 					}
 				}
-			});
+			}
 		});
 
 		return p;
@@ -272,7 +450,7 @@ class ContentSet {
 		const p = new Promise<void>(resolve => {
 			fs.readFile(contentSetFile, 'utf8', function (err, data) {
 				if (err) {
-					OutputChannelLogging.logError(`could ot open '${contentSetFile}'`, err);
+					OutputChannelLogging.logError(`could not open '${contentSetFile}'`, err);
 					return;
 				}
 

@@ -80,9 +80,9 @@ export class ServerServerUserGroups extends ServerServerBase {
 
             const increment = 50;
 
-            progress.report({ increment: increment, message: `user retrieval from ${leftFqdn}` });
+            progress.report({ increment: increment, message: `user group retrieval from ${leftFqdn}` });
             await this.processServerUserGroups(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-            progress.report({ increment: increment, message: `user retrieval from ${rightFqdn}` });
+            progress.report({ increment: increment, message: `user group retrieval from ${rightFqdn}` });
             await this.processServerUserGroups(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {
@@ -136,10 +136,8 @@ export class ServerServerUserGroups extends ServerServerBase {
                         // get groups map
                         const groupMap = await Groups.getGroupMapById(allowSelfSignedCerts, httpTimeout, restBase, session);
 
-                        var i = 0;
-
-                        userGroups.forEach(async userGroup => {
-                            i++;
+                        for (var i = 0; i < userGroups.length; i++) {
+                            const userGroup = userGroups[i];
 
                             if (i % 30 === 0 || i === userGroupTotal) {
                                 OutputChannelLogging.log(`processing ${i} of ${userGroupTotal}`);
@@ -183,7 +181,7 @@ export class ServerServerUserGroups extends ServerServerBase {
                                     }
                                 }
                             }
-                        });
+                        }
                     }
                 })();
             } catch (err) {

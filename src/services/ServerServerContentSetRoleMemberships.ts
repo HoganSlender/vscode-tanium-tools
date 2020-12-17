@@ -82,9 +82,9 @@ class ServerServerContentSetRoleMemberships extends ServerServerBase {
 
             const increment = 20;
 
-            progress.report({ increment: increment, message: `content set role retrieval from ${leftFqdn}` });
+            progress.report({ increment: increment, message: `content set role membership retrieval from ${leftFqdn}` });
             await this.processServerContentSetRoleMemberships(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-            progress.report({ increment: increment, message: `content set role retrieval from ${rightFqdn}` });
+            progress.report({ increment: increment, message: `content set role membership retrieval from ${rightFqdn}` });
             await this.processServerContentSetRoleMemberships(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {

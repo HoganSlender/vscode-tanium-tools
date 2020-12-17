@@ -3,18 +3,16 @@ import * as fs from 'fs';
 import { sanitize } from 'sanitize-filename-ts';
 import * as vscode from 'vscode';
 
+import { checkResolve } from '../common/checkResolve';
 import * as commands from '../common/commands';
 import { OutputChannelLogging } from '../common/logging';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
-import { Packages } from './Packages';
-
-import path = require('path');
-import { ServerServerSensors } from './ServerServerSensors';
 import { collectServerServerDashboardInputs } from '../parameter-collection/server-server-dashboard-parameters';
-import { checkResolve } from '../common/checkResolve';
 import { Dashboards } from './Dashboards';
 import { ServerServerBase } from './ServerServerBase';
+
+import path = require('path');
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -134,10 +132,8 @@ class ServerServerDashboards extends ServerServerBase {
                         OutputChannelLogging.log(`there are 0 dashboards for ${fqdn}`);
                         return resolve();
                     } else {
-                        var i = 0;
-
-                        dashboards.forEach(async dashboard => {
-                            i++;
+                        for (var i = 0; i < dashboards.length; i++) {
+                            const dashboard = dashboards[i];
 
                             if (i % 30 === 0 || i === dashboardTotal) {
                                 OutputChannelLogging.log(`processing ${i} of ${dashboardTotal}`);
@@ -195,7 +191,7 @@ class ServerServerDashboards extends ServerServerBase {
                                     }
                                 }
                             }
-                        });
+                        }
                     }
                 })();
             } catch (err) {

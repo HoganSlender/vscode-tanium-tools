@@ -94,7 +94,7 @@ export class RestClient {
         return p;
     }
 
-    static get(url: string, options: any, allowSelfSignedCerts: boolean, httpTimeout: number) {
+    static get(url: string, options: any, allowSelfSignedCerts: boolean, httpTimeout: number, dontThrow404?: boolean) {
         const p: Promise<any> = new Promise<any>(async (resolve, reject) => {
             try {
                 options = this._wrapOption(allowSelfSignedCerts, httpTimeout, options);
@@ -102,7 +102,17 @@ export class RestClient {
 
                 return resolve(body);
             } catch (err) {
-                return reject(err);
+                if (dontThrow404) {
+                    if (err.response.statusCode === 404) {
+                        const result = err.response.body;
+                        result['statusCode'] = 404;
+                        return resolve(result);
+                    } else {
+                        return reject(err);
+                    }
+                } else {
+                    return reject(err);
+                }
             }
         });
 

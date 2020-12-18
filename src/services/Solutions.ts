@@ -1,25 +1,18 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import * as he from 'he';
 import * as parser from 'fast-xml-parser';
 import * as fs from 'fs';
-import { sanitize } from 'sanitize-filename-ts';
-import * as vscode from 'vscode';
+import * as he from 'he';
 import * as os from 'os';
+import * as vscode from 'vscode';
 
 import * as commands from '../common/commands';
 import { OutputChannelLogging } from '../common/logging';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
-import { Groups } from './Groups';
-import { UserGroups } from './UserGroups';
+import { collectSolutionsInputs } from '../parameter-collection/solutions-parameters';
+import { TaniumSolutionNodeProvider } from '../trees/TaniumSolutionNodeProvider';
 
 import path = require('path');
-import { checkResolve } from '../common/checkResolve';
-import { ServerServerBase } from './ServerServerBase';
-import { collectSolutionsInputs } from '../parameter-collection/solutions-parameters';
-import { version } from 'he';
-import { TaniumTreeItem } from '../trees/TaniumTreeItem';
-import { TaniumNodeProvider } from '../trees/TaniumNodeProvider';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -27,6 +20,11 @@ export function activate(context: vscode.ExtensionContext) {
             Solutions.processUserSolutions(context);
         }
     });
+}
+
+export interface SolutionData {
+    fqdn: string,
+    items: SolutionItemData[]
 }
 
 export interface SolutionItemData {
@@ -196,8 +194,10 @@ export class Solutions {
                         solutionItems.sort((a: SolutionItemData, b: SolutionItemData) => (a.name > b.name) ? 1 : -1);
 
                         // update treeview
-                        TaniumNodeProvider.currentProvider?.setSolutionItems(solutionItems);
-                        TaniumNodeProvider.currentProvider?.refresh();
+                        TaniumSolutionNodeProvider.currentProvider?.setSolutionData({
+                            fqdn: fqdn,
+                            items: solutionItems,
+                        });
 
                         resolve();
                     }

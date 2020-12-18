@@ -34,7 +34,8 @@ import * as signContentFile from './services/SignContentFile';
 import * as solutions from './services/Solutions';
 import * as userGroups from './services/UserGroups';
 import * as users from './services/Users';
-import * as taniumNodeProvider from './trees/TaniumNodeProvider';
+import * as taniumDiffProvider from './trees/TaniumDiffProvider';
+import * as taniumNodeProvider from './trees/TaniumSolutionNodeProvider';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -72,6 +73,7 @@ export function activate(context: ExtensionContext) {
 	serverServerUsers.activate(context);
 	signContentFile.activate(context);
 	solutions.activate(context);
+	taniumDiffProvider.activate(context);
 	taniumNodeProvider.activate(context);
 	userGroups.activate(context);
 	users.activate(context);

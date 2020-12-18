@@ -13,6 +13,10 @@ import { Session } from '../common/session';
 import { collectContentSetContentInputs } from '../parameter-collection/content-set-content-parameters';
 import { collectContentSetSensorInputs } from '../parameter-collection/content-set-sensors-parameters';
 import { TransformSensor } from '../transform/transform-sensor';
+import { TransformContentSet } from '../transform/TransformContentSet';
+import { TransformContentSetPrivilege } from '../transform/TransformContentSetPrivilege';
+import { TransformContentSetRole } from '../transform/TransformContentSetRole';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { ServerServerBase } from './ServerServerBase';
 
 const diffMatchPatch = require('diff-match-patch');
@@ -22,15 +26,15 @@ export function activate(context: vscode.ExtensionContext) {
 		'hoganslendertanium.compareContentSetSensors': async () => {
 			ContentSet.processSensors(context);
 		},
-		'hoganslendertanium.compareContentSetContent': async (contentUrl) => {
-			ContentSet.processContentSetContent(contentUrl, context);
+		'hoganslendertanium.compareContentSetContent': async (fqdn, contentUrl) => {
+			ContentSet.processContentSetContent(fqdn, contentUrl, context);
 		},
 
 	});
 }
 
 class ContentSet extends ServerServerBase {
-	static async processContentSetContent(contentUrl: string, context: vscode.ExtensionContext) {
+	static async processContentSetContent(fqdn: string, contentUrl: string, context: vscode.ExtensionContext) {
 		// define output channel
 		OutputChannelLogging.initialize();
 
@@ -49,7 +53,6 @@ class ContentSet extends ServerServerBase {
 		const state = await collectContentSetContentInputs(config, context);
 
 		// collect values
-		const fqdn: string = state.fqdn;
 		const username: string = state.username;
 		const password: string = state.password;
 
@@ -77,9 +80,6 @@ class ContentSet extends ServerServerBase {
 			// create folders
 			const contentDir = path.join(folderPath!, `1 - ${contentFilename.replace('.xml', '')}`);
 			const serverDir = path.join(folderPath!, `2 - ${sanitize(fqdn)}`);
-			const commentDir = path.join(folderPath!, 'Comments Only');
-			const commentContentDir = path.join(commentDir, `1 - ${contentFilename.replace('.xml', '')}`);
-			const commentServerDir = path.join(commentDir, `2 - ${sanitize(fqdn)}`);
 
 			if (!fs.existsSync(contentDir)) {
 				fs.mkdirSync(contentDir);
@@ -94,7 +94,7 @@ class ContentSet extends ServerServerBase {
 			progress.report({ increment: increment, message: `downloading ${contentUrl}` });
 			await RestClient.downloadFile(contentUrl, contentSetFile, {}, allowSelfSignedCerts, httpTimeout);
 			progress.report({ increment: increment, message: 'extracting content' });
-			await this.extractContentSetContent(contentSetFile, contentDir);
+			await this.extractContentSetContent(contentSetFile, contentDir, serverDir, fqdn, username, password, allowSelfSignedCerts, httpTimeout, context);
 			progress.report({ increment: increment, message: `retrieving sensors from ${fqdn}` });
 			// await this.retrieveServerSensors(sensorInfo, allowSelfSignedCerts, httpTimeout, username, password, serverDir, fqdn);
 			const p = new Promise<void>(resolve => {
@@ -105,7 +105,17 @@ class ContentSet extends ServerServerBase {
 		});
 	}
 
-	static extractContentSetContent(contentSetFile: string, contentDir: string) {
+	static extractContentSetContent(
+		contentSetFile: string,
+		contentDir: string,
+		serverDir: string,
+		fqdn: string,
+		username: string,
+		password: string,
+		allowSelfSignedCerts: boolean,
+		httpTimeout: number,
+		context: vscode.ExtensionContext
+	) {
 		const p = new Promise<void>((resolve, reject) => {
 			fs.readFile(contentSetFile, 'utf8', async (err, data) => {
 				if (err) {
@@ -135,11 +145,41 @@ class ContentSet extends ServerServerBase {
 				if (parser.validate(data) === true) {
 					var jsonObj = parser.parse(data, options);
 
+					const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
+
 					// walk the content
 					for (const property in jsonObj.content) {
 						switch (property) {
 							case 'solution':
 								// do nothing
+								break;
+
+							case 'content_set_privilege':
+								var target = jsonObj.content.content_set_privilege;
+								if (Array.isArray(target)) {
+									// process each
+									for (var i = 0; i < target.length; i++) {
+										const contentSetPrivilege = target[i];
+										await this.processContentSetPrivilege(contentSetPrivilege, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+									}
+								} else {
+									// process one
+									await this.processContentSetPrivilege(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+								}
+								break;
+
+							case 'content_set_role':
+								var target = jsonObj.content.content_set_role;
+								if (Array.isArray(target)) {
+									// process each
+									for (var i = 0; i < target.length; i++) {
+										const contentSetRole = target[i];
+										await this.processContentSetRole(contentSetRole, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+									}
+								} else {
+									// process one
+									await this.processContentSetRole(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+								}
 								break;
 
 							case 'content_set':
@@ -148,21 +188,21 @@ class ContentSet extends ServerServerBase {
 									// process each
 									for (var i = 0; i < target.length; i++) {
 										const contentSet = target[i];
-										await this.processContentSet(contentSet, contentDir);
+										await this.processContentSet(contentSet, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
 									}
 								} else {
 									// process one
-									await this.processContentSet(target, contentDir);
+									await this.processContentSet(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
 								}
 								break;
 
 							default:
 								OutputChannelLogging.log(`${property} not set up for processing in extractContentSetContent`);
-								return reject();
+							//return reject();
 						}
 					}
 
-					console.log('helo');
+					return resolve();
 				}
 				else {
 					OutputChannelLogging.log('could not parse content set xml');
@@ -174,23 +214,243 @@ class ContentSet extends ServerServerBase {
 		return p;
 	}
 
-	static processContentSet(contentSet: any, contentDir: string) {
+	static processContentSetPrivilege(
+		contentSetPrivilege: any,
+		contentDir: string,
+		serverDir: string,
+		fqdn: string,
+		session: string,
+		allowSelfSignedCerts: boolean,
+		httpTimeout: number,
+		context: vscode.ExtensionContext
+	) {
 		const p = new Promise<void>((resolve, reject) => {
 			try {
-				const name = sanitize(contentSet.name);
-				const content = JSON.stringify(contentSet, null, 2);
+				const name = sanitize(contentSetPrivilege.name);
+				const subDirName = 'ContentSetPrivileges';
+				const serverSubDir = path.join(serverDir, subDirName);
+				const contentSubDir = path.join(contentDir, subDirName);
 
-				const file = path.join(contentDir, `${name}.json`);
+				// verify sub dir
+				if (!fs.existsSync(serverSubDir)) {
+					fs.mkdirSync(serverSubDir);
 
-				fs.writeFile(file, content, (err) => {
+					// since the directory didn't exist, send data over to diff provider
+					TaniumDiffProvider.currentProvider?.addDiffData({
+						label: 'Content Set Privileges',
+						leftDir: serverSubDir,
+						rightDir: contentSubDir,
+					}, context);
+				}
+
+				if (!fs.existsSync(contentSubDir)) {
+					fs.mkdirSync(contentSubDir);
+				}
+
+				contentSetPrivilege = TransformContentSetPrivilege.transformCs(contentSetPrivilege);
+				const contentContent = JSON.stringify(contentSetPrivilege, null, 2);
+
+				const contentFile = path.join(contentSubDir, `${name}.json`);
+
+				fs.writeFile(contentFile, contentContent, async (err) => {
 					if (err) {
-						OutputChannelLogging.logError(`error writing ${file} in processContentSet`, err);
+						OutputChannelLogging.logError(`error writing ${contentFile} in processContentPrivilege`, err);
 						return reject();
 					}
 
-					resolve();
-				});
+					// get server data
+					const body = await RestClient.get(`https://${fqdn}/api/v2/content_set_privileges/by-name/${contentSetPrivilege.name}`, {
+						headers: {
+							session: session
+						},
+						responseType: 'json',
+					}, allowSelfSignedCerts, httpTimeout, true);
 
+					if (body.statusCode) {
+						// looks like it doesn't exist on server
+						return resolve();
+					} else if (body.data) {
+						var target: any = body.data;
+
+						target = TransformContentSetPrivilege.transform(target);
+						const serverContent = JSON.stringify(target, null, 2);
+
+						const serverFile = path.join(serverSubDir, `${name}.json`);
+
+						fs.writeFile(serverFile, serverContent, err => {
+							if (err) {
+								OutputChannelLogging.logError(`error writing ${serverFile} in processContentSetPrivilege`, err);
+								return reject();
+							}
+
+							return resolve();
+						});
+					}
+				});
+			} catch (err) {
+				OutputChannelLogging.logError(`error in processContentSetPrivilege`, err);
+				return reject();
+			}
+		});
+
+		return p;
+	}
+
+	static processContentSetRole(
+		contentSetRole: any,
+		contentDir: string,
+		serverDir: string,
+		fqdn: string,
+		session: string,
+		allowSelfSignedCerts: boolean,
+		httpTimeout: number,
+		context: vscode.ExtensionContext
+	) {
+		const p = new Promise<void>((resolve, reject) => {
+			try {
+				const name = sanitize(contentSetRole.name);
+				const subDirName = 'ContentSetRoles';
+				const serverSubDir = path.join(serverDir, subDirName);
+				const contentSubDir = path.join(contentDir, subDirName);
+
+				// verify sub dir
+				if (!fs.existsSync(serverSubDir)) {
+					fs.mkdirSync(serverSubDir);
+
+					// since the directory didn't exist, send data over to diff provider
+					TaniumDiffProvider.currentProvider?.addDiffData({
+						label: 'Content Set Roles',
+						leftDir: serverSubDir,
+						rightDir: contentSubDir,
+					}, context);
+				}
+
+				if (!fs.existsSync(contentSubDir)) {
+					fs.mkdirSync(contentSubDir);
+				}
+
+				contentSetRole = TransformContentSetRole.transformCs(contentSetRole);
+				const contentContent = JSON.stringify(contentSetRole, null, 2);
+
+				const contentFile = path.join(contentSubDir, `${name}.json`);
+
+				fs.writeFile(contentFile, contentContent, async (err) => {
+					if (err) {
+						OutputChannelLogging.logError(`error writing ${contentFile} in processContentSet`, err);
+						return reject();
+					}
+
+					// get server data
+					const body = await RestClient.get(`https://${fqdn}/api/v2/content_set_roles/by-name/${contentSetRole.name}`, {
+						headers: {
+							session: session
+						},
+						responseType: 'json',
+					}, allowSelfSignedCerts, httpTimeout, true);
+
+					if (body.statusCode) {
+						// looks like it doesn't exist on server
+						return resolve();
+					} else if (body.data) {
+						var target: any = body.data;
+
+						target = TransformContentSetRole.transform(target);
+						const serverContent = JSON.stringify(target, null, 2);
+
+						const serverFile = path.join(serverSubDir, `${name}.json`);
+
+						fs.writeFile(serverFile, serverContent, err => {
+							if (err) {
+								OutputChannelLogging.logError(`error writing ${serverFile} in processContentSetRole`, err);
+								return reject();
+							}
+
+							return resolve();
+						});
+					}
+				});
+			} catch (err) {
+				OutputChannelLogging.logError(`error in processContentSetRole`, err);
+				return reject();
+			}
+		});
+
+		return p;
+	}
+
+	static processContentSet(
+		contentSet: any,
+		contentDir: string,
+		serverDir: string,
+		fqdn: string,
+		session: string,
+		allowSelfSignedCerts: boolean,
+		httpTimeout: number,
+		context: vscode.ExtensionContext
+	) {
+		const p = new Promise<void>((resolve, reject) => {
+			try {
+				const name = sanitize(contentSet.name);
+				const subDirName = 'ContentSets';
+				const serverSubDir = path.join(serverDir, subDirName);
+				const contentSubDir = path.join(contentDir, subDirName);
+
+				// verify sub dir
+				if (!fs.existsSync(serverSubDir)) {
+					fs.mkdirSync(serverSubDir);
+
+					// since the directory didn't exist, send data over to diff provider
+					TaniumDiffProvider.currentProvider?.addDiffData({
+						label: 'Content Sets',
+						leftDir: serverSubDir,
+						rightDir: contentSubDir,
+					}, context);
+				}
+
+				if (!fs.existsSync(contentSubDir)) {
+					fs.mkdirSync(contentSubDir);
+				}
+
+				contentSet = TransformContentSet.transformCs(contentSet);
+				const contentContent = JSON.stringify(contentSet, null, 2);
+
+				const contentFile = path.join(contentSubDir, `${name}.json`);
+
+				fs.writeFile(contentFile, contentContent, async (err) => {
+					if (err) {
+						OutputChannelLogging.logError(`error writing ${contentFile} in processContentSet`, err);
+						return reject();
+					}
+
+					// get server data
+					const body = await RestClient.get(`https://${fqdn}/api/v2/content_sets/by-name/${contentSet.name}`, {
+						headers: {
+							session: session
+						},
+						responseType: 'json',
+					}, allowSelfSignedCerts, httpTimeout, true);
+
+					if (body.statusCode) {
+						// looks like it doesn't exist on server
+						return resolve();
+					} else if (body.data) {
+						var target: any = body.data;
+
+						target = TransformContentSet.transform(target);
+						const serverContent = JSON.stringify(target, null, 2);
+
+						const serverFile = path.join(serverSubDir, `${name}.json`);
+
+						fs.writeFile(serverFile, serverContent, err => {
+							if (err) {
+								OutputChannelLogging.logError(`error writing ${serverFile} in processContentSet`, err);
+								return reject();
+							}
+
+							return resolve();
+						});
+					}
+				});
 			} catch (err) {
 				OutputChannelLogging.logError(`error in processContentSet`, err);
 				return reject();
@@ -396,7 +656,7 @@ class ContentSet extends ServerServerBase {
 			for (var i = 0; i < sensorInfos.length; i++) {
 				const sensorInfo = sensorInfos[i];
 
-				try {					
+				try {
 					const hash = sensorInfo.hash;
 					const options = {
 						headers: {

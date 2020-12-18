@@ -19,6 +19,7 @@
 		"Other"
 	],
 	"activationEvents": [
+		"onView:hoganslendertaniumcompare",
 		"onView:hoganslendertaniumdiff",
 		"onCommand:hoganslendertanium.analyzeContentSetPrivileges",
 		"onCommand:hoganslendertanium.analyzeContentSetRoleMemberships",
@@ -71,8 +72,12 @@
 		"views": {
 			"explorer": [
 				{
+					"id": "hoganslendertaniumcompare",
+					"name": "Tanium Compare"
+				},
+				{
 					"id": "hoganslendertaniumdiff",
-					"name": "Tanium Diff"
+					"name": "Tanium Differences"
 				}
 			]
 		},

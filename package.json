@@ -37,6 +37,7 @@
 		"onCommand:hoganslendertanium.analyzePackages",
 		"onCommand:hoganslendertanium.analyzeSavedQuestions",
 		"onCommand:hoganslendertanium.analyzeSensors",
+		"onCommand:hoganslendertanium.analyzeSolutions",
 		"onCommand:hoganslendertanium.analyzeUserGroups",
 		"onCommand:hoganslendertanium.analyzeUsers",
 		"onCommand:hoganslendertanium.compareContentSet",

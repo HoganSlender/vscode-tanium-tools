@@ -16,8 +16,11 @@ import { TransformSensor } from '../transform/transform-sensor';
 import { TransformContentSet } from '../transform/TransformContentSet';
 import { TransformContentSetPrivilege } from '../transform/TransformContentSetPrivilege';
 import { TransformContentSetRole } from '../transform/TransformContentSetRole';
+import { TransformContentSetRolePrivilege } from '../transform/TransformContentSetRolePrivilege';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
+import { ContentSetRolePrivileges } from './ContentSetRolePrivileges';
 import { ServerServerBase } from './ServerServerBase';
+import { ServerServerContentSetPrivileges } from './ServerServerContentSetPrivileges';
 
 const diffMatchPatch = require('diff-match-patch');
 
@@ -89,14 +92,12 @@ class ContentSet extends ServerServerBase {
 				fs.mkdirSync(serverDir);
 			}
 
-			const increment = 33;
+			const increment = 50;
 
 			progress.report({ increment: increment, message: `downloading ${contentUrl}` });
 			await RestClient.downloadFile(contentUrl, contentSetFile, {}, allowSelfSignedCerts, httpTimeout);
 			progress.report({ increment: increment, message: 'extracting content' });
 			await this.extractContentSetContent(contentSetFile, contentDir, serverDir, fqdn, username, password, allowSelfSignedCerts, httpTimeout, context);
-			progress.report({ increment: increment, message: `retrieving sensors from ${fqdn}` });
-			// await this.retrieveServerSensors(sensorInfo, allowSelfSignedCerts, httpTimeout, username, password, serverDir, fqdn);
 			const p = new Promise<void>(resolve => {
 				setTimeout(() => {
 					resolve();
@@ -117,98 +118,197 @@ class ContentSet extends ServerServerBase {
 		context: vscode.ExtensionContext
 	) {
 		const p = new Promise<void>((resolve, reject) => {
-			fs.readFile(contentSetFile, 'utf8', async (err, data) => {
-				if (err) {
-					OutputChannelLogging.logError(`could not open '${contentSetFile}'`, err);
-					return reject();
-				}
-
-				var options = {
-					attributeNamePrefix: "@_",
-					attrNodeName: "attr", //default is 'false'
-					textNodeName: "#text",
-					ignoreAttributes: true,
-					ignoreNameSpace: false,
-					allowBooleanAttributes: false,
-					parseNodeValue: true,
-					parseAttributeValue: false,
-					trimValues: true,
-					cdataTagName: "__cdata", //default is 'false'
-					cdataPositionChar: "\\c",
-					parseTrueNumberOnly: false,
-					arrayMode: false, //"strict"
-					attrValueProcessor: (val: string, attrName: string) => he.decode(val, { isAttributeValue: true }),//default is a=>a
-					tagValueProcessor: (val: string, tagName: string) => he.decode(val), //default is a=>a
-					stopNodes: ["parse-me-as-string"]
-				};
-
-				if (parser.validate(data) === true) {
-					var jsonObj = parser.parse(data, options);
-
-					const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
-
-					// walk the content
-					for (const property in jsonObj.content) {
-						switch (property) {
-							case 'solution':
-								// do nothing
-								break;
-
-							case 'content_set_privilege':
-								var target = jsonObj.content.content_set_privilege;
-								if (Array.isArray(target)) {
-									// process each
-									for (var i = 0; i < target.length; i++) {
-										const contentSetPrivilege = target[i];
-										await this.processContentSetPrivilege(contentSetPrivilege, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-									}
-								} else {
-									// process one
-									await this.processContentSetPrivilege(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-								}
-								break;
-
-							case 'content_set_role':
-								var target = jsonObj.content.content_set_role;
-								if (Array.isArray(target)) {
-									// process each
-									for (var i = 0; i < target.length; i++) {
-										const contentSetRole = target[i];
-										await this.processContentSetRole(contentSetRole, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-									}
-								} else {
-									// process one
-									await this.processContentSetRole(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-								}
-								break;
-
-							case 'content_set':
-								var target = jsonObj.content.content_set;
-								if (Array.isArray(target)) {
-									// process each
-									for (var i = 0; i < target.length; i++) {
-										const contentSet = target[i];
-										await this.processContentSet(contentSet, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-									}
-								} else {
-									// process one
-									await this.processContentSet(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-								}
-								break;
-
-							default:
-								OutputChannelLogging.log(`${property} not set up for processing in extractContentSetContent`);
-							//return reject();
-						}
+			try {
+				fs.readFile(contentSetFile, 'utf8', async (err, data) => {
+					if (err) {
+						OutputChannelLogging.logError(`could not open '${contentSetFile}'`, err);
+						return reject();
 					}
 
-					return resolve();
+					var options = {
+						attributeNamePrefix: "@_",
+						attrNodeName: "attr", //default is 'false'
+						textNodeName: "#text",
+						ignoreAttributes: true,
+						ignoreNameSpace: false,
+						allowBooleanAttributes: false,
+						parseNodeValue: true,
+						parseAttributeValue: false,
+						trimValues: true,
+						cdataTagName: "__cdata", //default is 'false'
+						cdataPositionChar: "\\c",
+						parseTrueNumberOnly: false,
+						arrayMode: false, //"strict"
+						attrValueProcessor: (val: string, attrName: string) => he.decode(val, { isAttributeValue: true }),//default is a=>a
+						tagValueProcessor: (val: string, tagName: string) => he.decode(val), //default is a=>a
+						stopNodes: ["parse-me-as-string"]
+					};
+
+					if (parser.validate(data) === true) {
+						var jsonObj = parser.parse(data, options);
+
+						const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
+
+						// walk the content
+						var serverContentSetRolePrivilegesMap: any;
+
+						for (const property in jsonObj.content) {
+							switch (property) {
+								case 'solution':
+									// do nothing
+									break;
+
+								case 'content_set_role_privilege':
+									if (!serverContentSetRolePrivilegesMap) {
+										// load up map on first use
+										serverContentSetRolePrivilegesMap = await ContentSetRolePrivileges.generateContentSetRolePrivilegeMap(allowSelfSignedCerts, httpTimeout, session, fqdn);
+									}
+
+									var target = jsonObj.content.content_set_role_privilege;
+									if (Array.isArray(target)) {
+										// process each
+										for (var i = 0; i < target.length; i++) {
+											const contentSetRolePrivilege = target[i];
+											await this.processContentSetRolePrivilege(contentSetRolePrivilege, contentDir, serverDir, context, serverContentSetRolePrivilegesMap);
+										}
+									} else {
+										// process one
+										await this.processContentSetRolePrivilege(target, contentDir, serverDir, context, serverContentSetRolePrivilegesMap);
+									}
+									break;
+
+								case 'content_set_privilege':
+									var target = jsonObj.content.content_set_privilege;
+									if (Array.isArray(target)) {
+										// process each
+										for (var i = 0; i < target.length; i++) {
+											const contentSetPrivilege = target[i];
+											await this.processContentSetPrivilege(contentSetPrivilege, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										}
+									} else {
+										// process one
+										await this.processContentSetPrivilege(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+									}
+									break;
+
+								case 'content_set_role':
+									var target = jsonObj.content.content_set_role;
+									if (Array.isArray(target)) {
+										// process each
+										for (var i = 0; i < target.length; i++) {
+											const contentSetRole = target[i];
+											await this.processContentSetRole(contentSetRole, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										}
+									} else {
+										// process one
+										await this.processContentSetRole(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+									}
+									break;
+
+								case 'content_set':
+									var target = jsonObj.content.content_set;
+									if (Array.isArray(target)) {
+										// process each
+										for (var i = 0; i < target.length; i++) {
+											const contentSet = target[i];
+											await this.processContentSet(contentSet, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										}
+									} else {
+										// process one
+										await this.processContentSet(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+									}
+									break;
+
+								default:
+									OutputChannelLogging.log(`${property} not set up for processing in extractContentSetContent`);
+								//return reject();
+							}
+						}
+
+						return resolve();
+					}
+					else {
+						OutputChannelLogging.log('could not parse content set xml');
+						return reject();
+					}
+				});
+
+			} catch (err) {
+				OutputChannelLogging.logError('error in extractContentSetContent', err);
+				return reject();
+			}
+		});
+
+		return p;
+	}
+
+	static processContentSetRolePrivilege(
+		contentSetRolePrivilege: any,
+		contentDir: string,
+		serverDir: string,
+		context: vscode.ExtensionContext,
+		serverContentSetRolePrivilegesMap: any
+	) {
+		const p = new Promise<void>(async (resolve, reject) => {
+			try {
+				const rawName: string = contentSetRolePrivilege.content_set.name + '-' + contentSetRolePrivilege.content_set_role.name + '-' + contentSetRolePrivilege.content_set_privilege.name;
+				const name: string = sanitize(rawName);
+				const subDirName = 'ContentSetRolePrivileges';
+				const serverSubDir = path.join(serverDir, subDirName);
+				const contentSubDir = path.join(contentDir, subDirName);
+
+				// verify sub dir
+				if (!fs.existsSync(serverSubDir)) {
+					fs.mkdirSync(serverSubDir);
+
+					// since the directory didn't exist, send data over to diff provider
+					TaniumDiffProvider.currentProvider?.addDiffData({
+						label: 'Content Set Role Privileges',
+						leftDir: serverSubDir,
+						rightDir: contentSubDir,
+					}, context);
 				}
-				else {
-					OutputChannelLogging.log('could not parse content set xml');
-					return reject();
+
+				if (!fs.existsSync(contentSubDir)) {
+					fs.mkdirSync(contentSubDir);
 				}
-			});
+
+				contentSetRolePrivilege = TransformContentSetRolePrivilege.transformCs(contentSetRolePrivilege);
+				const contentContent = JSON.stringify(contentSetRolePrivilege, null, 2);
+
+				const contentFile = path.join(contentSubDir, `${name}.json`);
+
+				fs.writeFile(contentFile, contentContent, async (err) => {
+					if (err) {
+						OutputChannelLogging.logError(`error writing ${contentFile} in processContentSetRolePrivilege`, err);
+						return reject();
+					}
+
+					// get server data
+					var target = serverContentSetRolePrivilegesMap[rawName];
+
+					if (target) {
+						const serverContent = JSON.stringify(target, null, 2);
+
+						const serverFile = path.join(serverSubDir, `${name}.json`);
+
+						fs.writeFile(serverFile, serverContent, err => {
+							if (err) {
+								OutputChannelLogging.logError(`error writing ${serverFile} in processContentSetRolePrivilege`, err);
+								return reject();
+							}
+
+							return resolve();
+						});
+					} else {
+						// target doesn't exist on server
+						return resolve();
+					}
+				});
+			} catch (err) {
+				OutputChannelLogging.logError(`error in processContentSetRolePrivilege`, err);
+				return reject();
+			}
 		});
 
 		return p;

@@ -18,7 +18,7 @@ export class PathUtils {
         return input.replace(path.sep + items[items.length - 1], '');
     }
 
-    static getDiffItems(leftDir: string, rightDir: string, checkForComments?: boolean) {
+    static getDiffItems(leftDir: string, rightDir: string, checkForComments?: boolean, dontCheckCreated?: boolean) {
         const p: Promise<DiffItemData> = new Promise<DiffItemData>((resolve, reject) => {
             try {
                 const files: string[] = fs.readdirSync(leftDir);
@@ -83,20 +83,22 @@ export class PathUtils {
                 });
 
                 // now check for created
-                const rightFiles: string[] = fs.readdirSync(rightDir);
+                if (!dontCheckCreated) {
+                    const rightFiles: string[] = fs.readdirSync(rightDir);
 
-                rightFiles.forEach(file => {
-                    const rightTarget = path.join(rightDir, file);
-                    const leftTarget = rightTarget.replace(rightDir, leftDir);
+                    rightFiles.forEach(file => {
+                        const rightTarget = path.join(rightDir, file);
+                        const leftTarget = rightTarget.replace(rightDir, leftDir);
 
-                    if (!leftTargets.includes(leftTarget)) {
-                        retval.created.push({
-                            name: file.replace('.json', ''),
-                            path: rightTarget
-                        });
-                    }
-                });
+                        if (!leftTargets.includes(leftTarget)) {
+                            retval.created.push({
+                                name: file.replace('.json', ''),
+                                path: rightTarget
+                            });
+                        }
+                    });
 
+                }
                 resolve(retval);
 
             } catch (err) {

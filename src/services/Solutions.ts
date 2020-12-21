@@ -13,12 +13,18 @@ import { collectSolutionsInputs } from '../parameter-collection/solutions-parame
 import { TaniumSolutionNodeProvider } from '../trees/TaniumSolutionNodeProvider';
 
 import path = require('path');
+import { PathUtils } from '../common/pathUtils';
+import { WebContentUtils } from '../common/webContentUtils';
+import { OpenType } from '../common/enums';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
         'hoganslendertanium.compareSolutions': () => {
             Solutions.processUserSolutions(context);
-        }
+        },
+        'hoganslendertanium.analyzeSolutions': (label, leftDir, rightDir) => {
+            Solutions.analyzeSolutions(label, leftDir, rightDir, context);
+        },
     });
 }
 
@@ -37,6 +43,139 @@ export interface SolutionItemData {
 }
 
 export class Solutions {
+    static async analyzeSolutions(label: string, leftDir: string, rightDir: string, context: vscode.ExtensionContext) {
+        await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+
+        const panelMissing = vscode.window.createWebviewPanel(
+            `hoganslenderMissing${label.replace(/\s/g, '')}`,
+            `Missing ${label}`,
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        const panelModified = vscode.window.createWebviewPanel(
+            `hoganslenderModified${label.replace(/\s/g, '')}`,
+            `Modified ${label}`,
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        const panelUnchanged = vscode.window.createWebviewPanel(
+            `hoganslenderUnchanged${label.replace(/\s/g, '')}`,
+            `Unchanged ${label}`,
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        // define output channel
+        OutputChannelLogging.initialize();
+
+        // get configurations
+        const config = vscode.workspace.getConfiguration('hoganslender.tanium');
+
+        OutputChannelLogging.log(`left dir: ${leftDir}`);
+        OutputChannelLogging.log(`right dir: ${rightDir}`);
+
+        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir, true, true);
+        OutputChannelLogging.log(`missing ${label.toLowerCase()}: ${diffItems.missing.length}`);
+        OutputChannelLogging.log(`modified ${label.toLowerCase()}: ${diffItems.modified.length}`);
+        OutputChannelLogging.log(`unchanged ${label.toLowerCase()}: ${diffItems.unchanged.length}`);
+
+        const title = label;
+
+        panelMissing.webview.html = WebContentUtils.getMissingWebContent({
+            myTitle: title,
+            items: diffItems.missing,
+            transferIndividual: 0,
+            showServerInfo: 0,
+            showDestServer: false,
+            readOnly: true,
+            openType: OpenType.file,
+        }, panelMissing, context, config);
+
+        panelModified.webview.html = WebContentUtils.getModifiedWebContent({
+            myTitle: title,
+            items: diffItems.modified,
+            transferIndividual: 0,
+            showServerInfo: 0,
+            showDestServer: false,
+            readOnly: true,
+            openType: OpenType.diff,
+        }, panelModified, context, config);
+
+        panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
+            myTitle: title,
+            items: diffItems.unchanged,
+            transferIndividual: 0,
+            showServerInfo: 0,
+            showDestServer: false,
+            openType: OpenType.diff,
+        }, panelUnchanged, context, config);
+
+        panelUnchanged.webview.onDidReceiveMessage(async message => {
+            try {
+                switch (message.command) {
+                    case "openDiff":
+                        var items = message.path.split('~');
+                        var lPath = items[0];
+                        var rPath = items[2];
+                        var title = `${message.name}.json (${PathUtils.getPath(lPath)} ↔ ${PathUtils.getPath(rPath)})`;
+                        vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(lPath), vscode.Uri.file(rPath), title, {
+                            preview: false,
+                            viewColumn: vscode.ViewColumn.Active
+                        });
+                        break;
+                }
+            } catch (err) {
+                OutputChannelLogging.logError('error processing message', err);
+            }
+        });
+
+        panelModified.webview.onDidReceiveMessage(async message => {
+            try {
+                switch (message.command) {
+                    case "openDiff":
+                        var diffItems = message.path.split('~');
+                        var lPath = diffItems[0];
+                        var rPath = diffItems[2];
+                        var title = `${message.name}.json (${PathUtils.getPath(lPath)} ↔ ${PathUtils.getPath(rPath)})`;
+                        vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(lPath), vscode.Uri.file(rPath), title, {
+                            preview: false,
+                            viewColumn: vscode.ViewColumn.Active
+                        });
+                        break;
+                }
+            } catch (err) {
+                OutputChannelLogging.logError('error processing message', err);
+            }
+        });
+    
+        panelMissing.webview.onDidReceiveMessage(async message => {
+            try {
+                switch (message.command) {
+                    case "openFile":
+                        var lPath = message.path.split('~')[0];
+                        vscode.commands.executeCommand('vscode.open', vscode.Uri.file(lPath), {
+                            preview: false,
+                            viewColumn: vscode.ViewColumn.Active
+                        });
+                        break;
+                }
+            } catch (err) {
+                OutputChannelLogging.logError('error processing message', err);
+            }
+        });
+}
+
     static async processUserSolutions(context: vscode.ExtensionContext) {
         // define output channel
         OutputChannelLogging.initialize();

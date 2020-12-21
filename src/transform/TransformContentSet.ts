@@ -23,7 +23,7 @@ export class TransformContentSet extends TransformBase {
         // description
         this.transpond(contentSet, result, 'description');
 
-        this.transpond(contentSet, result, 'reserverd_name');
+        this.transpond(contentSet, result, 'reserved_name');
 
         if ('metadata' in contentSet) {
             const metadata: any[] = [];

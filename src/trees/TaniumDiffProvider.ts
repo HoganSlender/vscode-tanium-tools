@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { TaniumDiffTreeItem } from './TaniumDiffTreeItem';
 
@@ -9,7 +10,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window.registerTreeDataProvider('hoganslendertaniumdiff', taniumDiffProvider);
 }
 
-export interface DiffItemData {
+export interface SolutionDiffItemData {
     label: string,
     leftDir: string,
     rightDir: string,
@@ -20,13 +21,11 @@ export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTre
         this.diffItemDatas = context.workspaceState.get(TANIUM_CONTENT_SET_DIFFS) || [];
         this.diffLabels = context.workspaceState.get(TANIUM_CONTENT_SET_DIFF_LABELS) || [];
 
-        // // clear out
-        // this.diffItemDatas = [];
-        // this.diffLabels = [];
-        // this.storeWorkspaceState(context);
+        // TODO: validate that target folders exist; if not then remove it
+        this.validateDiffItemDatas(context);
 
         vscode.workspace.onDidDeleteFiles((e: vscode.FileDeleteEvent) => {
-            const deletes: DiffItemData[] = [];
+            const deletes: SolutionDiffItemData[] = [];
 
             e.files.forEach(file => {
                 this.diffItemDatas.forEach(diffItemData => {
@@ -42,17 +41,46 @@ export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTre
                     });
                 });
 
-                // update labels
-                this.diffLabels = [];
-                this.diffItemDatas.forEach(diffItemData => {
-                    this.diffLabels.push(diffItemData.label);
-                });
+                if (deletes.length !== 0) {
+                    // update labels
+                    this.diffLabels = [];
+                    this.diffItemDatas.forEach(diffItemData => {
+                        this.diffLabels.push(diffItemData.label);
+                    });
 
-                this.storeWorkspaceState(context);
+                    this.storeWorkspaceState(context);
+                }
             });
 
             this.refresh();
         });
+    }
+
+    validateDiffItemDatas(context: vscode.ExtensionContext) {
+        const deletes: SolutionDiffItemData[] = [];
+
+        // walk the diffs and see if folder exits; if not then remove diff item data
+        this.diffItemDatas.forEach(diffItemData => {
+            if (!fs.existsSync(diffItemData.leftDir) || !fs.existsSync(diffItemData.rightDir)) {
+                deletes.push(diffItemData);
+            }
+        });
+
+        deletes.forEach(diffItemData => {
+            this.diffItemDatas = this.diffItemDatas.filter(f => {
+                diffItemData.label === f.label;
+            });
+        });
+
+        if (deletes.length !== 0) {
+            // update labels
+            this.diffLabels = [];
+            this.diffItemDatas.forEach(diffItemData => {
+                this.diffLabels.push(diffItemData.label);
+            });
+
+            this.storeWorkspaceState(context);
+        }
     }
 
     public refresh(): void {
@@ -61,7 +89,7 @@ export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTre
 
     public static currentProvider: TaniumDiffProvider | undefined;
 
-    private diffItemDatas: DiffItemData[];
+    private diffItemDatas: SolutionDiffItemData[];
     private diffLabels: string[];
 
     private storeWorkspaceState(context: vscode.ExtensionContext) {
@@ -69,7 +97,7 @@ export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTre
         context.workspaceState.update(TANIUM_CONTENT_SET_DIFF_LABELS, this.diffLabels);
     }
 
-    public addDiffData(diffItemData: DiffItemData, context: vscode.ExtensionContext) {
+    public addDiffData(diffItemData: SolutionDiffItemData, context: vscode.ExtensionContext) {
         if (this.diffLabels.includes(diffItemData.label)) {
             return;
         }
@@ -101,7 +129,7 @@ export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTre
         const children: TaniumDiffTreeItem[] = [];
         if (!element) {
             this.diffItemDatas.forEach(diffData => {
-                children.push(new TaniumDiffTreeItem(diffData.label));
+                children.push(new TaniumDiffTreeItem(diffData));
             });
         }
 

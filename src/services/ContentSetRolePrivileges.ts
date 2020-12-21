@@ -13,6 +13,10 @@ import path = require('path');
 import { SignContentFile } from './SignContentFile';
 import { SigningKey } from '../types/signingKey';
 import { SigningUtils } from '../common/signingUtils';
+import { ServerServerContentSets } from './ServerServerContentSets';
+import { ServerServerContentSetRoles } from './ServerServerContentSetRoles';
+import { ServerServerContentSetPrivileges } from './ServerServerContentSetPrivileges';
+import { RestClient } from '../common/restClient';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -270,7 +274,7 @@ export class ContentSetRolePrivileges {
     static async transferItems(
         signingKey: SigningKey,
         items: any[]
-        ) {
+    ) {
         const p = new Promise<void>(async (resolve, reject) => {
             try {
                 // generate json
@@ -309,6 +313,54 @@ export class ContentSetRolePrivileges {
                 resolve();
             } catch (err) {
                 OutputChannelLogging.logError('error transferring content set role privileges', err);
+                reject();
+            }
+        });
+
+        return p;
+    }
+
+    static generateContentSetRolePrivilegeMap(allowSelfSignedCerts: boolean, httpTimeout: number, session: string, fqdn: string) {
+
+        const p = new Promise<any>(async (resolve, reject) => {
+            try {
+                const restBase = `https://${fqdn}/api/v2`;
+
+                const retval: any = {};
+
+                var contentSetMap = await ServerServerContentSets.retrieveContentSetMap(allowSelfSignedCerts, httpTimeout, restBase, session);
+                var contentSetRoleMap = await ServerServerContentSetRoles.retrieveContentSetRoleMap(allowSelfSignedCerts, httpTimeout, restBase, session);
+                var contentSetPrivilegeMap = await ServerServerContentSetPrivileges.retrieveContentSetPrivilegeMap(allowSelfSignedCerts, httpTimeout, restBase, session);
+
+                const body = await RestClient.get(`${restBase}/content_set_role_privileges`, {
+                    headers: {
+                        session: session,
+                    },
+                    responseType: 'json',
+                }, allowSelfSignedCerts, httpTimeout);
+
+
+                body.data.forEach((contentSetRolePrivilege: any) => {
+                    if (contentSetRolePrivilege.content_set && contentSetRolePrivilege.content_set_privilege && contentSetRolePrivilege.content_set_role) {
+                        const newObject: any = {
+                            content_set: {
+                                name: contentSetMap[contentSetRolePrivilege.content_set.id],
+                            },
+                            content_set_role: {
+                                name: contentSetRoleMap[contentSetRolePrivilege.content_set_role.id],
+                            },
+                            content_set_privilege: {
+                                name: contentSetPrivilegeMap[contentSetRolePrivilege.content_set_privilege.id],
+                            }
+                        };
+
+                        retval[newObject.content_set.name + '-' + newObject.content_set_role.name + '-' + newObject.content_set_privilege.name] = newObject;
+                    }
+                });
+
+                resolve(retval);
+            } catch (err) {
+                OutputChannelLogging.logError('error in generateContentSetRolePrivilegeMap', err);
                 reject();
             }
         });

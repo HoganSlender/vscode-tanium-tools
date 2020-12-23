@@ -46,6 +46,8 @@ export class Solutions {
     static async analyzeSolutions(label: string, leftDir: string, rightDir: string, context: vscode.ExtensionContext) {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 
+        OutputChannelLogging.log(`calculating ${label} differences`);
+
         const panelMissing = vscode.window.createWebviewPanel(
             `hoganslenderMissing${label.replace(/\s/g, '')}`,
             `Missing ${label}`,
@@ -85,7 +87,7 @@ export class Solutions {
         OutputChannelLogging.log(`left dir: ${leftDir}`);
         OutputChannelLogging.log(`right dir: ${rightDir}`);
 
-        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir, true, true);
+        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir, false, true);
         OutputChannelLogging.log(`missing ${label.toLowerCase()}: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified ${label.toLowerCase()}: ${diffItems.modified.length}`);
         OutputChannelLogging.log(`unchanged ${label.toLowerCase()}: ${diffItems.unchanged.length}`);

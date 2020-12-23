@@ -279,7 +279,7 @@ export class TransformSensor {
         return converted;
     }
 
-    private static soapValueTypeToResultType(type: string): number {
+    static soapValueTypeToResultType(type: string): number {
         switch (type) {
             case 'BESDate':
                 return 4;
@@ -354,4 +354,4 @@ export class TransformSensor {
                 return 0;
         }
     }
-}
+} 

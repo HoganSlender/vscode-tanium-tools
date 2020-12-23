@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import * as parser from 'fast-xml-parser';
 import * as fs from 'fs';
 import * as he from 'he';
+import { groupBy } from 'lodash';
 import * as path from 'path';
 import { sanitize } from "sanitize-filename-ts";
 import * as url from 'url';
@@ -17,10 +19,11 @@ import { TransformContentSet } from '../transform/TransformContentSet';
 import { TransformContentSetPrivilege } from '../transform/TransformContentSetPrivilege';
 import { TransformContentSetRole } from '../transform/TransformContentSetRole';
 import { TransformContentSetRolePrivilege } from '../transform/TransformContentSetRolePrivilege';
+import { TransformPackage } from '../transform/TransformPackage';
+import { TransformSavedAction } from '../transform/TransformSavedAction';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { ContentSetRolePrivileges } from './ContentSetRolePrivileges';
 import { ServerServerBase } from './ServerServerBase';
-import { ServerServerContentSetPrivileges } from './ServerServerContentSetPrivileges';
 
 const diffMatchPatch = require('diff-match-patch');
 
@@ -118,33 +121,33 @@ class ContentSet extends ServerServerBase {
 		context: vscode.ExtensionContext
 	) {
 		const p = new Promise<void>((resolve, reject) => {
-			try {
-				fs.readFile(contentSetFile, 'utf8', async (err, data) => {
-					if (err) {
-						OutputChannelLogging.logError(`could not open '${contentSetFile}'`, err);
-						return reject();
-					}
+			fs.readFile(contentSetFile, 'utf8', async (err, data) => {
+				if (err) {
+					OutputChannelLogging.logError(`could not open '${contentSetFile}'`, err);
+					return reject();
+				}
 
-					var options = {
-						attributeNamePrefix: "@_",
-						attrNodeName: "attr", //default is 'false'
-						textNodeName: "#text",
-						ignoreAttributes: true,
-						ignoreNameSpace: false,
-						allowBooleanAttributes: false,
-						parseNodeValue: true,
-						parseAttributeValue: false,
-						trimValues: true,
-						cdataTagName: "__cdata", //default is 'false'
-						cdataPositionChar: "\\c",
-						parseTrueNumberOnly: false,
-						arrayMode: false, //"strict"
-						attrValueProcessor: (val: string, attrName: string) => he.decode(val, { isAttributeValue: true }),//default is a=>a
-						tagValueProcessor: (val: string, tagName: string) => he.decode(val), //default is a=>a
-						stopNodes: ["parse-me-as-string"]
-					};
+				var options = {
+					attributeNamePrefix: "@_",
+					attrNodeName: "attr", //default is 'false'
+					textNodeName: "#text",
+					ignoreAttributes: true,
+					ignoreNameSpace: false,
+					allowBooleanAttributes: false,
+					parseNodeValue: true,
+					parseAttributeValue: false,
+					trimValues: true,
+					cdataTagName: "__cdata", //default is 'false'
+					cdataPositionChar: "\\c",
+					parseTrueNumberOnly: false,
+					arrayMode: false, //"strict"
+					attrValueProcessor: (val: string, attrName: string) => he.decode(val, { isAttributeValue: true }),//default is a=>a
+					tagValueProcessor: (val: string, tagName: string) => he.decode(val), //default is a=>a
+					stopNodes: ["parse-me-as-string"]
+				};
 
-					if (parser.validate(data) === true) {
+				if (parser.validate(data) === true) {
+					try {
 						var jsonObj = parser.parse(data, options);
 
 						const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
@@ -155,7 +158,36 @@ class ContentSet extends ServerServerBase {
 						for (const property in jsonObj.content) {
 							switch (property) {
 								case 'solution':
+								case 'api_requests':
 									// do nothing
+									break;
+
+								case 'saved_action':
+									var target = jsonObj.content.saved_action;
+									if (Array.isArray(target)) {
+										// process each
+										for (var i = 0; i < target.length; i++) {
+											const savedAction = target[i];
+											await this.processSavedAction(savedAction, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										}
+									} else {
+										// process one
+										await this.processSavedAction(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+									}
+									break;
+
+								case 'tanium_package':
+									var target = jsonObj.content.tanium_package;
+									if (Array.isArray(target)) {
+										// process each
+										for (var i = 0; i < target.length; i++) {
+											const taniumPackage = target[i];
+											await this.processPackage(taniumPackage, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										}
+									} else {
+										// process one
+										await this.processPackage(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+									}
 									break;
 
 								case 'content_set_role_privilege':
@@ -226,15 +258,195 @@ class ContentSet extends ServerServerBase {
 						}
 
 						return resolve();
-					}
-					else {
-						OutputChannelLogging.log('could not parse content set xml');
+					} catch (err) {
+						OutputChannelLogging.logError('extractContentSetContent', err);
 						return reject();
 					}
-				});
+				}
+				else {
+					OutputChannelLogging.log('could not parse content set xml');
+					return reject();
+				}
+			});
+		});
 
+		return p;
+	}
+
+	static processSavedAction(
+		savedAction: any,
+		contentDir: string,
+		serverDir: string,
+		fqdn: string,
+		session: string,
+		allowSelfSignedCerts: boolean,
+		httpTimeout: number,
+		context: vscode.ExtensionContext
+	) {
+		const p = new Promise<void>(async (resolve, reject) => {
+			try {
+				const name = sanitize(savedAction.name);
+				const subDirName = 'SavedActions';
+				const serverSubDir = path.join(serverDir, subDirName);
+				const contentSubDir = path.join(contentDir, subDirName);
+
+				// verify sub dir
+				if (!fs.existsSync(serverSubDir)) {
+					fs.mkdirSync(serverSubDir);
+
+					// since the directory didn't exist, send data over to diff provider
+					TaniumDiffProvider.currentProvider?.addDiffData({
+						label: 'Saved Actions',
+						leftDir: contentSubDir,
+						rightDir: serverSubDir,
+					}, context);
+				}
+
+				if (!fs.existsSync(contentSubDir)) {
+					fs.mkdirSync(contentSubDir);
+				}
+
+				savedAction = await TransformSavedAction.transformCs(savedAction);
+				const contentContent = JSON.stringify(savedAction, null, 2);
+
+				const contentFile = path.join(contentSubDir, `${name}.json`);
+
+				fs.writeFile(contentFile, contentContent, async (err) => {
+					if (err) {
+						OutputChannelLogging.logError(`error writing ${contentFile} in processPackage`, err);
+						return reject();
+					}
+
+					// get server data
+					const body = await RestClient.get(`https://${fqdn}/api/v2/saved_actions/by-name/${savedAction.name}`, {
+						headers: {
+							session: session
+						},
+						responseType: 'json',
+					}, allowSelfSignedCerts, httpTimeout, true);
+
+					if (body.statusCode) {
+						// looks like it doesn't exist on server
+						return resolve();
+					} else if (body.data) {
+						var target: any = body.data;
+
+						// get target_group
+						const groupBody = await RestClient.get(`https://${fqdn}/api/v2/groups/${target.target_group.id}`,{
+							headers: {
+								session: session
+							},
+							responseType: 'json'
+						}, allowSelfSignedCerts, httpTimeout);
+
+						target.target_group = groupBody.data;
+
+						target = await TransformSavedAction.transform(target);
+						const serverContent = JSON.stringify(target, null, 2);
+
+						const serverFile = path.join(serverSubDir, `${name}.json`);
+
+						fs.writeFile(serverFile, serverContent, err => {
+							if (err) {
+								OutputChannelLogging.logError(`error writing ${serverFile} in processPackage`, err);
+								return reject();
+							}
+
+							return resolve();
+						});
+					}
+				});
 			} catch (err) {
-				OutputChannelLogging.logError('error in extractContentSetContent', err);
+				OutputChannelLogging.logError(`error in processPackage`, err);
+				return reject();
+			}
+		});
+
+		return p;
+	}
+
+	static processPackage(
+		taniumPackage: any,
+		contentDir: string,
+		serverDir: string,
+		fqdn: string,
+		session: string,
+		allowSelfSignedCerts: boolean,
+		httpTimeout: number,
+		context: vscode.ExtensionContext
+	) {
+		const p = new Promise<void>((resolve, reject) => {
+			try {
+				const name = sanitize(taniumPackage.name);
+				const subDirName = 'Packages';
+				const serverSubDir = path.join(serverDir, subDirName);
+				const contentSubDir = path.join(contentDir, subDirName);
+
+				// verify sub dir
+				if (!fs.existsSync(serverSubDir)) {
+					fs.mkdirSync(serverSubDir);
+
+					// since the directory didn't exist, send data over to diff provider
+					TaniumDiffProvider.currentProvider?.addDiffData({
+						label: 'Packages',
+						leftDir: contentSubDir,
+						rightDir: serverSubDir,
+					}, context);
+				}
+
+				if (!fs.existsSync(contentSubDir)) {
+					fs.mkdirSync(contentSubDir);
+				}
+
+				taniumPackage = TransformPackage.transformCs(taniumPackage);
+				const contentContent = JSON.stringify(taniumPackage, null, 2);
+
+				const contentFile = path.join(contentSubDir, `${name}.json`);
+
+				fs.writeFile(contentFile, contentContent, async (err) => {
+					if (err) {
+						OutputChannelLogging.logError(`error writing ${contentFile} in processPackage`, err);
+						return reject();
+					}
+
+					// get server data
+					const body = await RestClient.post(`https://${fqdn}/api/v2/export`, {
+						headers: {
+							session: session
+						},
+						json: {
+							package_specs: {
+								include: [
+									taniumPackage.name
+								]
+							}
+						},
+						responseType: 'json',
+					}, allowSelfSignedCerts, httpTimeout, true);
+
+					if (body.statusCode) {
+						// looks like it doesn't exist on server
+						return resolve();
+					} else if (body.data) {
+						var target: any = body.data.object_list.package_specs[0];
+
+						target = TransformPackage.transform(target);
+						const serverContent = JSON.stringify(target, null, 2);
+
+						const serverFile = path.join(serverSubDir, `${name}.json`);
+
+						fs.writeFile(serverFile, serverContent, err => {
+							if (err) {
+								OutputChannelLogging.logError(`error writing ${serverFile} in processPackage`, err);
+								return reject();
+							}
+
+							return resolve();
+						});
+					}
+				});
+			} catch (err) {
+				OutputChannelLogging.logError(`error in processPackage`, err);
 				return reject();
 			}
 		});
@@ -264,8 +476,8 @@ class ContentSet extends ServerServerBase {
 					// since the directory didn't exist, send data over to diff provider
 					TaniumDiffProvider.currentProvider?.addDiffData({
 						label: 'Content Set Role Privileges',
-						leftDir: serverSubDir,
-						rightDir: contentSubDir,
+						leftDir: contentSubDir,
+						rightDir: serverSubDir,
 					}, context);
 				}
 
@@ -338,8 +550,8 @@ class ContentSet extends ServerServerBase {
 					// since the directory didn't exist, send data over to diff provider
 					TaniumDiffProvider.currentProvider?.addDiffData({
 						label: 'Content Set Privileges',
-						leftDir: serverSubDir,
-						rightDir: contentSubDir,
+						leftDir: contentSubDir,
+						rightDir: serverSubDir,
 					}, context);
 				}
 
@@ -420,8 +632,8 @@ class ContentSet extends ServerServerBase {
 					// since the directory didn't exist, send data over to diff provider
 					TaniumDiffProvider.currentProvider?.addDiffData({
 						label: 'Content Set Roles',
-						leftDir: serverSubDir,
-						rightDir: contentSubDir,
+						leftDir: contentSubDir,
+						rightDir: serverSubDir,
 					}, context);
 				}
 
@@ -502,8 +714,8 @@ class ContentSet extends ServerServerBase {
 					// since the directory didn't exist, send data over to diff provider
 					TaniumDiffProvider.currentProvider?.addDiffData({
 						label: 'Content Sets',
-						leftDir: serverSubDir,
-						rightDir: contentSubDir,
+						leftDir: contentSubDir,
+						rightDir: serverSubDir,
 					}, context);
 				}
 

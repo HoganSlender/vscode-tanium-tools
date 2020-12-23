@@ -2,7 +2,6 @@
 import * as parser from 'fast-xml-parser';
 import * as fs from 'fs';
 import * as he from 'he';
-import { groupBy } from 'lodash';
 import * as path from 'path';
 import { sanitize } from "sanitize-filename-ts";
 import * as url from 'url';
@@ -21,6 +20,7 @@ import { TransformContentSetRole } from '../transform/TransformContentSetRole';
 import { TransformContentSetRolePrivilege } from '../transform/TransformContentSetRolePrivilege';
 import { TransformPackage } from '../transform/TransformPackage';
 import { TransformSavedAction } from '../transform/TransformSavedAction';
+import { TransformSavedQuestion } from '../transform/TransformSavedQuestion';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { ContentSetRolePrivileges } from './ContentSetRolePrivileges';
 import { ServerServerBase } from './ServerServerBase';
@@ -162,6 +162,20 @@ class ContentSet extends ServerServerBase {
 									// do nothing
 									break;
 
+								case 'saved_question':
+									var target = jsonObj.content.saved_question;
+									if (Array.isArray(target)) {
+										// process each
+										for (var i = 0; i < target.length; i++) {
+											const savedQuestion = target[i];
+											await this.processSavedQuestion(savedQuestion, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										}
+									} else {
+										// process one
+										await this.processSavedQuestion(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+									}
+									break;
+
 								case 'saved_action':
 									var target = jsonObj.content.saved_action;
 									if (Array.isArray(target)) {
@@ -272,6 +286,78 @@ class ContentSet extends ServerServerBase {
 
 		return p;
 	}
+	static processSavedQuestion(savedQuestion: any, contentDir: string, serverDir: string, fqdn: string, session: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
+		const p = new Promise<void>(async (resolve, reject) => {
+			try {
+				const name = sanitize(savedQuestion.name);
+				const subDirName = 'SavedQuestions';
+				const serverSubDir = path.join(serverDir, subDirName);
+				const contentSubDir = path.join(contentDir, subDirName);
+
+				// verify sub dir
+				if (!fs.existsSync(serverSubDir)) {
+					fs.mkdirSync(serverSubDir);
+
+					// since the directory didn't exist, send data over to diff provider
+					TaniumDiffProvider.currentProvider?.addDiffData({
+						label: 'Saved Questions',
+						leftDir: contentSubDir,
+						rightDir: serverSubDir,
+					}, context);
+				}
+
+				if (!fs.existsSync(contentSubDir)) {
+					fs.mkdirSync(contentSubDir);
+				}
+
+				savedQuestion = await TransformSavedQuestion.transformCs(savedQuestion);
+				const contentContent = JSON.stringify(savedQuestion, null, 2);
+
+				const contentFile = path.join(contentSubDir, `${name}.json`);
+
+				fs.writeFile(contentFile, contentContent, async (err) => {
+					if (err) {
+						OutputChannelLogging.logError(`error writing ${contentFile} in processSavedQuestion`, err);
+						return reject();
+					}
+
+					// get server data
+					const body = await RestClient.get(`https://${fqdn}/api/v2/saved_questions/by-name/${savedQuestion.name}`, {
+						headers: {
+							session: session
+						},
+						responseType: 'json',
+					}, allowSelfSignedCerts, httpTimeout, true);
+
+					if (body.statusCode) {
+						// looks like it doesn't exist on server
+						return resolve();
+					} else if (body.data) {
+						var target: any = body.data;
+
+						target = await TransformSavedQuestion.transform(target);
+						const serverContent = JSON.stringify(target, null, 2);
+
+						const serverFile = path.join(serverSubDir, `${name}.json`);
+
+						fs.writeFile(serverFile, serverContent, err => {
+							if (err) {
+								OutputChannelLogging.logError(`error writing ${serverFile} in processSavedQuestion`, err);
+								return reject();
+							}
+
+							return resolve();
+						});
+					}
+				});
+			} catch (err) {
+				OutputChannelLogging.logError(`error in processSavedQuestion`, err);
+				return reject();
+			}
+		});
+
+		return p;
+	}
 
 	static processSavedAction(
 		savedAction: any,
@@ -313,7 +399,7 @@ class ContentSet extends ServerServerBase {
 
 				fs.writeFile(contentFile, contentContent, async (err) => {
 					if (err) {
-						OutputChannelLogging.logError(`error writing ${contentFile} in processPackage`, err);
+						OutputChannelLogging.logError(`error writing ${contentFile} in processSavedAction`, err);
 						return reject();
 					}
 
@@ -332,7 +418,7 @@ class ContentSet extends ServerServerBase {
 						var target: any = body.data;
 
 						// get target_group
-						const groupBody = await RestClient.get(`https://${fqdn}/api/v2/groups/${target.target_group.id}`,{
+						const groupBody = await RestClient.get(`https://${fqdn}/api/v2/groups/${target.target_group.id}`, {
 							headers: {
 								session: session
 							},
@@ -348,7 +434,7 @@ class ContentSet extends ServerServerBase {
 
 						fs.writeFile(serverFile, serverContent, err => {
 							if (err) {
-								OutputChannelLogging.logError(`error writing ${serverFile} in processPackage`, err);
+								OutputChannelLogging.logError(`error writing ${serverFile} in processSavedAction`, err);
 								return reject();
 							}
 
@@ -357,7 +443,7 @@ class ContentSet extends ServerServerBase {
 					}
 				});
 			} catch (err) {
-				OutputChannelLogging.logError(`error in processPackage`, err);
+				OutputChannelLogging.logError(`error in processSavedAction`, err);
 				return reject();
 			}
 		});
@@ -566,7 +652,7 @@ class ContentSet extends ServerServerBase {
 
 				fs.writeFile(contentFile, contentContent, async (err) => {
 					if (err) {
-						OutputChannelLogging.logError(`error writing ${contentFile} in processContentPrivilege`, err);
+						OutputChannelLogging.logError(`error writing ${contentFile} in processContentSetPrivilege`, err);
 						return reject();
 					}
 
@@ -648,7 +734,7 @@ class ContentSet extends ServerServerBase {
 
 				fs.writeFile(contentFile, contentContent, async (err) => {
 					if (err) {
-						OutputChannelLogging.logError(`error writing ${contentFile} in processContentSet`, err);
+						OutputChannelLogging.logError(`error writing ${contentFile} in processContentSetRole`, err);
 						return reject();
 					}
 

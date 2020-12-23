@@ -21,11 +21,29 @@ export class TransformBase {
     }
 
     static transpondBooleanToInteger(source: any, dest: any, name: string) {
+        this.transpondBooleanToIntegerNewName(source, dest, name, name);
+    }
+
+    static transpondBooleanToIntegerInverse(source: any, dest: any, name: string) {
+        this.transpondBooleanToIntegerNewNameInverse(source, dest, name, name);
+    }
+    
+    static transpondBooleanToIntegerNewName(source: any, dest: any, name: string, newName: string) {
         if (name in source) {
             if (source[name]) {
-                dest[name] = 1;
+                dest[newName] = 1;
             } else {
-                dest[name] = 0;
+                dest[newName] = 0;
+            }
+        }
+    }
+
+    static transpondBooleanToIntegerNewNameInverse(source: any, dest: any, name: string, newName: string) {
+        if (name in source) {
+            if (source[name]) {
+                dest[newName] = 0;
+            } else {
+                dest[newName] = 1;
             }
         }
     }

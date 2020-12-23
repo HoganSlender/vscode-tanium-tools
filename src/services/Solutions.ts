@@ -87,7 +87,7 @@ export class Solutions {
         OutputChannelLogging.log(`left dir: ${leftDir}`);
         OutputChannelLogging.log(`right dir: ${rightDir}`);
 
-        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir, false, true);
+        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir, label === 'Sensors' ? true : false, true);
         OutputChannelLogging.log(`missing ${label.toLowerCase()}: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified ${label.toLowerCase()}: ${diffItems.modified.length}`);
         OutputChannelLogging.log(`unchanged ${label.toLowerCase()}: ${diffItems.unchanged.length}`);

@@ -162,6 +162,20 @@ class ContentSet extends ServerServerBase {
 									// do nothing
 									break;
 
+								case 'sensor':
+									var target = jsonObj.content.sensor;
+									if (Array.isArray(target)) {
+										// process each
+										for (var i = 0; i < target.length; i++) {
+											const sensor = target[i];
+											await this.processSensor(sensor, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										}
+									} else {
+										// process one
+										await this.processSensor(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+									}
+									break;
+
 								case 'saved_question':
 									var target = jsonObj.content.saved_question;
 									if (Array.isArray(target)) {
@@ -286,6 +300,79 @@ class ContentSet extends ServerServerBase {
 
 		return p;
 	}
+	static processSensor(sensor: any, contentDir: string, serverDir: string, fqdn: string, session: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
+		const p = new Promise<void>(async (resolve, reject) => {
+			try {
+				const name = sanitize(sensor.name);
+				const subDirName = 'Sensors';
+				const serverSubDir = path.join(serverDir, subDirName);
+				const contentSubDir = path.join(contentDir, subDirName);
+
+				// verify sub dir
+				if (!fs.existsSync(serverSubDir)) {
+					fs.mkdirSync(serverSubDir);
+
+					// since the directory didn't exist, send data over to diff provider
+					TaniumDiffProvider.currentProvider?.addDiffData({
+						label: 'Sensors',
+						leftDir: contentSubDir,
+						rightDir: serverSubDir,
+					}, context);
+				}
+
+				if (!fs.existsSync(contentSubDir)) {
+					fs.mkdirSync(contentSubDir);
+				}
+
+				sensor = await TransformSensor.transformContentSet(sensor);
+				const contentContent = JSON.stringify(sensor, null, 2);
+
+				const contentFile = path.join(contentSubDir, `${name}.json`);
+
+				fs.writeFile(contentFile, contentContent, async (err) => {
+					if (err) {
+						OutputChannelLogging.logError(`error writing ${contentFile} in processSensor`, err);
+						return reject();
+					}
+
+					// get server data
+					const body = await RestClient.get(`https://${fqdn}/api/v2/sensors/by-name/${sensor.name}`, {
+						headers: {
+							session: session
+						},
+						responseType: 'json',
+					}, allowSelfSignedCerts, httpTimeout, true);
+
+					if (body.statusCode) {
+						// looks like it doesn't exist on server
+						return resolve();
+					} else if (body.data) {
+						var target: any = body.data;
+
+						target = await TransformSensor.transform(target);
+						const serverContent = JSON.stringify(target, null, 2);
+
+						const serverFile = path.join(serverSubDir, `${name}.json`);
+
+						fs.writeFile(serverFile, serverContent, err => {
+							if (err) {
+								OutputChannelLogging.logError(`error writing ${serverFile} in processSensor`, err);
+								return reject();
+							}
+
+							return resolve();
+						});
+					}
+				});
+			} catch (err) {
+				OutputChannelLogging.logError(`error in processSensor`, err);
+				return reject();
+			}
+		});
+
+		return p;
+	}
+
 	static processSavedQuestion(savedQuestion: any, contentDir: string, serverDir: string, fqdn: string, session: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
 		const p = new Promise<void>(async (resolve, reject) => {
 			try {

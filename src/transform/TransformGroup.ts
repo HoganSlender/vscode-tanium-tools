@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { OutputChannelLogging } from "../common/logging";
-import { TransformSensor } from "./transform-sensor";
+import { TransformSensor } from "./TransformSensor";
 import { TransformBase } from "./TransformBase";
 
 export class TransformGroup extends TransformBase {

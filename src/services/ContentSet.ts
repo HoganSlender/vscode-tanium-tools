@@ -13,7 +13,7 @@ import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { collectContentSetContentInputs } from '../parameter-collection/content-set-content-parameters';
 import { collectContentSetSensorInputs } from '../parameter-collection/content-set-sensors-parameters';
-import { TransformSensor } from '../transform/transform-sensor';
+import { TransformSensor } from '../transform/TransformSensor';
 import { TransformContentSet } from '../transform/TransformContentSet';
 import { TransformContentSetPrivilege } from '../transform/TransformContentSetPrivilege';
 import { TransformContentSetRole } from '../transform/TransformContentSetRole';

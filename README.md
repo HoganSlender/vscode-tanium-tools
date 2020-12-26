@@ -1,29 +1,36 @@
-# HoganSlender's Tanium Tools
+HoganSlender's Tanium Tools
 
 Contains miscellaneous commands to work with Tanium servers in Visual Studio Code.
 
+- [Features](#features)
+  - [Content Set Compare](#content-set-compare)
+  - [Server to Server Compare](#server-to-server-compare)
+  - [Sign Content File](#sign-content-file)
+- [Known Issues](#known-issues)
+- [Release Notes](#release-notes)
+  - [1.0.0](#100)
+  - [0.0.4](#004)
+  - [0.0.3](#003)
+  - [0.0.2](#002)
+  - [0.0.1](#001)
+- [Recommended Extensions](#recommended-extensions)
 ## Features
-* **Available Commands**
-    * `Tanium: Compare Content Set` - allows you to download a content set xml file from Tanium support and compare it to the sensors on your server.    
-    * `Tanium: Compare Tanium Server Sensors` - allows you to compare sensors from 2 different Tanium servers.
-    * `Tanium: Retrieve Sensor Data by Name` - allows you to retrieve a sensor by name from the Tanium server.
-    * `Tanium: Retrieve Sensor Data by Hash` - allows you to retrieve a sensor by hash value from the Tanium server.
-* **Available Settings**
-    * `hoganslender.tanium.allowSelfSignedCerts` - Set to true if communicating with servers that are using a self signed certificate.
-    * `hoganslender.tanium.fqdns` - List of recently used Tanium server FQDNs.
-    * `hoganslender.tanium.httpTimeoutSeconds` - Number of seconds for HTTP request timeout.
-    * `hoganslender.tanium.signingPaths` - Path definitions for KeyUtility.exe and private key file
-    * `hoganslender.tanium.usernames` - List of recently used Tanium usernames.
-* **Available Context Menus**
-    * **Visual Studio Code Explorer**
-        * **Folders**
-            * `Tanium: Generate Export File for Missing Sensors` - Generates an export file that contains the missing sensors from the right side of the two selected folders.
-            * `Tanium: Generate Export File for Modified Sensors` - Generates an export file that contains the modified sensors from the two selected folders.
-        * **Files**
-            * `Tanium: Sign Content` - Signs the selected file for importing into Tanium server.
+### Content Set Compare
+
+### Server to Server Compare
+
+### Sign Content File
 ## Known Issues
 * none
 ## Release Notes
+### 1.0.0 
+* switched to new difference dialogs
+* added Server to Server content compare functionality
+* added Content Set to Server compare functionality
+* removed `Tanium: Retrieve Sensor Data by Name` command
+* removed `Tanium: Retrieve Sensor Data by Hash` command
+* removed `Tanium: Generate Export File for Modified Sensors`
+  
 ### 0.0.4
 * Added `Tanium: Retrieve Sensor Data by Name` command
 * Added `Tanium: Retrieve Sensor Data by Hash` command

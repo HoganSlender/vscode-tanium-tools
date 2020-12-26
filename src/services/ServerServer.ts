@@ -10,7 +10,7 @@ import { Session } from '../common/session';
 import { collectServerServerMissingSensorInputs } from '../parameter-collection/server-server-missing-sensors-parameters';
 import { collectServerServerModifiedSensorInputs } from '../parameter-collection/server-server-modified-sensors-parameters';
 import { collectServerServerSensorInputs } from '../parameter-collection/server-server-sensors-parameters';
-import { TransformSensor } from '../transform/transform-sensor';
+import { TransformSensor } from '../transform/TransformSensor';
 
 import path = require('path');
 

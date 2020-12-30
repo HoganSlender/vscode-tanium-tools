@@ -1,5 +1,7 @@
 import * as fs from 'fs';
 import * as vscode from 'vscode';
+import { OutputChannelLogging } from '../common/logging';
+import { DiffItemData, PathUtils } from '../common/pathUtils';
 import { TaniumDiffTreeItem } from './TaniumDiffTreeItem';
 
 const TANIUM_CONTENT_SET_DIFFS = 'taniumContentSetDiffs';
@@ -14,6 +16,7 @@ export interface SolutionDiffItemData {
     label: string,
     leftDir: string,
     rightDir: string,
+    diffItems?: DiffItemData,
 }
 
 export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTreeItem> {
@@ -21,7 +24,6 @@ export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTre
         this.diffItemDatas = context.workspaceState.get(TANIUM_CONTENT_SET_DIFFS) || [];
         this.diffLabels = context.workspaceState.get(TANIUM_CONTENT_SET_DIFF_LABELS) || [];
 
-        // TODO: validate that target folders exist; if not then remove it
         this.validateDiffItemDatas(context);
 
         vscode.workspace.onDidDeleteFiles((e: vscode.FileDeleteEvent) => {
@@ -95,6 +97,45 @@ export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTre
     private storeWorkspaceState(context: vscode.ExtensionContext) {
         context.workspaceState.update(TANIUM_CONTENT_SET_DIFFS, this.diffItemDatas);
         context.workspaceState.update(TANIUM_CONTENT_SET_DIFF_LABELS, this.diffLabels);
+    }
+
+    public calculateDiffs(context: vscode.ExtensionContext) {
+        const p = new Promise<void>((resolve, reject) => {
+            try {
+                const increment = 100 / this.diffItemDatas.length;
+
+                vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: 'Calculate Differences',
+                    cancellable: false
+                }, async (progress) => {
+                    progress.report({
+                        increment: 0
+                    });
+
+                    for (var i = 0; i < this.diffItemDatas.length; i++) {
+                        const diffItemData = this.diffItemDatas[i];
+                        progress.report({
+                            increment: increment,
+                            message: `calculating diffs for ${diffItemData.label}`
+                        });
+                        diffItemData.diffItems = await PathUtils.getDiffItems(diffItemData.leftDir, diffItemData.rightDir, diffItemData.label === 'Sensors' ? true : false, true);
+                    }
+
+                    // store for later
+                    this.storeWorkspaceState(context);
+
+                    this.refresh();
+
+                    return resolve();
+                });
+            } catch (err) {
+                OutputChannelLogging.logError('error in TaniumDiffProvider.calculateDiffs', err);
+                return reject();
+            }
+        });
+
+        return p;
     }
 
     public addDiffData(diffItemData: SolutionDiffItemData, context: vscode.ExtensionContext) {

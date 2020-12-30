@@ -13,7 +13,7 @@ import { collectSolutionsInputs } from '../parameter-collection/solutions-parame
 import { TaniumSolutionNodeProvider } from '../trees/TaniumSolutionNodeProvider';
 
 import path = require('path');
-import { PathUtils } from '../common/pathUtils';
+import { DiffItemData, PathUtils } from '../common/pathUtils';
 import { WebContentUtils } from '../common/webContentUtils';
 import { OpenType } from '../common/enums';
 
@@ -22,8 +22,8 @@ export function activate(context: vscode.ExtensionContext) {
         'hoganslendertanium.compareSolutions': () => {
             Solutions.processUserSolutions(context);
         },
-        'hoganslendertanium.analyzeSolutions': (label, leftDir, rightDir) => {
-            Solutions.analyzeSolutions(label, leftDir, rightDir, context);
+        'hoganslendertanium.analyzeSolutions': (label, diffItems) => {
+            Solutions.analyzeSolutions(label, diffItems, context);
         },
     });
 }
@@ -43,14 +43,14 @@ export interface SolutionItemData {
 }
 
 export class Solutions {
-    static async analyzeSolutions(label: string, leftDir: string, rightDir: string, context: vscode.ExtensionContext) {
+    static async analyzeSolutions(label: string, diffItems: DiffItemData, context: vscode.ExtensionContext) {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 
         OutputChannelLogging.log(`calculating ${label} differences`);
 
         const panelMissing = vscode.window.createWebviewPanel(
             `hoganslenderMissing${label.replace(/\s/g, '')}`,
-            `Missing ${label}`,
+            `Missing ${label} (${diffItems.missing.length})`,
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -60,7 +60,7 @@ export class Solutions {
 
         const panelModified = vscode.window.createWebviewPanel(
             `hoganslenderModified${label.replace(/\s/g, '')}`,
-            `Modified ${label}`,
+            `Modified ${label} (${diffItems.modified.length})`,
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -70,7 +70,7 @@ export class Solutions {
 
         const panelUnchanged = vscode.window.createWebviewPanel(
             `hoganslenderUnchanged${label.replace(/\s/g, '')}`,
-            `Unchanged ${label}`,
+            `Unchanged ${label} (${diffItems.unchanged.length})`,
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -83,11 +83,6 @@ export class Solutions {
 
         // get configurations
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');
-
-        OutputChannelLogging.log(`left dir: ${leftDir}`);
-        OutputChannelLogging.log(`right dir: ${rightDir}`);
-
-        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir, label === 'Sensors' ? true : false, true);
         OutputChannelLogging.log(`missing ${label.toLowerCase()}: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified ${label.toLowerCase()}: ${diffItems.modified.length}`);
         OutputChannelLogging.log(`unchanged ${label.toLowerCase()}: ${diffItems.unchanged.length}`);
@@ -208,7 +203,7 @@ export class Solutions {
         }, async (progress) => {
             progress.report({ increment: 0 });
 
-            const increment = 50;
+            const increment = 100;
 
             progress.report({ increment: increment, message: `solutions retrieval from ${leftFqdn}` });
             await this.processSolutions(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword);

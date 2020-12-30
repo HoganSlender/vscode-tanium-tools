@@ -5,11 +5,11 @@ export class TaniumDiffTreeItem extends vscode.TreeItem {
     constructor(
         public readonly diffItemData: SolutionDiffItemData,
     ) {
-        super(diffItemData.label);
+        super(diffItemData.diffItems ? `${diffItemData.label} (${diffItemData.diffItems.missing.length}:${diffItemData.diffItems.modified.length}:${diffItemData.diffItems.unchanged.length})` : diffItemData.label);
     }
 
 	public command = {
-		arguments: [this.label, this.diffItemData.leftDir, this.diffItemData.rightDir],
+		arguments: [this.diffItemData.label, this.diffItemData.diffItems],
 		command: 'hoganslendertanium.analyzeSolutions',
 		title: 'Open Comparison',
 	};

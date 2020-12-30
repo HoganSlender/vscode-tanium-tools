@@ -102,13 +102,24 @@ class ContentSet extends ServerServerBase {
 			progress.report({ increment: increment, message: `downloading ${contentUrl}` });
 			await RestClient.downloadFile(contentUrl, contentSetFile, {}, allowSelfSignedCerts, httpTimeout);
 			progress.report({ increment: increment, message: 'extracting content' });
-			await this.extractContentSetContent(contentSetFile, contentDir, serverDir, fqdn, username, password, allowSelfSignedCerts, httpTimeout, context);
+			await this.extractContentSetContentAndCalcDiffs(contentSetFile, contentDir, serverDir, fqdn, username, password, allowSelfSignedCerts, httpTimeout, context);
 			const p = new Promise<void>(resolve => {
 				setTimeout(() => {
 					resolve();
 				}, 3000);
 			});
 		});
+	}
+
+	static extractContentSetContentAndCalcDiffs(contentSetFile: string, contentDir: string, serverDir: string, fqdn: string, username: string, password: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
+		const p = new Promise<void>(async (resolve) => {
+			await this.extractContentSetContent(contentSetFile, contentDir, serverDir, fqdn, username, password, allowSelfSignedCerts, httpTimeout, context);
+			await TaniumDiffProvider.currentProvider?.calculateDiffs(context);
+
+			resolve();
+		});
+
+		return p;
 	}
 
 	static extractContentSetContent(
@@ -122,7 +133,7 @@ class ContentSet extends ServerServerBase {
 		httpTimeout: number,
 		context: vscode.ExtensionContext
 	) {
-		const p = new Promise<void>((resolve, reject) => {
+		const p = new Promise<any>((resolve, reject) => {
 			fs.readFile(contentSetFile, 'utf8', async (err, data) => {
 				if (err) {
 					OutputChannelLogging.logError(`could not open '${contentSetFile}'`, err);
@@ -152,161 +163,180 @@ class ContentSet extends ServerServerBase {
 					try {
 						var jsonObj = parser.parse(data, options);
 
+						// number of properties
+						const propertyCount = Object.keys(jsonObj.content).length;
+
 						const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
-						// walk the content
-						var serverContentSetRolePrivilegesMap: any;
-						var serverWhiteListedUrlsMap: any;
+						// process contents
+						vscode.window.withProgress({
+							location: vscode.ProgressLocation.Notification,
+							title: 'Parse Content',
+							cancellable: false
+						}, async (progress) => {
+							progress.report({ increment: 0 });
 
-						for (const property in jsonObj.content) {
-							switch (property) {
-								case 'solution':
-								case 'api_requests':
-									// do nothing
-									break;
+							const increment = 100 / propertyCount;
 
-								case 'white_listed_url':
-									if (!serverWhiteListedUrlsMap) {
-										serverWhiteListedUrlsMap = await WhiteListedUrls.generateWhiteListedUrlMap(allowSelfSignedCerts, httpTimeout, session, fqdn);
-									}
+							// walk the content
+							var serverContentSetRolePrivilegesMap: any;
+							var serverWhiteListedUrlsMap: any;
 
-									var target = jsonObj.content.white_listed_url;
-									if (Array.isArray(target)) {
-										// process each
-										for (var i = 0; i < target.length; i++) {
-											const whiteListedUrl = target[i];
-											await this.processWhiteListedUrl(whiteListedUrl, contentDir, serverDir, context, serverWhiteListedUrlsMap);
+							for (const property in jsonObj.content) {
+								progress.report({
+									increment: increment,
+									message: `extracting ${property}`
+								});
+
+								switch (property) {
+									case 'solution':
+									case 'api_requests':
+										// do nothing
+										break;
+
+									case 'white_listed_url':
+										if (!serverWhiteListedUrlsMap) {
+											serverWhiteListedUrlsMap = await WhiteListedUrls.generateWhiteListedUrlMap(allowSelfSignedCerts, httpTimeout, session, fqdn);
 										}
-									} else {
-										// process one
-										await this.processWhiteListedUrl(target, contentDir, serverDir, context, serverWhiteListedUrlsMap);
-									}
-									break;
 
-								case 'sensor':
-									var target = jsonObj.content.sensor;
-									if (Array.isArray(target)) {
-										// process each
-										for (var i = 0; i < target.length; i++) {
-											const sensor = target[i];
-											await this.processSensor(sensor, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										var target = jsonObj.content.white_listed_url;
+										if (Array.isArray(target)) {
+											// process each
+											for (var i = 0; i < target.length; i++) {
+												const whiteListedUrl = target[i];
+												await this.processWhiteListedUrl(whiteListedUrl, contentDir, serverDir, context, serverWhiteListedUrlsMap);
+											}
+										} else {
+											// process one
+											await this.processWhiteListedUrl(target, contentDir, serverDir, context, serverWhiteListedUrlsMap);
 										}
-									} else {
-										// process one
-										await this.processSensor(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-									}
-									break;
+										break;
 
-								case 'saved_question':
-									var target = jsonObj.content.saved_question;
-									if (Array.isArray(target)) {
-										// process each
-										for (var i = 0; i < target.length; i++) {
-											const savedQuestion = target[i];
-											await this.processSavedQuestion(savedQuestion, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+									case 'sensor':
+										var target = jsonObj.content.sensor;
+										if (Array.isArray(target)) {
+											// process each
+											for (var i = 0; i < target.length; i++) {
+												const sensor = target[i];
+												await this.processSensor(sensor, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+											}
+										} else {
+											// process one
+											await this.processSensor(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
 										}
-									} else {
-										// process one
-										await this.processSavedQuestion(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-									}
-									break;
+										break;
 
-								case 'saved_action':
-									var target = jsonObj.content.saved_action;
-									if (Array.isArray(target)) {
-										// process each
-										for (var i = 0; i < target.length; i++) {
-											const savedAction = target[i];
-											await this.processSavedAction(savedAction, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+									case 'saved_question':
+										var target = jsonObj.content.saved_question;
+										if (Array.isArray(target)) {
+											// process each
+											for (var i = 0; i < target.length; i++) {
+												const savedQuestion = target[i];
+												await this.processSavedQuestion(savedQuestion, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+											}
+										} else {
+											// process one
+											await this.processSavedQuestion(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
 										}
-									} else {
-										// process one
-										await this.processSavedAction(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-									}
-									break;
+										break;
 
-								case 'tanium_package':
-									var target = jsonObj.content.tanium_package;
-									if (Array.isArray(target)) {
-										// process each
-										for (var i = 0; i < target.length; i++) {
-											const taniumPackage = target[i];
-											await this.processPackage(taniumPackage, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+									case 'saved_action':
+										var target = jsonObj.content.saved_action;
+										if (Array.isArray(target)) {
+											// process each
+											for (var i = 0; i < target.length; i++) {
+												const savedAction = target[i];
+												await this.processSavedAction(savedAction, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+											}
+										} else {
+											// process one
+											await this.processSavedAction(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
 										}
-									} else {
-										// process one
-										await this.processPackage(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-									}
-									break;
+										break;
 
-								case 'content_set_role_privilege':
-									if (!serverContentSetRolePrivilegesMap) {
-										// load up map on first use
-										serverContentSetRolePrivilegesMap = await ContentSetRolePrivileges.generateContentSetRolePrivilegeMap(allowSelfSignedCerts, httpTimeout, session, fqdn);
-									}
-
-									var target = jsonObj.content.content_set_role_privilege;
-									if (Array.isArray(target)) {
-										// process each
-										for (var i = 0; i < target.length; i++) {
-											const contentSetRolePrivilege = target[i];
-											await this.processContentSetRolePrivilege(contentSetRolePrivilege, contentDir, serverDir, context, serverContentSetRolePrivilegesMap);
+									case 'tanium_package':
+										var target = jsonObj.content.tanium_package;
+										if (Array.isArray(target)) {
+											// process each
+											for (var i = 0; i < target.length; i++) {
+												const taniumPackage = target[i];
+												await this.processPackage(taniumPackage, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+											}
+										} else {
+											// process one
+											await this.processPackage(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
 										}
-									} else {
-										// process one
-										await this.processContentSetRolePrivilege(target, contentDir, serverDir, context, serverContentSetRolePrivilegesMap);
-									}
-									break;
+										break;
 
-								case 'content_set_privilege':
-									var target = jsonObj.content.content_set_privilege;
-									if (Array.isArray(target)) {
-										// process each
-										for (var i = 0; i < target.length; i++) {
-											const contentSetPrivilege = target[i];
-											await this.processContentSetPrivilege(contentSetPrivilege, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+									case 'content_set_role_privilege':
+										if (!serverContentSetRolePrivilegesMap) {
+											// load up map on first use
+											serverContentSetRolePrivilegesMap = await ContentSetRolePrivileges.generateContentSetRolePrivilegeMap(allowSelfSignedCerts, httpTimeout, session, fqdn);
 										}
-									} else {
-										// process one
-										await this.processContentSetPrivilege(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-									}
-									break;
 
-								case 'content_set_role':
-									var target = jsonObj.content.content_set_role;
-									if (Array.isArray(target)) {
-										// process each
-										for (var i = 0; i < target.length; i++) {
-											const contentSetRole = target[i];
-											await this.processContentSetRole(contentSetRole, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										var target = jsonObj.content.content_set_role_privilege;
+										if (Array.isArray(target)) {
+											// process each
+											for (var i = 0; i < target.length; i++) {
+												const contentSetRolePrivilege = target[i];
+												await this.processContentSetRolePrivilege(contentSetRolePrivilege, contentDir, serverDir, context, serverContentSetRolePrivilegesMap);
+											}
+										} else {
+											// process one
+											await this.processContentSetRolePrivilege(target, contentDir, serverDir, context, serverContentSetRolePrivilegesMap);
 										}
-									} else {
-										// process one
-										await this.processContentSetRole(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-									}
-									break;
+										break;
 
-								case 'content_set':
-									var target = jsonObj.content.content_set;
-									if (Array.isArray(target)) {
-										// process each
-										for (var i = 0; i < target.length; i++) {
-											const contentSet = target[i];
-											await this.processContentSet(contentSet, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+									case 'content_set_privilege':
+										var target = jsonObj.content.content_set_privilege;
+										if (Array.isArray(target)) {
+											// process each
+											for (var i = 0; i < target.length; i++) {
+												const contentSetPrivilege = target[i];
+												await this.processContentSetPrivilege(contentSetPrivilege, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+											}
+										} else {
+											// process one
+											await this.processContentSetPrivilege(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
 										}
-									} else {
-										// process one
-										await this.processContentSet(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-									}
-									break;
+										break;
 
-								default:
-									OutputChannelLogging.log(`${property} not set up for processing in extractContentSetContent`);
-								//return reject();
+									case 'content_set_role':
+										var target = jsonObj.content.content_set_role;
+										if (Array.isArray(target)) {
+											// process each
+											for (var i = 0; i < target.length; i++) {
+												const contentSetRole = target[i];
+												await this.processContentSetRole(contentSetRole, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+											}
+										} else {
+											// process one
+											await this.processContentSetRole(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										}
+										break;
+
+									case 'content_set':
+										var target = jsonObj.content.content_set;
+										if (Array.isArray(target)) {
+											// process each
+											for (var i = 0; i < target.length; i++) {
+												const contentSet = target[i];
+												await this.processContentSet(contentSet, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+											}
+										} else {
+											// process one
+											await this.processContentSet(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										}
+										break;
+
+									default:
+										OutputChannelLogging.log(`${property} not set up for processing in extractContentSetContent`);
+									//return reject();
+								}
 							}
-						}
 
-						return resolve();
+							return resolve(jsonObj.content);
+						});
 					} catch (err) {
 						OutputChannelLogging.logError('extractContentSetContent', err);
 						return reject();
@@ -336,16 +366,16 @@ class ContentSet extends ServerServerBase {
 				const serverSubDir = path.join(serverDir, subDirName);
 				const contentSubDir = path.join(contentDir, subDirName);
 
+				// ensure diff
+				TaniumDiffProvider.currentProvider?.addDiffData({
+					label: 'White Listed Urls',
+					leftDir: contentSubDir,
+					rightDir: serverSubDir,
+				}, context);
+
 				// verify sub dir
 				if (!fs.existsSync(serverSubDir)) {
 					fs.mkdirSync(serverSubDir);
-
-					// since the directory didn't exist, send data over to diff provider
-					TaniumDiffProvider.currentProvider?.addDiffData({
-						label: 'White Listed Urls',
-						leftDir: contentSubDir,
-						rightDir: serverSubDir,
-					}, context);
 				}
 
 				if (!fs.existsSync(contentSubDir)) {
@@ -401,16 +431,16 @@ class ContentSet extends ServerServerBase {
 				const serverSubDir = path.join(serverDir, subDirName);
 				const contentSubDir = path.join(contentDir, subDirName);
 
+				// ensure diff data
+				TaniumDiffProvider.currentProvider?.addDiffData({
+					label: 'Sensors',
+					leftDir: contentSubDir,
+					rightDir: serverSubDir,
+				}, context);
+
 				// verify sub dir
 				if (!fs.existsSync(serverSubDir)) {
 					fs.mkdirSync(serverSubDir);
-
-					// since the directory didn't exist, send data over to diff provider
-					TaniumDiffProvider.currentProvider?.addDiffData({
-						label: 'Sensors',
-						leftDir: contentSubDir,
-						rightDir: serverSubDir,
-					}, context);
 				}
 
 				if (!fs.existsSync(contentSubDir)) {
@@ -474,16 +504,16 @@ class ContentSet extends ServerServerBase {
 				const serverSubDir = path.join(serverDir, subDirName);
 				const contentSubDir = path.join(contentDir, subDirName);
 
+				// ensure diff data
+				TaniumDiffProvider.currentProvider?.addDiffData({
+					label: 'Saved Questions',
+					leftDir: contentSubDir,
+					rightDir: serverSubDir,
+				}, context);
+
 				// verify sub dir
 				if (!fs.existsSync(serverSubDir)) {
 					fs.mkdirSync(serverSubDir);
-
-					// since the directory didn't exist, send data over to diff provider
-					TaniumDiffProvider.currentProvider?.addDiffData({
-						label: 'Saved Questions',
-						leftDir: contentSubDir,
-						rightDir: serverSubDir,
-					}, context);
 				}
 
 				if (!fs.existsSync(contentSubDir)) {
@@ -556,16 +586,16 @@ class ContentSet extends ServerServerBase {
 				const serverSubDir = path.join(serverDir, subDirName);
 				const contentSubDir = path.join(contentDir, subDirName);
 
+				// ensure diff
+				TaniumDiffProvider.currentProvider?.addDiffData({
+					label: 'Saved Actions',
+					leftDir: contentSubDir,
+					rightDir: serverSubDir,
+				}, context);
+
 				// verify sub dir
 				if (!fs.existsSync(serverSubDir)) {
 					fs.mkdirSync(serverSubDir);
-
-					// since the directory didn't exist, send data over to diff provider
-					TaniumDiffProvider.currentProvider?.addDiffData({
-						label: 'Saved Actions',
-						leftDir: contentSubDir,
-						rightDir: serverSubDir,
-					}, context);
 				}
 
 				if (!fs.existsSync(contentSubDir)) {
@@ -648,16 +678,16 @@ class ContentSet extends ServerServerBase {
 				const serverSubDir = path.join(serverDir, subDirName);
 				const contentSubDir = path.join(contentDir, subDirName);
 
+				// ensure diff
+				TaniumDiffProvider.currentProvider?.addDiffData({
+					label: 'Packages',
+					leftDir: contentSubDir,
+					rightDir: serverSubDir,
+				}, context);
+
 				// verify sub dir
 				if (!fs.existsSync(serverSubDir)) {
 					fs.mkdirSync(serverSubDir);
-
-					// since the directory didn't exist, send data over to diff provider
-					TaniumDiffProvider.currentProvider?.addDiffData({
-						label: 'Packages',
-						leftDir: contentSubDir,
-						rightDir: serverSubDir,
-					}, context);
 				}
 
 				if (!fs.existsSync(contentSubDir)) {
@@ -735,16 +765,16 @@ class ContentSet extends ServerServerBase {
 				const serverSubDir = path.join(serverDir, subDirName);
 				const contentSubDir = path.join(contentDir, subDirName);
 
+				// ensure diff data
+				TaniumDiffProvider.currentProvider?.addDiffData({
+					label: 'Content Set Role Privileges',
+					leftDir: contentSubDir,
+					rightDir: serverSubDir,
+				}, context);
+
 				// verify sub dir
 				if (!fs.existsSync(serverSubDir)) {
 					fs.mkdirSync(serverSubDir);
-
-					// since the directory didn't exist, send data over to diff provider
-					TaniumDiffProvider.currentProvider?.addDiffData({
-						label: 'Content Set Role Privileges',
-						leftDir: contentSubDir,
-						rightDir: serverSubDir,
-					}, context);
 				}
 
 				if (!fs.existsSync(contentSubDir)) {
@@ -809,16 +839,16 @@ class ContentSet extends ServerServerBase {
 				const serverSubDir = path.join(serverDir, subDirName);
 				const contentSubDir = path.join(contentDir, subDirName);
 
+				// ensure diff data
+				TaniumDiffProvider.currentProvider?.addDiffData({
+					label: 'Content Set Privileges',
+					leftDir: contentSubDir,
+					rightDir: serverSubDir,
+				}, context);
+
 				// verify sub dir
 				if (!fs.existsSync(serverSubDir)) {
 					fs.mkdirSync(serverSubDir);
-
-					// since the directory didn't exist, send data over to diff provider
-					TaniumDiffProvider.currentProvider?.addDiffData({
-						label: 'Content Set Privileges',
-						leftDir: contentSubDir,
-						rightDir: serverSubDir,
-					}, context);
 				}
 
 				if (!fs.existsSync(contentSubDir)) {
@@ -891,16 +921,16 @@ class ContentSet extends ServerServerBase {
 				const serverSubDir = path.join(serverDir, subDirName);
 				const contentSubDir = path.join(contentDir, subDirName);
 
+				// ensure diff data
+				TaniumDiffProvider.currentProvider?.addDiffData({
+					label: 'Content Set Roles',
+					leftDir: contentSubDir,
+					rightDir: serverSubDir,
+				}, context);
+
 				// verify sub dir
 				if (!fs.existsSync(serverSubDir)) {
 					fs.mkdirSync(serverSubDir);
-
-					// since the directory didn't exist, send data over to diff provider
-					TaniumDiffProvider.currentProvider?.addDiffData({
-						label: 'Content Set Roles',
-						leftDir: contentSubDir,
-						rightDir: serverSubDir,
-					}, context);
 				}
 
 				if (!fs.existsSync(contentSubDir)) {
@@ -973,16 +1003,16 @@ class ContentSet extends ServerServerBase {
 				const serverSubDir = path.join(serverDir, subDirName);
 				const contentSubDir = path.join(contentDir, subDirName);
 
+				// ensure diff data
+				TaniumDiffProvider.currentProvider?.addDiffData({
+					label: 'Content Sets',
+					leftDir: contentSubDir,
+					rightDir: serverSubDir,
+				}, context);
+
 				// verify sub dir
 				if (!fs.existsSync(serverSubDir)) {
 					fs.mkdirSync(serverSubDir);
-
-					// since the directory didn't exist, send data over to diff provider
-					TaniumDiffProvider.currentProvider?.addDiffData({
-						label: 'Content Sets',
-						leftDir: contentSubDir,
-						rightDir: serverSubDir,
-					}, context);
 				}
 
 				if (!fs.existsSync(contentSubDir)) {

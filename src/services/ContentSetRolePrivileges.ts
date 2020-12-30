@@ -1,22 +1,19 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
 import * as vscode from 'vscode';
 
 import * as commands from '../common/commands';
 import { OpenType } from '../common/enums';
 import { OutputChannelLogging } from '../common/logging';
 import { PathUtils } from '../common/pathUtils';
-import { WebContentUtils } from '../common/webContentUtils';
-
-import path = require('path');
-import { SignContentFile } from './SignContentFile';
-import { SigningKey } from '../types/signingKey';
-import { SigningUtils } from '../common/signingUtils';
-import { ServerServerContentSets } from './ServerServerContentSets';
-import { ServerServerContentSetRoles } from './ServerServerContentSetRoles';
-import { ServerServerContentSetPrivileges } from './ServerServerContentSetPrivileges';
 import { RestClient } from '../common/restClient';
+import { SigningUtils } from '../common/signingUtils';
+import { WebContentUtils } from '../common/webContentUtils';
+import { SigningKey } from '../types/signingKey';
+import { ServerServerContentSetPrivileges } from './ServerServerContentSetPrivileges';
+import { ServerServerContentSetRoles } from './ServerServerContentSetRoles';
+import { ServerServerContentSets } from './ServerServerContentSets';
+import { SignContentFile } from './SignContentFile';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {

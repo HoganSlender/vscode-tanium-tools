@@ -21,9 +21,11 @@ import { TransformContentSetRolePrivilege } from '../transform/TransformContentS
 import { TransformPackage } from '../transform/TransformPackage';
 import { TransformSavedAction } from '../transform/TransformSavedAction';
 import { TransformSavedQuestion } from '../transform/TransformSavedQuestion';
+import { TransformWhiteListedUrl } from '../transform/TransformWhiteListedUrl';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { ContentSetRolePrivileges } from './ContentSetRolePrivileges';
 import { ServerServerBase } from './ServerServerBase';
+import { WhiteListedUrls } from './WhiteListedUrls';
 
 const diffMatchPatch = require('diff-match-patch');
 
@@ -154,12 +156,31 @@ class ContentSet extends ServerServerBase {
 
 						// walk the content
 						var serverContentSetRolePrivilegesMap: any;
+						var serverWhiteListedUrlsMap: any;
 
 						for (const property in jsonObj.content) {
 							switch (property) {
 								case 'solution':
 								case 'api_requests':
 									// do nothing
+									break;
+
+								case 'white_listed_url':
+									if (!serverWhiteListedUrlsMap) {
+										serverWhiteListedUrlsMap = await WhiteListedUrls.generateWhiteListedUrlMap(allowSelfSignedCerts, httpTimeout, session, fqdn);
+									}
+
+									var target = jsonObj.content.white_listed_url;
+									if (Array.isArray(target)) {
+										// process each
+										for (var i = 0; i < target.length; i++) {
+											const whiteListedUrl = target[i];
+											await this.processWhiteListedUrl(whiteListedUrl, contentDir, serverDir, context, serverWhiteListedUrlsMap);
+										}
+									} else {
+										// process one
+										await this.processWhiteListedUrl(target, contentDir, serverDir, context, serverWhiteListedUrlsMap);
+									}
 									break;
 
 								case 'sensor':
@@ -300,6 +321,78 @@ class ContentSet extends ServerServerBase {
 
 		return p;
 	}
+
+	static processWhiteListedUrl(
+		whiteListedUrl: any,
+		contentDir: string,
+		serverDir: string,
+		context: vscode.ExtensionContext,
+		serverWhiteListedUrlsMap: any
+	) {
+		const p = new Promise<void>(async (resolve, reject) => {
+			try {
+				const name = sanitize(whiteListedUrl.url);
+				const subDirName = 'WhiteListedUrls';
+				const serverSubDir = path.join(serverDir, subDirName);
+				const contentSubDir = path.join(contentDir, subDirName);
+
+				// verify sub dir
+				if (!fs.existsSync(serverSubDir)) {
+					fs.mkdirSync(serverSubDir);
+
+					// since the directory didn't exist, send data over to diff provider
+					TaniumDiffProvider.currentProvider?.addDiffData({
+						label: 'White Listed Urls',
+						leftDir: contentSubDir,
+						rightDir: serverSubDir,
+					}, context);
+				}
+
+				if (!fs.existsSync(contentSubDir)) {
+					fs.mkdirSync(contentSubDir);
+				}
+
+				whiteListedUrl = await TransformWhiteListedUrl.transformCs(whiteListedUrl);
+				const contentContent = JSON.stringify(whiteListedUrl, null, 2);
+
+				const contentFile = path.join(contentSubDir, `${name}.json`);
+
+				fs.writeFile(contentFile, contentContent, async (err) => {
+					if (err) {
+						OutputChannelLogging.logError(`error writing ${contentFile} in processWhiteListedUrl`, err);
+						return reject();
+					}
+
+					// get server data
+					var target = serverWhiteListedUrlsMap[whiteListedUrl.url];
+
+					if (target) {
+						const serverContent = JSON.stringify(target, null, 2);
+
+						const serverFile = path.join(serverSubDir, `${name}.json`);
+
+						fs.writeFile(serverFile, serverContent, err => {
+							if (err) {
+								OutputChannelLogging.logError(`error writing ${serverFile} in processWhiteListedUrl`, err);
+								return reject();
+							}
+
+							return resolve();
+						});
+					} else {
+						// target doesn't exist on server
+						return resolve();
+					}
+				});
+			} catch (err) {
+				OutputChannelLogging.logError(`error in processWhiteListedUrl`, err);
+				return reject();
+			}
+		});
+
+		return p;
+	}
+
 	static processSensor(sensor: any, contentDir: string, serverDir: string, fqdn: string, session: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
 		const p = new Promise<void>(async (resolve, reject) => {
 			try {

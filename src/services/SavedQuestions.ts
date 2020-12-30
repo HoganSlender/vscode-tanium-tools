@@ -14,6 +14,8 @@ import { WebContentUtils } from '../common/webContentUtils';
 import { SigningKey } from '../types/signingKey';
 
 import path = require('path');
+import { DiffBase } from './DiffBase';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -23,47 +25,21 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-export class SavedQuestions {
+export class SavedQuestions extends DiffBase {
     static async analyzeSavedQuestions(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
-        const panelMissing = vscode.window.createWebviewPanel(
-            'hoganslenderMissingSavedQuestions',
-            'Missing Saved Questions',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 
-        const panelModified = vscode.window.createWebviewPanel(
-            'hoganslenderModifiedSavedQuestions',
-            'Modified Saved Questions',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath, true);
 
-        const panelCreated = vscode.window.createWebviewPanel(
-            'hoganslenderCreatedSavedQuestions',
-            'Created Saved Questions',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'Saved Questions',
+            leftDir: left.fsPath,
+            rightDir: right.fsPath,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzeSavedQuestions',
+        }, context);
 
-        const panelUnchanged = vscode.window.createWebviewPanel(
-            'hoganslenderUnchangedSavedQuestions',
-            'Unchanged Saved Questions',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        const panels = this.createPanels('Saved Questions', diffItems);
 
         // define output channel
         OutputChannelLogging.initialize();
@@ -76,7 +52,6 @@ export class SavedQuestions {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath, true);
         OutputChannelLogging.log(`missing saved questions: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified saved questions: ${diffItems.modified.length}`);
         OutputChannelLogging.log(`created saved questions: ${diffItems.created.length}`);
@@ -84,7 +59,7 @@ export class SavedQuestions {
 
         const title = 'Saved Questions';
 
-        panelMissing.webview.html = WebContentUtils.getMissingWebContent({
+        panels.missing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
             items: diffItems.missing,
             transferIndividual: 0,
@@ -94,9 +69,9 @@ export class SavedQuestions {
             showDestServer: false,
             showSigningKeys: true,
             openType: OpenType.file,
-        }, panelMissing, context, config);
+        }, panels.missing, context, config);
 
-        panelModified.webview.html = WebContentUtils.getModifiedWebContent({
+        panels.modified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
             items: diffItems.modified,
             transferIndividual: 0,
@@ -106,9 +81,9 @@ export class SavedQuestions {
             showDestServer: false,
             showSigningKeys: true,
             openType: OpenType.diff,
-        }, panelModified, context, config);
+        }, panels.modified, context, config);
 
-        panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
+        panels.created.webview.html = WebContentUtils.getCreatedWebContent({
             myTitle: title,
             items: diffItems.created,
             transferIndividual: 0,
@@ -118,18 +93,18 @@ export class SavedQuestions {
             showDestServer: false,
             showSigningKeys: true,
             openType: OpenType.file,
-        }, panelCreated, context, config);
+        }, panels.created, context, config);
 
-        panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
+        panels.unchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
             items: diffItems.unchanged,
             transferIndividual: 0,
             showServerInfo: 0,
             showDestServer: false,
             openType: OpenType.diff,
-        }, panelUnchanged, context, config);
+        }, panels.unchanged, context, config);
 
-        panelUnchanged.webview.onDidReceiveMessage(async message => {
+        panels.unchanged.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case "openDiff":
@@ -148,7 +123,7 @@ export class SavedQuestions {
             }
         });
 
-        panelModified.webview.onDidReceiveMessage(async message => {
+        panels.modified.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'completeProcess':
@@ -188,7 +163,7 @@ export class SavedQuestions {
             }
         });
 
-        panelMissing.webview.onDidReceiveMessage(async message => {
+        panels.missing.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'completeProcess':
@@ -225,7 +200,7 @@ export class SavedQuestions {
             }
         });
 
-        panelCreated.webview.onDidReceiveMessage(async message => {
+        panels.created.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case "openFile":

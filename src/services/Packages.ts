@@ -14,6 +14,8 @@ import { WebContentUtils } from '../common/webContentUtils';
 import { SigningKey } from '../types/signingKey';
 
 import path = require('path');
+import { DiffBase } from './DiffBase';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -23,47 +25,21 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-export class Packages {
+export class Packages extends DiffBase {
     static async analyzePackages(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
-        const panelMissing = vscode.window.createWebviewPanel(
-            'hoganslenderMissingPackages',
-            'Missing Packages',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 
-        const panelModified = vscode.window.createWebviewPanel(
-            'hoganslenderModifiedPackages',
-            'Modified Packages',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath, true);
 
-        const panelCreated = vscode.window.createWebviewPanel(
-            'hoganslenderCreatedPackages',
-            'Created Packages',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'Packages',
+            leftDir: left.fsPath,
+            rightDir: right.fsPath,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzePackages',
+        }, context);
 
-        const panelUnchanged = vscode.window.createWebviewPanel(
-            'hoganslenderUnchangedPackages',
-            'Unchanged Packages',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        const panels = this.createPanels('Packages', diffItems);
 
         // define output channel
         OutputChannelLogging.initialize();
@@ -76,7 +52,6 @@ export class Packages {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath, true);
         OutputChannelLogging.log(`missing packages: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified packages: ${diffItems.modified.length}`);
         OutputChannelLogging.log(`created packages: ${diffItems.created.length}`);
@@ -84,7 +59,7 @@ export class Packages {
 
         const title = 'Packages';
 
-        panelMissing.webview.html = WebContentUtils.getMissingWebContent({
+        panels.missing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
             items: diffItems.missing,
             transferIndividual: 1,
@@ -93,9 +68,9 @@ export class Packages {
             showSourceCreds: true,
             showDestServer: true,
             openType: OpenType.file,
-        }, panelMissing, context, config);
+        }, panels.missing, context, config);
 
-        panelModified.webview.html = WebContentUtils.getModifiedWebContent({
+        panels.modified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
             items: diffItems.modified,
             transferIndividual: 1,
@@ -104,9 +79,9 @@ export class Packages {
             showSourceCreds: true,
             showDestServer: true,
             openType: OpenType.diff,
-        }, panelModified, context, config);
+        }, panels.modified, context, config);
 
-        panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
+        panels.created.webview.html = WebContentUtils.getCreatedWebContent({
             myTitle: title,
             items: diffItems.created,
             transferIndividual: 1,
@@ -115,18 +90,18 @@ export class Packages {
             showSourceCreds: true,
             showDestServer: true,
             openType: OpenType.file,
-        }, panelCreated, context, config);
+        }, panels.created, context, config);
 
-        panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
+        panels.unchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
             items: diffItems.unchanged,
             transferIndividual: 0,
             showServerInfo: 0,
             showDestServer: false,
             openType: OpenType.diff,
-        }, panelUnchanged, context, config);
+        }, panels.unchanged, context, config);
 
-        panelUnchanged.webview.onDidReceiveMessage(async message => {
+        panels.unchanged.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case "openDiff":
@@ -145,7 +120,7 @@ export class Packages {
             }
         });
 
-        panelModified.webview.onDidReceiveMessage(async message => {
+        panels.modified.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'completeProcess':
@@ -178,7 +153,7 @@ export class Packages {
                         );
 
                         // send message back
-                        panelModified.webview.postMessage({
+                        panels.modified.webview.postMessage({
                             command: 'complete',
                         });
                         break;
@@ -199,7 +174,7 @@ export class Packages {
             }
         });
 
-        panelMissing.webview.onDidReceiveMessage(async message => {
+        panels.missing.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'completeProcess':
@@ -232,7 +207,7 @@ export class Packages {
                         );
 
                         // send message back
-                        panelMissing.webview.postMessage({
+                        panels.missing.webview.postMessage({
                             command: 'complete',
                         });
                         break;
@@ -250,7 +225,7 @@ export class Packages {
             }
         });
 
-        panelCreated.webview.onDidReceiveMessage(async message => {
+        panels.created.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case "openFile":

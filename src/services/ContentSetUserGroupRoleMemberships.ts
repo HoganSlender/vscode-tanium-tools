@@ -9,7 +9,9 @@ import { PathUtils } from '../common/pathUtils';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { WebContentUtils } from '../common/webContentUtils';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { ContentSetRoles } from './ContentSetRoles';
+import { DiffBase } from './DiffBase';
 import { UserGroups } from './UserGroups';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -20,47 +22,21 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-export class ContentSetUserGroupRoleMemberships {
+export class ContentSetUserGroupRoleMemberships extends DiffBase {
     static async analyzeContentSetUserGroupRoleMemberships(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
-        const panelMissing = vscode.window.createWebviewPanel(
-            'hoganslenderMissingContentSetUserGroupRoleMemberships',
-            'Missing Content Set Role Memberships',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 
-        const panelModified = vscode.window.createWebviewPanel(
-            'hoganslenderModifiedContentSetUserGroupRoleMemberships',
-            'Modified Content Set Role Memberships',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
 
-        const panelCreated = vscode.window.createWebviewPanel(
-            'hoganslenderCreatedContentSetUserGroupRoleMemberships',
-            'Created Content Set Role Memberships',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'Content Set User Group Role Memberships',
+            leftDir: left.fsPath,
+            rightDir: right.fsPath,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzeContentSetUserGroupRoleMemberships',
+        }, context);
 
-        const panelUnchanged = vscode.window.createWebviewPanel(
-            'hoganslenderUnchangedContentSetUserGroupRoleMemberships',
-            'Unchanged Content Set Role Memberships',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        const panels = this.createPanels('Content Set User Group Role Memberships', diffItems);
 
         // define output channel
         OutputChannelLogging.initialize();
@@ -74,7 +50,6 @@ export class ContentSetUserGroupRoleMemberships {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
         OutputChannelLogging.log(`missing content set user group role memberships: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified content set user group role memberships: ${diffItems.modified.length}`);
         OutputChannelLogging.log(`created content set user group role memberships: ${diffItems.created.length}`);
@@ -82,43 +57,43 @@ export class ContentSetUserGroupRoleMemberships {
 
         const title = 'Content Set Role Memberships';
 
-        panelMissing.webview.html = WebContentUtils.getMissingWebContent({
+        panels.missing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
             items: diffItems.missing,
             transferIndividual: 1,
             showServerInfo: 1,
             showDestServer: true,
             openType: OpenType.file,
-        }, panelMissing, context, config);
+        }, panels.missing, context, config);
 
-        panelModified.webview.html = WebContentUtils.getModifiedWebContent({
+        panels.modified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
             items: diffItems.modified,
             transferIndividual: 1,
             showServerInfo: 1,
             showDestServer: true,
             openType: OpenType.diff,
-        }, panelModified, context, config);
+        }, panels.modified, context, config);
 
-        panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
+        panels.created.webview.html = WebContentUtils.getCreatedWebContent({
             myTitle: title,
             items: diffItems.created,
             transferIndividual: 1,
             showServerInfo: 1,
             showDestServer: true,
             openType: OpenType.file,
-        }, panelCreated, context, config);
+        }, panels.created, context, config);
 
-        panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
+        panels.unchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
             items: diffItems.unchanged,
             transferIndividual: 0,
             showServerInfo: 0,
             showDestServer: false,
             openType: OpenType.diff,
-        }, panelUnchanged, context, config);
+        }, panels.unchanged, context, config);
 
-        panelUnchanged.webview.onDidReceiveMessage(async message => {
+        panels.unchanged.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case "openDiff":
@@ -137,7 +112,7 @@ export class ContentSetUserGroupRoleMemberships {
             }
         });
 
-        panelModified.webview.onDidReceiveMessage(async message => {
+        panels.modified.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'completeProcess':
@@ -161,7 +136,7 @@ export class ContentSetUserGroupRoleMemberships {
                         );
 
                         // send message back
-                        panelModified.webview.postMessage({
+                        panels.modified.webview.postMessage({
                             command: 'complete',
                         });
                         break;
@@ -182,7 +157,7 @@ export class ContentSetUserGroupRoleMemberships {
             }
         });
 
-        panelMissing.webview.onDidReceiveMessage(async message => {
+        panels.missing.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'completeProcess':
@@ -206,7 +181,7 @@ export class ContentSetUserGroupRoleMemberships {
                         );
 
                         // send message back
-                        panelMissing.webview.postMessage({
+                        panels.missing.webview.postMessage({
                             command: 'complete',
                         });
                         break;
@@ -224,7 +199,7 @@ export class ContentSetUserGroupRoleMemberships {
             }
         });
 
-        panelCreated.webview.onDidReceiveMessage(async message => {
+        panels.created.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case "openFile":

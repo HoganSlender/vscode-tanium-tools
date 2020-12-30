@@ -9,7 +9,9 @@ import { PathUtils } from '../common/pathUtils';
 import { RestClient } from '../common/restClient';
 import { SigningUtils } from '../common/signingUtils';
 import { WebContentUtils } from '../common/webContentUtils';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { SigningKey } from '../types/signingKey';
+import { DiffBase } from './DiffBase';
 import { ServerServerContentSetPrivileges } from './ServerServerContentSetPrivileges';
 import { ServerServerContentSetRoles } from './ServerServerContentSetRoles';
 import { ServerServerContentSets } from './ServerServerContentSets';
@@ -23,47 +25,22 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-export class ContentSetRolePrivileges {
+export class ContentSetRolePrivileges extends DiffBase {
     static async analyzeContentSetRolePrivileges(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
-        const panelMissing = vscode.window.createWebviewPanel(
-            'hoganslenderMissingContentSetRolePrivileges',
-            'Missing Content Set Role Privileges',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 
-        const panelModified = vscode.window.createWebviewPanel(
-            'hoganslenderModifiedContentSetRolePrivileges',
-            'Modified Content Set Role Privileges',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
 
-        const panelCreated = vscode.window.createWebviewPanel(
-            'hoganslenderCreatedContentSetRolePrivileges',
-            'Created Content Set Role Privileges',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'Content Set Role Privileges',
+            leftDir: left.fsPath,
+            rightDir: right.fsPath,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzeContentSetRolePrivileges',
+        }, context);
 
-        const panelUnchanged = vscode.window.createWebviewPanel(
-            'hoganslenderUnchangedContentSetRolePrivileges',
-            'Unchanged Content Set Role Privileges',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        const panels = this.createPanels('Content Set Role Privileges', diffItems);
+
 
         // define output channel
         OutputChannelLogging.initialize();
@@ -74,7 +51,6 @@ export class ContentSetRolePrivileges {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
         OutputChannelLogging.log(`missing content set role privileges: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified content set role privileges: ${diffItems.modified.length}`);
         OutputChannelLogging.log(`created content set role privileges: ${diffItems.created.length}`);
@@ -82,7 +58,7 @@ export class ContentSetRolePrivileges {
 
         const title = 'Content Set Role Privileges';
 
-        panelMissing.webview.html = WebContentUtils.getMissingWebContent({
+        panels.missing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
             items: diffItems.missing,
             transferIndividual: 0,
@@ -91,9 +67,9 @@ export class ContentSetRolePrivileges {
             showSigningKeys: true,
             readOnly: true,
             openType: OpenType.file,
-        }, panelMissing, context, config);
+        }, panels.missing, context, config);
 
-        panelModified.webview.html = WebContentUtils.getModifiedWebContent({
+        panels.modified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
             items: diffItems.modified,
             transferIndividual: 0,
@@ -102,9 +78,9 @@ export class ContentSetRolePrivileges {
             showSigningKeys: true,
             readOnly: true,
             openType: OpenType.diff,
-        }, panelModified, context, config);
+        }, panels.modified, context, config);
 
-        panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
+        panels.created.webview.html = WebContentUtils.getCreatedWebContent({
             myTitle: title,
             items: diffItems.created,
             transferIndividual: 0,
@@ -113,18 +89,18 @@ export class ContentSetRolePrivileges {
             showSigningKeys: true,
             readOnly: true,
             openType: OpenType.file,
-        }, panelCreated, context, config);
+        }, panels.created, context, config);
 
-        panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
+        panels.unchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
             items: diffItems.unchanged,
             transferIndividual: 0,
             showServerInfo: 0,
             showDestServer: false,
             openType: OpenType.diff,
-        }, panelUnchanged, context, config);
+        }, panels.unchanged, context, config);
 
-        panelUnchanged.webview.onDidReceiveMessage(async message => {
+        panels.unchanged.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case "openDiff":
@@ -143,7 +119,7 @@ export class ContentSetRolePrivileges {
             }
         });
 
-        panelModified.webview.onDidReceiveMessage(async message => {
+        panels.modified.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'initSigningKeys':
@@ -152,7 +128,7 @@ export class ContentSetRolePrivileges {
 
                         const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
 
-                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                        [panels.missing, panels.modified, panels.created].forEach(panel => {
                             panel.webview.postMessage({
                                 command: 'signingKeysInitialized',
                                 signingKey: newSigningKeys[0].serverLabel,
@@ -192,7 +168,7 @@ export class ContentSetRolePrivileges {
             }
         });
 
-        panelMissing.webview.onDidReceiveMessage(async message => {
+        panels.missing.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'initSigningKeys':
@@ -201,7 +177,7 @@ export class ContentSetRolePrivileges {
 
                         const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
 
-                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                        [panels.missing, panels.modified, panels.created].forEach(panel => {
                             panel.webview.postMessage({
                                 command: 'signingKeysInitialized',
                                 signingKey: newSigningKeys[0].serverLabel,
@@ -238,7 +214,7 @@ export class ContentSetRolePrivileges {
             }
         });
 
-        panelCreated.webview.onDidReceiveMessage(async message => {
+        panels.created.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'initSigningKeys':
@@ -247,7 +223,7 @@ export class ContentSetRolePrivileges {
 
                         const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
 
-                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                        [panels.missing, panels.modified, panels.created].forEach(panel => {
                             panel.webview.postMessage({
                                 command: 'signingKeysInitialized',
                                 signingKey: newSigningKeys[0].serverLabel,

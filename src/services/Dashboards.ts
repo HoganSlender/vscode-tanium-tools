@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
 import * as vscode from 'vscode';
 
 import * as commands from '../common/commands';
@@ -11,10 +10,11 @@ import { WebContentUtils } from '../common/webContentUtils';
 import { SigningKey } from '../types/signingKey';
 import { SignContentFile } from './SignContentFile';
 
-import path = require('path');
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { SigningUtils } from '../common/signingUtils';
+import { DiffBase } from './DiffBase';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -24,47 +24,21 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-export class Dashboards {
+export class Dashboards extends DiffBase {
     static async analyzeDashboards(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
-        const panelMissing = vscode.window.createWebviewPanel(
-            'hoganslenderMissingDashboards',
-            'Missing Dashboards',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 
-        const panelModified = vscode.window.createWebviewPanel(
-            'hoganslenderModifiedDashboards',
-            'Modified Dashboards',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath, true);
 
-        const panelCreated = vscode.window.createWebviewPanel(
-            'hoganslenderCreatedDashboards',
-            'Created Dashboards',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'Dashboards',
+            leftDir: left.fsPath,
+            rightDir: right.fsPath,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzeDashboards',
+        }, context);
 
-        const panelUnchanged = vscode.window.createWebviewPanel(
-            'hoganslenderUnchangedDashboards',
-            'Unchanged Dashboards',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        const panels = this.createPanels('Dashboards', diffItems);
 
         // define output channel
         OutputChannelLogging.initialize();
@@ -77,7 +51,6 @@ export class Dashboards {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath, true);
         OutputChannelLogging.log(`missing dashboards: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified dashboards: ${diffItems.modified.length}`);
         OutputChannelLogging.log(`created dashboards: ${diffItems.created.length}`);
@@ -85,7 +58,7 @@ export class Dashboards {
 
         const title = 'Dashboards';
 
-        panelMissing.webview.html = WebContentUtils.getMissingWebContent({
+        panels.missing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
             items: diffItems.missing,
             transferIndividual: 0,
@@ -95,9 +68,9 @@ export class Dashboards {
             showDestServer: false,
             showSigningKeys: true,
             openType: OpenType.file,
-        }, panelMissing, context, config);
+        }, panels.missing, context, config);
 
-        panelModified.webview.html = WebContentUtils.getModifiedWebContent({
+        panels.modified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
             items: diffItems.modified,
             transferIndividual: 0,
@@ -107,9 +80,9 @@ export class Dashboards {
             showDestServer: false,
             showSigningKeys: true,
             openType: OpenType.diff,
-        }, panelModified, context, config);
+        }, panels.modified, context, config);
 
-        panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
+        panels.created.webview.html = WebContentUtils.getCreatedWebContent({
             myTitle: title,
             items: diffItems.created,
             transferIndividual: 0,
@@ -119,18 +92,18 @@ export class Dashboards {
             showDestServer: false,
             showSigningKeys: true,
             openType: OpenType.file,
-        }, panelCreated, context, config);
+        }, panels.created, context, config);
 
-        panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
+        panels.unchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
             items: diffItems.unchanged,
             transferIndividual: 0,
             showServerInfo: 0,
             showDestServer: false,
             openType: OpenType.diff,
-        }, panelUnchanged, context, config);
+        }, panels.unchanged, context, config);
 
-        panelUnchanged.webview.onDidReceiveMessage(async message => {
+        panels.unchanged.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case "openDiff":
@@ -149,7 +122,7 @@ export class Dashboards {
             }
         });
 
-        panelModified.webview.onDidReceiveMessage(async message => {
+        panels.modified.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'initSigningKeys':
@@ -158,7 +131,7 @@ export class Dashboards {
 
                         const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
 
-                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                        [panels.missing, panels.modified, panels.created].forEach(panel => {
                             panel.webview.postMessage({
                                 command: 'signingKeysInitialized',
                                 signingKey: newSigningKeys[0].serverLabel,
@@ -203,7 +176,7 @@ export class Dashboards {
             }
         });
 
-        panelMissing.webview.onDidReceiveMessage(async message => {
+        panels.missing.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'initSigningKeys':
@@ -212,7 +185,7 @@ export class Dashboards {
 
                         const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
 
-                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                        [panels.missing, panels.modified, panels.created].forEach(panel => {
                             panel.webview.postMessage({
                                 command: 'signingKeysInitialized',
                                 signingKey: newSigningKeys[0].serverLabel,
@@ -254,7 +227,7 @@ export class Dashboards {
             }
         });
 
-        panelCreated.webview.onDidReceiveMessage(async message => {
+        panels.created.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'initSigningKeys':
@@ -263,7 +236,7 @@ export class Dashboards {
 
                         const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
 
-                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                        [panels.missing, panels.modified, panels.created].forEach(panel => {
                             panel.webview.postMessage({
                                 command: 'signingKeysInitialized',
                                 signingKey: newSigningKeys[0].serverLabel,

@@ -14,6 +14,8 @@ import { UserGroups } from "./UserGroups";
 
 import path = require('path');
 import { SigningUtils } from '../common/signingUtils';
+import { DiffBase } from './DiffBase';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -35,71 +37,51 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-export class Groups {
+export class Groups extends DiffBase {
     static async analyzeGroups(left: vscode.Uri, right: vscode.Uri, targetGroupType: number, context: vscode.ExtensionContext) {        
+        await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+
         var title = 'Groups';
+        var commandString = 'Groups';
 
         switch(targetGroupType) {
             case 0:
                 title = 'Filter Groups';
+                commandString = 'hoganslendertanium.analyzeFilterGroups';
                 break;
 
             case 1:
                 title = 'Action Groups';
+                commandString = 'hoganslendertanium.analyzeActionGroups';
                 break;
             
             case 2:
                 title = 'Action Policy Groups';
+                commandString = 'hoganslendertanium.analyzeActionPolicyGroups';
                 break;
 
             case 3:
                 title = 'Ad Hoc Groups';
+                commandString = 'hoganslendertanium.analyzeAdHocGroups';
                 break;
 
             case 4:
                 title = 'Manual Groups';
+                commandString = 'hoganslendertanium.analyzeManualGroups';
                 break;
         }
 
-        const panelMissing = vscode.window.createWebviewPanel(
-            'hoganslenderMissingGroups',
-            `Missing ${title}`,
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
 
-        const panelModified = vscode.window.createWebviewPanel(
-            'hoganslenderModifiedGroups',
-            `Modified ${title}`,
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: title,
+            leftDir: left.fsPath,
+            rightDir: right.fsPath,
+            diffItems: diffItems,
+            commandString: commandString,
+        }, context);
 
-        const panelCreated = vscode.window.createWebviewPanel(
-            'hoganslenderCreatedGroups',
-            `Created ${title}`,
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
-
-        const panelUnchanged = vscode.window.createWebviewPanel(
-            'hoganslenderUnchangedGroups',
-            `Unchanged ${title}`,
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        const panels = this.createPanels(title, diffItems);
 
         // define output channel
         OutputChannelLogging.initialize();
@@ -112,13 +94,12 @@ export class Groups {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
         OutputChannelLogging.log(`missing groups: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified groups: ${diffItems.modified.length}`);
         OutputChannelLogging.log(`created groups: ${diffItems.created.length}`);
         OutputChannelLogging.log(`unchanged groups: ${diffItems.unchanged.length}`);
 
-        panelMissing.webview.html = WebContentUtils.getMissingWebContent({
+        panels.missing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
             items: diffItems.missing,
             transferIndividual: 1,
@@ -126,9 +107,9 @@ export class Groups {
             showDestServer: true,
             showSigningKeys: true,
             openType: OpenType.file,
-        }, panelMissing, context, config);
+        }, panels.missing, context, config);
 
-        panelModified.webview.html = WebContentUtils.getModifiedWebContent({
+        panels.modified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
             items: diffItems.modified,
             transferIndividual: 1,
@@ -136,9 +117,9 @@ export class Groups {
             showDestServer: true,
             showSigningKeys: true,
             openType: OpenType.diff,
-        }, panelModified, context, config);
+        }, panels.modified, context, config);
 
-        panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
+        panels.created.webview.html = WebContentUtils.getCreatedWebContent({
             myTitle: title,
             items: diffItems.created,
             transferIndividual: 1,
@@ -146,18 +127,18 @@ export class Groups {
             showDestServer: true,
             showSigningKeys: true,
             openType: OpenType.file,
-        }, panelCreated, context, config);
+        }, panels.created, context, config);
 
-        panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
+        panels.unchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
             items: diffItems.unchanged,
             transferIndividual: 0,
             showServerInfo: 0,
             showDestServer: false,
             openType: OpenType.diff,
-        }, panelUnchanged, context, config);
+        }, panels.unchanged, context, config);
 
-        panelUnchanged.webview.onDidReceiveMessage(async message => {
+        panels.unchanged.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case "openDiff":
@@ -176,7 +157,7 @@ export class Groups {
             }
         });
 
-        panelModified.webview.onDidReceiveMessage(async message => {
+        panels.modified.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'completeProcess':
@@ -206,7 +187,7 @@ export class Groups {
                         );
 
                         // send message back
-                        panelModified.webview.postMessage({
+                        panels.modified.webview.postMessage({
                             command: 'complete',
                         });
                         break;
@@ -227,7 +208,7 @@ export class Groups {
             }
         });
 
-        panelMissing.webview.onDidReceiveMessage(async message => {
+        panels.missing.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'completeProcess':
@@ -257,7 +238,7 @@ export class Groups {
                         );
 
                         // send message back
-                        panelMissing.webview.postMessage({
+                        panels.missing.webview.postMessage({
                             command: 'complete',
                         });
                         break;
@@ -275,7 +256,7 @@ export class Groups {
             }
         });
 
-        panelCreated.webview.onDidReceiveMessage(async message => {
+        panels.created.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case "openFile":

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as fs from 'fs';
+import { title } from 'process';
 import * as vscode from 'vscode';
 
 import * as commands from '../common/commands';
@@ -10,7 +11,9 @@ import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { SigningUtils } from '../common/signingUtils';
 import { WebContentUtils } from '../common/webContentUtils';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { SigningKey } from "../types/signingKey";
+import { DiffBase } from './DiffBase';
 import { SignContentFile } from './SignContentFile';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -21,49 +24,21 @@ export function activate(context: vscode.ExtensionContext) {
     });
 }
 
-export class Sensors {
+export class Sensors extends DiffBase {
     static async analyzeSensors(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
-        var title = 'Sensors';
+        await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 
-        const panelMissing = vscode.window.createWebviewPanel(
-            'hoganslenderMissingSensors',
-            `Missing ${title}`,
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath, true);
 
-        const panelModified = vscode.window.createWebviewPanel(
-            'hoganslenderModifiedSensors',
-            `Modified ${title}`,
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'Sensors',
+            leftDir: left.fsPath,
+            rightDir: right.fsPath,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzeSensors',
+        }, context);
 
-        const panelCreated = vscode.window.createWebviewPanel(
-            'hoganslenderCreatedSensors',
-            `Created ${title}`,
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
-
-        const panelUnchanged = vscode.window.createWebviewPanel(
-            'hoganslenderUnchangedSensors',
-            `Unchanged ${title}`,
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        const panels = this.createPanels('Sensors', diffItems);
 
         // define output channel
         OutputChannelLogging.initialize();
@@ -76,13 +51,12 @@ export class Sensors {
         OutputChannelLogging.log(`left dir: ${left.fsPath}`);
         OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
-        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath, true);
         OutputChannelLogging.log(`missing sensors: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified sensors: ${diffItems.modified.length}`);
         OutputChannelLogging.log(`created sensors: ${diffItems.created.length}`);
         OutputChannelLogging.log(`unchanged sensors: ${diffItems.unchanged.length}`);
 
-        panelMissing.webview.html = WebContentUtils.getMissingWebContent({
+        panels.missing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
             items: diffItems.missing,
             transferIndividual: 0,
@@ -92,9 +66,9 @@ export class Sensors {
             showDestServer: false,
             showSigningKeys: true,
             openType: OpenType.file,
-        }, panelMissing, context, config);
+        }, panels.missing, context, config);
 
-        panelModified.webview.html = WebContentUtils.getModifiedWebContent({
+        panels.modified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
             items: diffItems.modified,
             transferIndividual: 0,
@@ -104,9 +78,9 @@ export class Sensors {
             showDestServer: false,
             showSigningKeys: true,
             openType: OpenType.diff,
-        }, panelModified, context, config);
+        }, panels.modified, context, config);
 
-        panelCreated.webview.html = WebContentUtils.getCreatedWebContent({
+        panels.created.webview.html = WebContentUtils.getCreatedWebContent({
             myTitle: title,
             items: diffItems.created,
             transferIndividual: 0,
@@ -116,18 +90,18 @@ export class Sensors {
             showDestServer: true,
             showSigningKeys: true,
             openType: OpenType.file,
-        }, panelCreated, context, config);
+        }, panels.created, context, config);
 
-        panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
+        panels.unchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
             items: diffItems.unchanged,
             transferIndividual: 0,
             showServerInfo: 0,
             showDestServer: false,
             openType: OpenType.diff,
-        }, panelUnchanged, context, config);
+        }, panels.unchanged, context, config);
 
-        panelUnchanged.webview.onDidReceiveMessage(async message => {
+        panels.unchanged.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case "openDiff":
@@ -146,7 +120,7 @@ export class Sensors {
             }
         });
 
-        panelModified.webview.onDidReceiveMessage(async message => {
+        panels.modified.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'initSigningKeys':
@@ -155,7 +129,7 @@ export class Sensors {
 
                         const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
 
-                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                        [panels.missing, panels.modified, panels.created].forEach(panel => {
                             panel.webview.postMessage({
                                 command: 'signingKeysInitialized',
                                 signingKey: newSigningKeys[0].serverLabel,
@@ -200,7 +174,7 @@ export class Sensors {
             }
         });
 
-        panelMissing.webview.onDidReceiveMessage(async message => {
+        panels.missing.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'initSigningKeys':
@@ -209,7 +183,7 @@ export class Sensors {
 
                         const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
 
-                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                        [panels.missing, panels.modified, panels.created].forEach(panel => {
                             panel.webview.postMessage({
                                 command: 'signingKeysInitialized',
                                 signingKey: newSigningKeys[0].serverLabel,
@@ -251,7 +225,7 @@ export class Sensors {
             }
         });
 
-        panelCreated.webview.onDidReceiveMessage(async message => {
+        panels.created.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case 'initSigningKeys':
@@ -260,7 +234,7 @@ export class Sensors {
 
                         const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
 
-                        [panelMissing, panelModified, panelCreated].forEach(panel => {
+                        [panels.missing, panels.modified, panels.created].forEach(panel => {
                             panel.webview.postMessage({
                                 command: 'signingKeysInitialized',
                                 signingKey: newSigningKeys[0].serverLabel,

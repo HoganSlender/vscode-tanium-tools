@@ -16,6 +16,7 @@ import path = require('path');
 import { DiffItemData, PathUtils } from '../common/pathUtils';
 import { WebContentUtils } from '../common/webContentUtils';
 import { OpenType } from '../common/enums';
+import { DiffBase } from './DiffBase';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -42,41 +43,13 @@ export interface SolutionItemData {
     featured: boolean,
 }
 
-export class Solutions {
+export class Solutions extends DiffBase {
     static async analyzeSolutions(label: string, diffItems: DiffItemData, context: vscode.ExtensionContext) {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 
         OutputChannelLogging.log(`calculating ${label} differences`);
 
-        const panelMissing = vscode.window.createWebviewPanel(
-            `hoganslenderMissing${label.replace(/\s/g, '')}`,
-            `Missing ${label} (${diffItems.missing.length})`,
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
-
-        const panelModified = vscode.window.createWebviewPanel(
-            `hoganslenderModified${label.replace(/\s/g, '')}`,
-            `Modified ${label} (${diffItems.modified.length})`,
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
-
-        const panelUnchanged = vscode.window.createWebviewPanel(
-            `hoganslenderUnchanged${label.replace(/\s/g, '')}`,
-            `Unchanged ${label} (${diffItems.unchanged.length})`,
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
-        );
+        const panels = this.createSolutionPanels(label, diffItems);
 
         // define output channel
         OutputChannelLogging.initialize();
@@ -89,7 +62,7 @@ export class Solutions {
 
         const title = label;
 
-        panelMissing.webview.html = WebContentUtils.getMissingWebContent({
+        panels.missing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
             items: diffItems.missing,
             transferIndividual: 0,
@@ -97,9 +70,9 @@ export class Solutions {
             showDestServer: false,
             readOnly: true,
             openType: OpenType.file,
-        }, panelMissing, context, config);
+        }, panels.missing, context, config);
 
-        panelModified.webview.html = WebContentUtils.getModifiedWebContent({
+        panels.modified.webview.html = WebContentUtils.getModifiedWebContent({
             myTitle: title,
             items: diffItems.modified,
             transferIndividual: 0,
@@ -107,18 +80,18 @@ export class Solutions {
             showDestServer: false,
             readOnly: true,
             openType: OpenType.diff,
-        }, panelModified, context, config);
+        }, panels.modified, context, config);
 
-        panelUnchanged.webview.html = WebContentUtils.getUnchangedWebContent({
+        panels.unchanged.webview.html = WebContentUtils.getUnchangedWebContent({
             myTitle: title,
             items: diffItems.unchanged,
             transferIndividual: 0,
             showServerInfo: 0,
             showDestServer: false,
             openType: OpenType.diff,
-        }, panelUnchanged, context, config);
+        }, panels.unchanged, context, config);
 
-        panelUnchanged.webview.onDidReceiveMessage(async message => {
+        panels.unchanged.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case "openDiff":
@@ -137,7 +110,7 @@ export class Solutions {
             }
         });
 
-        panelModified.webview.onDidReceiveMessage(async message => {
+        panels.modified.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case "openDiff":
@@ -156,7 +129,7 @@ export class Solutions {
             }
         });
     
-        panelMissing.webview.onDidReceiveMessage(async message => {
+        panels.missing.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
                     case "openFile":

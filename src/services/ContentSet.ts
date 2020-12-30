@@ -169,7 +169,7 @@ class ContentSet extends ServerServerBase {
 						const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
 						// process contents
-						vscode.window.withProgress({
+						await vscode.window.withProgress({
 							location: vscode.ProgressLocation.Notification,
 							title: 'Parse Content',
 							cancellable: false

@@ -17,6 +17,7 @@ export interface SolutionDiffItemData {
     leftDir: string,
     rightDir: string,
     diffItems?: DiffItemData,
+    commandString?: string
 }
 
 export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTreeItem> {
@@ -100,11 +101,11 @@ export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTre
     }
 
     public calculateDiffs(context: vscode.ExtensionContext) {
-        const p = new Promise<void>((resolve, reject) => {
+        const p = new Promise<void>(async (resolve, reject) => {
             try {
                 const increment = 100 / this.diffItemDatas.length;
 
-                vscode.window.withProgress({
+                await vscode.window.withProgress({
                     location: vscode.ProgressLocation.Notification,
                     title: 'Calculate Differences',
                     cancellable: false

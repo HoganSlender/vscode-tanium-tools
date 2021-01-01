@@ -85,10 +85,18 @@
 		"commands": [
 			{
 				"command": "hoganslendertanium.refreshSolutions",
-				"title": "Refresh Solutions",
+				"title": " Refresh Solutions",
 				"icon": {
 					"light": "resources/light/refresh.svg",
 					"dark": "resources/dark/refresh.svg"
+				}
+			},
+			{
+				"command": "hoganslendertanium.clearSolutions",
+				"title": "Clear Solutions",
+				"icon": {
+					"light": "resources/light/delete.svg",
+					"dark": "resources/dark/delete.svg"
 				}
 			},
 			{
@@ -309,6 +317,11 @@
 		],
 		"menus": {
 			"view/item/context":[
+				{
+					"command": "hoganslendertanium.clearSolutions",
+					"when": "view == hoganslendertaniumcompare && viewItem == serverSolutions",
+					"group": "inline"
+				},
 				{
 					"command": "hoganslendertanium.refreshSolutions",
 					"when": "view == hoganslendertaniumcompare && viewItem == serverSolutions",

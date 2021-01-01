@@ -27,6 +27,9 @@ export function activate(context: vscode.ExtensionContext) {
         'hoganslendertanium.refreshSolutions': () => {
             Solutions.refreshUserSolutions(context);
         },
+        'hoganslendertanium.clearSolutions': () => {
+            Solutions.clearUserSolutions(context);
+        },
         'hoganslendertanium.analyzeSolutions': (label, diffItems) => {
             Solutions.analyzeSolutions(label, diffItems, context);
         },
@@ -148,6 +151,10 @@ export class Solutions extends DiffBase {
                 OutputChannelLogging.logError('error processing message', err);
             }
         });
+    }
+
+    static async clearUserSolutions(context: vscode.ExtensionContext) {
+        TaniumSolutionNodeProvider.currentProvider?.clearSolutionData();
     }
 
     static async refreshUserSolutions(context: vscode.ExtensionContext) {

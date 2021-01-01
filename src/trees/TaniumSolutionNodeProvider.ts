@@ -21,10 +21,27 @@ export class TaniumSolutionNodeProvider implements vscode.TreeDataProvider<Taniu
     label: string = '';
 
     private solutionData: SolutionData | undefined;
+    private isRefreshing: boolean = false;
+
+    public clearSolutionData() {
+        this.solutionData = undefined;
+        this.refresh();
+    }
+
+    public refreshSolutionData() {
+        this.solutionData = undefined;
+        this.isRefreshing = true;
+        this.refresh();
+    }
 
     public setSolutionData(data: SolutionData) {
+        this.isRefreshing = false;
         this.solutionData = data;
         this.refresh();
+    }
+
+    public getSolutionDataFqdn(): string {
+        return this.solutionData?.fqdn!;
     }
 
     public static createProvider(context: vscode.ExtensionContext) {
@@ -46,10 +63,14 @@ export class TaniumSolutionNodeProvider implements vscode.TreeDataProvider<Taniu
             switch (element.label) {
                 case 'Solutions':
                     if (this.solutionData === undefined) {
-                        children.push(new TaniumSolutionTreeItem(element, 'Compare Solutions', 'Compare Solutions to Tanium Server', vscode.TreeItemCollapsibleState.None, undefined, {
-                            'command': 'hoganslendertanium.compareSolutions',
-                            'title': 'Compare Solutions',
-                        }));
+                        if (this.isRefreshing) {
+                            children.push(new TaniumSolutionTreeItem(element, 'Updating...', 'Updating...', vscode.TreeItemCollapsibleState.None));
+                        } else {
+                            children.push(new TaniumSolutionTreeItem(element, 'Compare Solutions', 'Compare Solutions to Tanium Server', vscode.TreeItemCollapsibleState.None, undefined, {
+                                'command': 'hoganslendertanium.compareSolutions',
+                                'title': 'Compare Solutions',
+                            }));
+                        }
                     } else {
                         children.push(new TaniumSolutionTreeItem(element, 'Modules', 'Modules', vscode.TreeItemCollapsibleState.Expanded, {
                             light: path.join(this.resourcePath, 'light', 'folder.svg'),
@@ -227,10 +248,16 @@ export class TaniumSolutionNodeProvider implements vscode.TreeDataProvider<Taniu
 
             this.label = this.solutionData ? `Solutions - ${this.solutionData.fqdn}` : 'Solutions';
 
-            roots.push(new TaniumSolutionTreeItem(element, this.label, 'Show differences between Solutions and Tanium Server', vscode.TreeItemCollapsibleState.Expanded, {
+            const serverSolutions = new TaniumSolutionTreeItem(element, this.label, 'Show differences between Solutions and Tanium Server', vscode.TreeItemCollapsibleState.Expanded, {
                 light: path.join(this.resourcePath, 'light', 'folder.svg'),
                 dark: path.join(this.resourcePath, 'dark', 'folder.svg')
-            }));
+            });
+
+            if (this.solutionData) {
+                serverSolutions.contextValue = 'serverSolutions';
+            }
+
+            roots.push(serverSolutions);
 
             roots.push(new TaniumSolutionTreeItem(element, 'Servers', 'Show differences between Tanium Servers', vscode.TreeItemCollapsibleState.Expanded, {
                 light: path.join(this.resourcePath, 'light', 'folder.svg'),

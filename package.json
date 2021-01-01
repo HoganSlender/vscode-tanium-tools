@@ -84,6 +84,14 @@
 		},
 		"commands": [
 			{
+				"command": "hoganslendertanium.refreshSolutions",
+				"title": "Refresh Solutions",
+				"icon": {
+					"light": "resources/light/refresh.svg",
+					"dark": "resources/dark/refresh.svg"
+				}
+			},
+			{
 				"command": "hoganslendertanium.analyzeContentSetPrivileges",
 				"title": "Analyze Content Set Privileges",
 				"category": "Tanium"
@@ -300,6 +308,13 @@
 			}
 		],
 		"menus": {
+			"view/item/context":[
+				{
+					"command": "hoganslendertanium.refreshSolutions",
+					"when": "view == hoganslendertaniumcompare && viewItem == serverSolutions",
+					"group": "inline"
+				}
+			],
 			"commandPalette": [
 				{
 					"command": "hoganslendertanium.analyzeContentSetPrivileges",

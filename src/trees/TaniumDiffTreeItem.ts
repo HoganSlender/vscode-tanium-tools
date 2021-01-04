@@ -22,4 +22,6 @@ export class TaniumDiffTreeItem extends vscode.TreeItem {
             command: 'hoganslendertanium.analyzeSolutions',
             title: 'Open Comparison',
         };
+
+    public contextValue = 'diffItem';
 }

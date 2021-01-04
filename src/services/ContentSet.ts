@@ -26,6 +26,7 @@ import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { ContentSetRolePrivileges } from './ContentSetRolePrivileges';
 import { ServerServerBase } from './ServerServerBase';
 import { WhiteListedUrls } from './WhiteListedUrls';
+import { reject } from 'lodash';
 
 const diffMatchPatch = require('diff-match-patch');
 
@@ -112,11 +113,15 @@ class ContentSet extends ServerServerBase {
 	}
 
 	static extractContentSetContentAndCalcDiffs(contentSetFile: string, contentDir: string, serverDir: string, fqdn: string, username: string, password: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
-		const p = new Promise<void>(async (resolve) => {
-			await this.extractContentSetContent(contentSetFile, contentDir, serverDir, fqdn, username, password, allowSelfSignedCerts, httpTimeout, context);
-			await TaniumDiffProvider.currentProvider?.calculateDiffs(context);
+		const p = new Promise<void>(async (resolve, reject) => {
+			try {
+				await this.extractContentSetContent(contentSetFile, contentDir, serverDir, fqdn, username, password, allowSelfSignedCerts, httpTimeout, context);
+				await TaniumDiffProvider.currentProvider?.calculateDiffs(context);
 
-			resolve();
+				return resolve();
+			} catch (err) {
+				return reject();
+			}
 		});
 
 		return p;
@@ -139,6 +144,9 @@ class ContentSet extends ServerServerBase {
 					OutputChannelLogging.logError(`could not open '${contentSetFile}'`, err);
 					return reject();
 				}
+
+				// store for later
+				TaniumDiffProvider.currentProvider?.addXmlContentSetFile(contentSetFile, context);
 
 				var options = {
 					attributeNamePrefix: "@_",

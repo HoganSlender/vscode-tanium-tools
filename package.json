@@ -108,6 +108,14 @@
 				}
 			},
 			{
+				"command": "hoganslendertanium.removeDiffItems",
+				"title": "Remove All Diffs",
+				"icon": {
+					"light": "resources/light/delete.svg",
+					"dark": "resources/dark/delete.svg"
+				}
+			},
+			{
 				"command": "hoganslendertanium.analyzeContentSetPrivileges",
 				"title": "Analyze Content Set Privileges",
 				"category": "Tanium"
@@ -324,6 +332,13 @@
 			}
 		],
 		"menus": {
+			"view/title": [
+				{
+					"command": "hoganslendertanium.removeDiffItems",
+					"when": "view == hoganslendertaniumdiff",
+					"group": "navigation"
+				}
+			],
 			"view/item/context": [
 				{
 					"command": "hoganslendertanium.clearSolutions",

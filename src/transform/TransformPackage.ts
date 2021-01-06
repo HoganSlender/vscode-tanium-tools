@@ -4,36 +4,72 @@ import { TransformBase } from "./TransformBase";
 
 export class TransformPackage extends TransformBase {
     static transformCs(taniumPackage: any) {
-        if (taniumPackage['signature'] === '') {
-            delete taniumPackage.signature;
-        }
+        var result: any = {};
 
-        if (taniumPackage['meta_data'] === '') {
-            delete taniumPackage.meta_data;
-        }
+        this.transpond(taniumPackage, result, 'name');
+        this.transpond(taniumPackage, result, 'display_name');
+        this.transpond(taniumPackage, result, 'command_line');
 
+        // convert prompt text to object and stringify
+        if ('prompt_text' in taniumPackage) {
+            if (taniumPackage['prompt_text'] !== '') {
+                try {
+                    result['prompt_text'] = this.convertWhitespace(JSON.stringify(JSON.parse(taniumPackage['prompt_text']), null, 2));
 
-        if ('package_files' in taniumPackage) {
-            const val = taniumPackage['package_files']['package_file'];
-            if ((val || "") !== "") {
-                if (Array.isArray(val) && val.length !== 1) {
-                    // sort by file_name
-                    val.sort((a: any, b: any) => (a.file_name > b.file_name) ? 1 : -1);
-
-                    taniumPackage['package_files']['package_file'] = val;
+                } catch (err) {
+                    console.log('helo');
                 }
             }
         }
 
-        if ('sensors' in taniumPackage) {
-            delete taniumPackage.sensors;
+        this.transpond(taniumPackage, result, 'command_line_timeout');
+        this.transpond(taniumPackage, result, 'hidden_flag');
+        this.transpond(taniumPackage, result, 'process_group_flag');
+        this.transpond(taniumPackage, result, 'verify_expire_seconds');
+
+        if ('download_seconds' in taniumPackage) {
+            this.transpond(taniumPackage, result, 'download_seconds');
+        } else {
+            result['download_seconds'] = 600;
         }
 
-        if ('content_set' in taniumPackage) {
-            delete taniumPackage.content_set;
+        if ('verify_group' in taniumPackage) {
+            if ('group' in taniumPackage['verify_group']) {
+                if (taniumPackage['verify_group']['group']['id'] === 0) {
+                    //this.deleteProperty(taniumPackage, 'verify_group');
+                } else {
+                    this.transpond(taniumPackage, result, 'verify_group');
+                }
+            }
         }
 
-        return taniumPackage;
+        this.transpond(taniumPackage, result, 'meta_data');
+
+        if ('parameters' in taniumPackage) {
+            if (taniumPackage['parameters'] !== '') {
+                result['parameters'] = taniumPackage['parameters'];
+            }
+        }
+
+        if ('package_files' in taniumPackage) {
+            const val = taniumPackage['package_files']['package_file'];
+            if ((val || "") !== "") {
+                if (Array.isArray(val)) {
+                    // sort by file_name
+                    val.sort((a: any, b: any) => (a.file_name > b.file_name) ? 1 : -1);
+
+                    result['package_files'] = {
+                        package_file: val
+                    };
+                } else {
+                    result['package_files'] = {
+                        package_file: val
+                    };
+                }
+            }
+        }
+
+        return result;
     }
 
     static transform(taniumPackage: any) {
@@ -42,11 +78,17 @@ export class TransformPackage extends TransformBase {
         this.transpond(taniumPackage, result, 'name');
         this.transpond(taniumPackage, result, 'display_name');
         this.transpondNewName(taniumPackage, result, 'command', 'command_line');
-        this.transpondNewName(taniumPackage, result, 'parameter_definition', 'prompt_text');
+
+        if ('parameter_definition' in taniumPackage) {
+            if (taniumPackage['parameter_definition'] !== '') {
+                taniumPackage['parameter_definition'] = this.convertWhitespace(JSON.stringify(JSON.parse(taniumPackage['parameter_definition']), null, 2));
+                this.transpondNewName(taniumPackage, result, 'parameter_definition', 'prompt_text');
+            }
+        }
+
         this.transpondNewName(taniumPackage, result, 'command_timeout', 'command_line_timeout');
         this.transpond(taniumPackage, result, 'hidden_flag');
         this.transpond(taniumPackage, result, 'process_group_flag');
-        this.transpond(taniumPackage, result, 'skip_lock_flag');
         this.transpond(taniumPackage, result, 'verify_expire_seconds');
 
         result['download_seconds'] = taniumPackage['expire_seconds'] - taniumPackage['command_timeout'];
@@ -75,14 +117,6 @@ export class TransformPackage extends TransformBase {
                     }
                 }
             }
-        }
-
-        if (taniumPackage.verify_group.name === '') {
-            result['verify_group'] = {
-                "group": {
-                    "id": 0
-                }
-            };
         }
 
         if ('files' in taniumPackage) {

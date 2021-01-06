@@ -18,7 +18,16 @@ export function activate(context: vscode.ExtensionContext) {
         'hoganslendertanium.removeDiffItem': (node: TaniumDiffTreeItem) => {
             TaniumDiffProvider.currentProvider?.removeItem(node, context);
         },
+        'hoganslendertanium.removeDiffItems': (node: TaniumDiffTreeItem) => {
+            TaniumDiffProvider.currentProvider?.removeItems(context);
+        },
     });
+}
+
+export interface SolutionContentSetData {
+    xmlContentSetFile: string,
+    leftDir: string,
+    rightDir: string,
 }
 
 export interface SolutionDiffItemData {
@@ -33,7 +42,7 @@ export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTre
     constructor(private context: vscode.ExtensionContext) {
         this.diffItemDatas = context.workspaceState.get(TANIUM_CONTENT_SET_DIFFS) || [];
         this.diffLabels = context.workspaceState.get(TANIUM_CONTENT_SET_DIFF_LABELS) || [];
-        this.xmlContentSetFiles = context.workspaceState.get(TANIUM_CONTENT_SET_XML_FILES) || [];
+        this.solutionContentSetDatas = context.workspaceState.get(TANIUM_CONTENT_SET_XML_FILES) || [];
 
         this.validateDiffItemDatas(context);
         this.validateXmlContentSetFiles(context);
@@ -41,25 +50,25 @@ export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTre
         vscode.workspace.onDidDeleteFiles((e: vscode.FileDeleteEvent) => {
             e.files.forEach(file => {
                 this.processDeleteDiffItemDatas(file, context);
-                this.processDeleteXmlContentSetFiles(file, context);
+                this.processDeleteSolutionContentSetData(file, context);
             });
 
             this.refresh();
         });
     }
 
-    private processDeleteXmlContentSetFiles(file: vscode.Uri, context: vscode.ExtensionContext) {
-        const deletes: string[] = [];
+    private processDeleteSolutionContentSetData(file: vscode.Uri, context: vscode.ExtensionContext) {
+        const deletes: SolutionContentSetData[] = [];
 
-        this.xmlContentSetFiles.forEach(xmlContentSetFile => {
-            if (xmlContentSetFile === file.fsPath) {
+        this.solutionContentSetDatas.forEach(solutionContentSetData => {
+            if (solutionContentSetData.xmlContentSetFile === file.fsPath || solutionContentSetData.leftDir === file.fsPath || solutionContentSetData.rightDir === file.fsPath) {
                 // need to delete
-                deletes.push(xmlContentSetFile);
+                deletes.push(solutionContentSetData);
             }
         });
 
-        deletes.forEach(xmlContentSetFile => {
-            this.xmlContentSetFiles = this.xmlContentSetFiles.filter(f => xmlContentSetFile !== f);
+        deletes.forEach(solutionContentSetData => {
+            this.solutionContentSetDatas = this.solutionContentSetDatas.filter(f => solutionContentSetData.xmlContentSetFile !== f.xmlContentSetFile);
         });
 
         if (deletes.length !== 0) {
@@ -88,17 +97,17 @@ export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTre
     }
 
     validateXmlContentSetFiles(context: vscode.ExtensionContext) {
-        const deletes: string[] = [];
+        const deletes: SolutionContentSetData[] = [];
 
         // walk the diffs and see if folder exists; if not then remove diff item data
-        this.xmlContentSetFiles.forEach(xmlContentSetFile => {
-            if (!fs.existsSync(xmlContentSetFile)) {
-                deletes.push(xmlContentSetFile);
+        this.solutionContentSetDatas.forEach(contentSetData => {
+            if (!fs.existsSync(contentSetData.xmlContentSetFile) || !fs.existsSync(contentSetData.leftDir) || !fs.existsSync(contentSetData.rightDir)) {
+                deletes.push(contentSetData);
             }
         });
 
-        deletes.forEach(xmlContentSetFile => {
-            this.xmlContentSetFiles = this.xmlContentSetFiles.filter(f => xmlContentSetFile !== f);
+        deletes.forEach(solutionContentSetData => {
+            this.solutionContentSetDatas = this.solutionContentSetDatas.filter(f => solutionContentSetData.xmlContentSetFile !== f.xmlContentSetFile);
         });
 
         if (deletes.length !== 0) {
@@ -134,12 +143,12 @@ export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTre
 
     private diffItemDatas: SolutionDiffItemData[];
     private diffLabels: string[];
-    private xmlContentSetFiles: string[];
+    private solutionContentSetDatas: SolutionContentSetData[];
 
     private storeWorkspaceState(context: vscode.ExtensionContext) {
         context.workspaceState.update(TANIUM_CONTENT_SET_DIFFS, this.diffItemDatas);
         context.workspaceState.update(TANIUM_CONTENT_SET_DIFF_LABELS, this.diffLabels);
-        context.workspaceState.update(TANIUM_CONTENT_SET_XML_FILES, this.xmlContentSetFiles);
+        context.workspaceState.update(TANIUM_CONTENT_SET_XML_FILES, this.solutionContentSetDatas);
     }
 
     public calculateDiffs(context: vscode.ExtensionContext) {
@@ -181,17 +190,58 @@ export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTre
         return p;
     }
 
-    public addXmlContentSetFile(xmlContentSetFile: string, context: vscode.ExtensionContext) {
-        if (this.xmlContentSetFiles.includes(xmlContentSetFile)) {
+    public addSolutionContentSetData(solutionContentSetData: SolutionContentSetData, context: vscode.ExtensionContext) {
+        if (this.solutionContentSetDatas.filter(e => e.xmlContentSetFile === solutionContentSetData.xmlContentSetFile).length > 0) {
+            // already here
             return;
         }
 
-        this.xmlContentSetFiles.push(xmlContentSetFile);
+        this.solutionContentSetDatas.push(solutionContentSetData);
 
         // store for later
         this.storeWorkspaceState(context);
 
         // no ui update necessary
+    }
+
+    public async removeItems(context: vscode.ExtensionContext) {
+        this.solutionContentSetDatas.forEach(solutionContentSetData => {
+            if (fs.existsSync(solutionContentSetData.leftDir)) {
+                rimraf.sync(solutionContentSetData.leftDir);
+            }
+
+            if (fs.existsSync(solutionContentSetData.rightDir)) {
+                rimraf.sync(solutionContentSetData.rightDir);
+            }
+            
+            if (fs.existsSync(solutionContentSetData.xmlContentSetFile)){
+                fs.unlinkSync(solutionContentSetData.xmlContentSetFile);
+            }
+        });
+
+        this.diffItemDatas.forEach(diffItemData => {
+            // remove left dir
+            if (fs.existsSync(diffItemData.leftDir)) {
+                rimraf.sync(diffItemData.leftDir);
+            }
+
+            // remove right dir
+            if (fs.existsSync(diffItemData.rightDir)) {
+                rimraf.sync(diffItemData.rightDir);
+            }
+        });
+
+        // remove diffitemdatas
+        this.diffItemDatas = [];
+        this.diffLabels = [];
+        this.solutionContentSetDatas = [];
+
+        this.storeWorkspaceState(context);
+
+        this.refresh();
+
+        // clear out current windows
+        await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     }
 
     public removeItem(node: TaniumDiffTreeItem, context: vscode.ExtensionContext) {

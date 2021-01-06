@@ -4,7 +4,8 @@ import { TransformBase } from "./TransformBase";
 
 export class TransformContentSet extends TransformBase {
     public static transformCs(contentSet: any) {
-        delete contentSet.disable_action_approval;
+        this.deleteProperty(contentSet, 'disable_action_approval');
+        this.deleteProperty(contentSet, 'is_namespace_default_repo');
 
         // order metadata by name
         if (contentSet.meta_data) {

@@ -26,7 +26,8 @@ import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { ContentSetRolePrivileges } from './ContentSetRolePrivileges';
 import { ServerServerBase } from './ServerServerBase';
 import { WhiteListedUrls } from './WhiteListedUrls';
-import { reject } from 'lodash';
+import { TransformDashboardGroup } from '../transform/TransformDashboardGroup';
+import { TransformDashboard } from '../transform/TransformDashboard';
 
 const diffMatchPatch = require('diff-match-patch');
 
@@ -146,7 +147,11 @@ class ContentSet extends ServerServerBase {
 				}
 
 				// store for later
-				TaniumDiffProvider.currentProvider?.addXmlContentSetFile(contentSetFile, context);
+				TaniumDiffProvider.currentProvider?.addSolutionContentSetData({
+					xmlContentSetFile: contentSetFile,
+					leftDir: contentDir,
+					rightDir: serverDir
+				}, context);
 
 				var options = {
 					attributeNamePrefix: "@_",
@@ -196,150 +201,183 @@ class ContentSet extends ServerServerBase {
 									message: `extracting ${property}`
 								});
 
-								switch (property) {
-									case 'solution':
-									case 'api_requests':
-										// do nothing
-										break;
+								try {
+									switch (property) {
+										case 'solution':
+										case 'api_requests':
+											// do nothing
+											break;
 
-									case 'white_listed_url':
-										if (!serverWhiteListedUrlsMap) {
-											serverWhiteListedUrlsMap = await WhiteListedUrls.generateWhiteListedUrlMap(allowSelfSignedCerts, httpTimeout, session, fqdn);
-										}
-
-										var target = jsonObj.content.white_listed_url;
-										if (Array.isArray(target)) {
-											// process each
-											for (var i = 0; i < target.length; i++) {
-												const whiteListedUrl = target[i];
-												await this.processWhiteListedUrl(whiteListedUrl, contentDir, serverDir, context, serverWhiteListedUrlsMap);
+										case 'dashboard':
+											var target = jsonObj.content.dashboard;
+											if (Array.isArray(target)) {
+												// process each
+												for (var i = 0; i < target.length; i++) {
+													const dashboard = target[i];
+													await this.processDashboard(dashboard, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+											} else {
+												// process one
+												await this.processDashboard(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
 											}
-										} else {
-											// process one
-											await this.processWhiteListedUrl(target, contentDir, serverDir, context, serverWhiteListedUrlsMap);
-										}
-										break;
+											break;
 
-									case 'sensor':
-										var target = jsonObj.content.sensor;
-										if (Array.isArray(target)) {
-											// process each
-											for (var i = 0; i < target.length; i++) {
-												const sensor = target[i];
-												await this.processSensor(sensor, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										case 'dashboard_group':
+											var target = jsonObj.content.dashboard_group;
+											if (Array.isArray(target)) {
+												// process each
+												for (var i = 0; i < target.length; i++) {
+													const dashboardGroup = target[i];
+													await this.processDashboardGroup(dashboardGroup, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+											} else {
+												// process one
+												await this.processDashboardGroup(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
 											}
-										} else {
-											// process one
-											await this.processSensor(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-										}
-										break;
+											break;
 
-									case 'saved_question':
-										var target = jsonObj.content.saved_question;
-										if (Array.isArray(target)) {
-											// process each
-											for (var i = 0; i < target.length; i++) {
-												const savedQuestion = target[i];
-												await this.processSavedQuestion(savedQuestion, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										case 'white_listed_url':
+											if (!serverWhiteListedUrlsMap) {
+												serverWhiteListedUrlsMap = await WhiteListedUrls.generateWhiteListedUrlMap(allowSelfSignedCerts, httpTimeout, session, fqdn);
 											}
-										} else {
-											// process one
-											await this.processSavedQuestion(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-										}
-										break;
 
-									case 'saved_action':
-										var target = jsonObj.content.saved_action;
-										if (Array.isArray(target)) {
-											// process each
-											for (var i = 0; i < target.length; i++) {
-												const savedAction = target[i];
-												await this.processSavedAction(savedAction, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+											var target = jsonObj.content.white_listed_url;
+											if (Array.isArray(target)) {
+												// process each
+												for (var i = 0; i < target.length; i++) {
+													const whiteListedUrl = target[i];
+													await this.processWhiteListedUrl(whiteListedUrl, contentDir, serverDir, context, serverWhiteListedUrlsMap);
+												}
+											} else {
+												// process one
+												await this.processWhiteListedUrl(target, contentDir, serverDir, context, serverWhiteListedUrlsMap);
 											}
-										} else {
-											// process one
-											await this.processSavedAction(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-										}
-										break;
+											break;
 
-									case 'tanium_package':
-										var target = jsonObj.content.tanium_package;
-										if (Array.isArray(target)) {
-											// process each
-											for (var i = 0; i < target.length; i++) {
-												const taniumPackage = target[i];
-												await this.processPackage(taniumPackage, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										case 'sensor':
+											var target = jsonObj.content.sensor;
+											if (Array.isArray(target)) {
+												// process each
+												for (var i = 0; i < target.length; i++) {
+													const sensor = target[i];
+													await this.processSensor(sensor, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+											} else {
+												// process one
+												await this.processSensor(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
 											}
-										} else {
-											// process one
-											await this.processPackage(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-										}
-										break;
+											break;
 
-									case 'content_set_role_privilege':
-										if (!serverContentSetRolePrivilegesMap) {
-											// load up map on first use
-											serverContentSetRolePrivilegesMap = await ContentSetRolePrivileges.generateContentSetRolePrivilegeMap(allowSelfSignedCerts, httpTimeout, session, fqdn);
-										}
-
-										var target = jsonObj.content.content_set_role_privilege;
-										if (Array.isArray(target)) {
-											// process each
-											for (var i = 0; i < target.length; i++) {
-												const contentSetRolePrivilege = target[i];
-												await this.processContentSetRolePrivilege(contentSetRolePrivilege, contentDir, serverDir, context, serverContentSetRolePrivilegesMap);
+										case 'saved_question':
+											var target = jsonObj.content.saved_question;
+											if (Array.isArray(target)) {
+												// process each
+												for (var i = 0; i < target.length; i++) {
+													const savedQuestion = target[i];
+													await this.processSavedQuestion(savedQuestion, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+											} else {
+												// process one
+												await this.processSavedQuestion(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
 											}
-										} else {
-											// process one
-											await this.processContentSetRolePrivilege(target, contentDir, serverDir, context, serverContentSetRolePrivilegesMap);
-										}
-										break;
+											break;
 
-									case 'content_set_privilege':
-										var target = jsonObj.content.content_set_privilege;
-										if (Array.isArray(target)) {
-											// process each
-											for (var i = 0; i < target.length; i++) {
-												const contentSetPrivilege = target[i];
-												await this.processContentSetPrivilege(contentSetPrivilege, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										case 'saved_action':
+											var target = jsonObj.content.saved_action;
+											if (Array.isArray(target)) {
+												// process each
+												for (var i = 0; i < target.length; i++) {
+													const savedAction = target[i];
+													await this.processSavedAction(savedAction, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+											} else {
+												// process one
+												await this.processSavedAction(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
 											}
-										} else {
-											// process one
-											await this.processContentSetPrivilege(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-										}
-										break;
+											break;
 
-									case 'content_set_role':
-										var target = jsonObj.content.content_set_role;
-										if (Array.isArray(target)) {
-											// process each
-											for (var i = 0; i < target.length; i++) {
-												const contentSetRole = target[i];
-												await this.processContentSetRole(contentSetRole, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										case 'tanium_package':
+											var target = jsonObj.content.tanium_package;
+											if (Array.isArray(target)) {
+												// process each
+												for (var i = 0; i < target.length; i++) {
+													const taniumPackage = target[i];
+													await this.processPackage(taniumPackage, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+											} else {
+												// process one
+												await this.processPackage(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
 											}
-										} else {
-											// process one
-											await this.processContentSetRole(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-										}
-										break;
+											break;
 
-									case 'content_set':
-										var target = jsonObj.content.content_set;
-										if (Array.isArray(target)) {
-											// process each
-											for (var i = 0; i < target.length; i++) {
-												const contentSet = target[i];
-												await this.processContentSet(contentSet, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+										case 'content_set_role_privilege':
+											if (!serverContentSetRolePrivilegesMap) {
+												// load up map on first use
+												serverContentSetRolePrivilegesMap = await ContentSetRolePrivileges.generateContentSetRolePrivilegeMap(allowSelfSignedCerts, httpTimeout, session, fqdn);
 											}
-										} else {
-											// process one
-											await this.processContentSet(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-										}
-										break;
 
-									default:
-										OutputChannelLogging.log(`${property} not set up for processing in extractContentSetContent`);
-									//return reject();
+											var target = jsonObj.content.content_set_role_privilege;
+											if (Array.isArray(target)) {
+												// process each
+												for (var i = 0; i < target.length; i++) {
+													const contentSetRolePrivilege = target[i];
+													await this.processContentSetRolePrivilege(contentSetRolePrivilege, contentDir, serverDir, context, serverContentSetRolePrivilegesMap);
+												}
+											} else {
+												// process one
+												await this.processContentSetRolePrivilege(target, contentDir, serverDir, context, serverContentSetRolePrivilegesMap);
+											}
+											break;
+
+										case 'content_set_privilege':
+											var target = jsonObj.content.content_set_privilege;
+											if (Array.isArray(target)) {
+												// process each
+												for (var i = 0; i < target.length; i++) {
+													const contentSetPrivilege = target[i];
+													await this.processContentSetPrivilege(contentSetPrivilege, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+											} else {
+												// process one
+												await this.processContentSetPrivilege(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+											}
+											break;
+
+										case 'content_set_role':
+											var target = jsonObj.content.content_set_role;
+											if (Array.isArray(target)) {
+												// process each
+												for (var i = 0; i < target.length; i++) {
+													const contentSetRole = target[i];
+													await this.processContentSetRole(contentSetRole, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+											} else {
+												// process one
+												await this.processContentSetRole(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+											}
+											break;
+
+										case 'content_set':
+											var target = jsonObj.content.content_set;
+											if (Array.isArray(target)) {
+												// process each
+												for (var i = 0; i < target.length; i++) {
+													const contentSet = target[i];
+													await this.processContentSet(contentSet, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+											} else {
+												// process one
+												await this.processContentSet(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+											}
+											break;
+
+										default:
+											OutputChannelLogging.log(`${property} not set up for processing in extractContentSetContent`);
+										//return reject();
+									}
+
+								} catch (err) {
+									OutputChannelLogging.logError('extractContentSetContent', err);
 								}
 							}
 
@@ -355,6 +393,166 @@ class ContentSet extends ServerServerBase {
 					return reject();
 				}
 			});
+		});
+
+		return p;
+	}
+	
+	static processDashboard(dashboard: any, contentDir: string, serverDir: string, fqdn: string, session: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
+		const p = new Promise<void>(async (resolve, reject) => {
+			try {
+				const name = sanitize(dashboard.name);
+				const subDirName = 'Dashboards';
+				const serverSubDir = path.join(serverDir, subDirName);
+				const contentSubDir = path.join(contentDir, subDirName);
+
+				// ensure diff data
+				TaniumDiffProvider.currentProvider?.addDiffData({
+					label: 'Dashboards',
+					leftDir: contentSubDir,
+					rightDir: serverSubDir,
+				}, context);
+
+				// verify sub dir
+				if (!fs.existsSync(serverSubDir)) {
+					fs.mkdirSync(serverSubDir);
+				}
+
+				if (!fs.existsSync(contentSubDir)) {
+					fs.mkdirSync(contentSubDir);
+				}
+
+				dashboard = await TransformDashboard.transformCs(dashboard);
+				const contentContent = JSON.stringify(dashboard, null, 2);
+
+				const contentFile = path.join(contentSubDir, `${name}.json`);
+
+				fs.writeFile(contentFile, contentContent, async (err) => {
+					if (err) {
+						OutputChannelLogging.logError(`error writing ${contentFile} in processDashboard`, err);
+						return reject();
+					}
+
+					// get server data
+					const body = await RestClient.post(`https://${fqdn}/api/v2/export`, {
+						headers: {
+							session: session
+						},
+						json: {
+							dashboards: {
+								include: [
+									dashboard.name
+								]
+							}
+						},
+						responseType: 'json',
+					}, allowSelfSignedCerts, httpTimeout, true);
+
+					if (body.statusCode) {
+						// looks like it doesn't exist on server
+						return resolve();
+					} else if (body.data) {
+						var target: any = body.data.object_list.dashboards[0];
+
+						target = await TransformDashboard.transform(target);
+						const serverContent = JSON.stringify(target, null, 2);
+
+						const serverFile = path.join(serverSubDir, `${name}.json`);
+
+						fs.writeFile(serverFile, serverContent, err => {
+							if (err) {
+								OutputChannelLogging.logError(`error writing ${serverFile} in processDashboard`, err);
+								return reject();
+							}
+
+							return resolve();
+						});
+					}
+				});
+			} catch (err) {
+				OutputChannelLogging.logError(`error in processDashboard`, err);
+				return reject();
+			}
+		});
+
+		return p;
+	}
+
+	static processDashboardGroup(dashboardGroup: any, contentDir: string, serverDir: string, fqdn: string, session: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
+		const p = new Promise<void>(async (resolve, reject) => {
+			try {
+				const name = sanitize(dashboardGroup.name);
+				const subDirName = 'DashboardGroups';
+				const serverSubDir = path.join(serverDir, subDirName);
+				const contentSubDir = path.join(contentDir, subDirName);
+
+				// ensure diff data
+				TaniumDiffProvider.currentProvider?.addDiffData({
+					label: 'Dashboard Groups',
+					leftDir: contentSubDir,
+					rightDir: serverSubDir,
+				}, context);
+
+				// verify sub dir
+				if (!fs.existsSync(serverSubDir)) {
+					fs.mkdirSync(serverSubDir);
+				}
+
+				if (!fs.existsSync(contentSubDir)) {
+					fs.mkdirSync(contentSubDir);
+				}
+
+				dashboardGroup = await TransformDashboardGroup.transformCs(dashboardGroup);
+				const contentContent = JSON.stringify(dashboardGroup, null, 2);
+
+				const contentFile = path.join(contentSubDir, `${name}.json`);
+
+				fs.writeFile(contentFile, contentContent, async (err) => {
+					if (err) {
+						OutputChannelLogging.logError(`error writing ${contentFile} in processDashboardGroup`, err);
+						return reject();
+					}
+
+					// get server data
+					const body = await RestClient.post(`https://${fqdn}/api/v2/export`, {
+						headers: {
+							session: session
+						},
+						json: {
+							dashboard_groups: {
+								include: [
+									dashboardGroup.name
+								]
+							}
+						},
+						responseType: 'json',
+					}, allowSelfSignedCerts, httpTimeout, true);
+
+					if (body.statusCode) {
+						// looks like it doesn't exist on server
+						return resolve();
+					} else if (body.data) {
+						var target: any = body.data.object_list.dashboard_groups[0];
+
+						target = await TransformDashboardGroup.transform(target);
+						const serverContent = JSON.stringify(target, null, 2);
+
+						const serverFile = path.join(serverSubDir, `${name}.json`);
+
+						fs.writeFile(serverFile, serverContent, err => {
+							if (err) {
+								OutputChannelLogging.logError(`error writing ${serverFile} in processDashboardGroup`, err);
+								return reject();
+							}
+
+							return resolve();
+						});
+					}
+				});
+			} catch (err) {
+				OutputChannelLogging.logError(`error in processDashboardGroup`, err);
+				return reject();
+			}
 		});
 
 		return p;

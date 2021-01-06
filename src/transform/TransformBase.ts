@@ -1,9 +1,19 @@
 export class TransformBase {
+    static convertWhitespace(input: string) {
+        var converted = input.replace(/\r/g, '').split(/\n/);
+        if (converted[converted.length - 1] === '') {
+            converted.pop();
+        }
+
+        return converted;
+    }
+
     static deleteProperty(source: any, name: string) {
         if (name in source) {
             delete source[name];
         }
     }
+
     static transpond(source: any, dest: any, name: string) {
         this.transpondNewName(source, dest, name, name);
     }
@@ -15,8 +25,18 @@ export class TransformBase {
     }
 
     static transpondStringToInteger(source: any, dest: any, name: string) {
+        this.transpondStringToIntegerNewName(source, dest, name, name);
+    }
+
+    static transpondStringToIntegerNewName(source: any, dest: any, name: string, newName: string) {
         if (name in source) {
-            dest[name] = this.convertInteger(source[name]);
+            dest[newName] = this.convertInteger(source[name]);
+        }
+    }
+
+    static transpondIntegerToString(source: any, dest: any, name: string) {
+        if (name in source) {
+            dest[name] = this.convertStringToInteger(source[name]);
         }
     }
 
@@ -45,6 +65,14 @@ export class TransformBase {
             } else {
                 dest[newName] = 1;
             }
+        }
+    }
+
+    static convertStringToInteger(input: any) {
+        if (this.isInteger(input)) {
+            return String(input);
+        } else {
+            return input;
         }
     }
 

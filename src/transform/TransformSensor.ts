@@ -2,8 +2,9 @@
 import lodash = require('lodash');
 import { TransformParameter } from './TransformParameter';
 import { TransformMetadataItem } from './transform-metadata-item';
+import { TransformBase } from './TransformBase';
 
-export class TransformSensor {
+export class TransformSensor extends TransformBase {
     public static transform(sensor: any): any {
         var result: any = TransformSensor.doTransform(sensor);
 
@@ -37,6 +38,7 @@ export class TransformSensor {
         TransformSensor.mapProperty('name', sensor, result);
         TransformSensor.mapProperty('value_type', sensor, result);
         TransformSensor.mapProperty('max_age_seconds', sensor, result);
+        TransformSensor.mapProperty('max_strings', sensor, result);
         TransformSensor.mapProperty('max_string_age_minutes', sensor, result);
         TransformSensor.mapProperty('ignore_case_flag', sensor, result);
         TransformSensor.mapProperty('category', sensor, result);
@@ -269,15 +271,6 @@ export class TransformSensor {
             }
         }
     };
-
-    private static convertWhitespace(input: string) {
-        var converted = input.replace(/\r/g, '').split(/\n/);
-        if (converted[converted.length - 1] === '') {
-            converted.pop();
-        }
-
-        return converted;
-    }
 
     static soapValueTypeToResultType(type: string): number {
         switch (type) {

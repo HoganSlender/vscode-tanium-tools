@@ -19,14 +19,20 @@ export class TransformGroup extends TransformBase {
                     } else {
                         var filters: any[] = [];
 
-                        for(var i = 0; i < group.filters.length; i++) {
+                        for (var i = 0; i < group.filters.length; i++) {
                             const filter = group.filters[i];
                             filters.push(await TransformGroup.transformFilter(filter));
                         }
 
-                        sentence['filter_specs'] = {
-                            filter_spec: filters
-                        };
+                        if (filters.length === 1) {
+                            sentence['filter_specs'] = {
+                                filter_spec: filters[0]
+                            };
+                        } else {
+                            sentence['filter_specs'] = {
+                                filter_spec: filters
+                            };
+                        }
                     }
                 } else {
                     sentence['filter_specs'] = '';
@@ -40,7 +46,11 @@ export class TransformGroup extends TransformBase {
                         newItems.push(await TransformGroup.transform(subGroup));
                     }
 
-                    result['group'] = newItems[0];
+                    if (newItems.length > 1) {
+                        result['group'] = newItems;
+                    } else {
+                        result['group'] = newItems[0];
+                    }
                 }
 
                 return resolve(result);
@@ -58,10 +68,18 @@ export class TransformGroup extends TransformBase {
         const p = new Promise<any>((resolve, reject) => {
             try {
                 var result: any = {};
+                const filterValueType = TransformSensor.soapValueTypeToResultType(filter.value_type);
 
+                if (filterValueType === 0) {
+                    this.transpondStringToIntegerNewName(filter, result, 'value', 'how_hash');
+                }
                 result['type'] = 'filter';
                 result['what_hash'] = filter.sensor.hash;
-                result['how_reg_ex'] = filter.value;
+                if (filterValueType !== 0) {
+                    result['how_reg_ex'] = filter.value;
+                } else {
+                    result['how_reg_ex'] = '';
+                }
 
                 this.transpond(filter, result, 'max_age_seconds');
                 this.transpond(filter, result, 'not_flag');

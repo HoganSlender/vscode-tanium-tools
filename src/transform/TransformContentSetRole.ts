@@ -1,15 +1,19 @@
-import { TransformMetadataItem } from "./transform-metadata-item";
 import { TransformBase } from "./TransformBase";
+import { TransformMetaData } from "./TransformMetaData";
 
 export class TransformContentSetRole extends TransformBase {
     public static transformCs(contentSetRole: any) {
         // kill taas_internal_flag
         delete contentSetRole.taas_internal_flag;
 
-        if (contentSetRole.meta_data === '') {
-            delete contentSetRole.meta_data;
+        if ('meta_data' in contentSetRole) {
+            if (contentSetRole['meta_data'] === '') {
+                this.deleteProperty(contentSetRole, 'meta_data');
+            } else {
+                TransformMetaData.transformCs(contentSetRole['meta_data']);
+            }
         }
-        
+
         return contentSetRole;
     }
 
@@ -22,6 +26,11 @@ export class TransformContentSetRole extends TransformBase {
         this.transpondStringToInteger(contentSetRole, result, 'deny_flag');
         this.transpondStringToInteger(contentSetRole, result, 'all_content_sets_flag');
         this.transpond(contentSetRole, result, 'category');
+
+        if ('metadata' in contentSetRole) {
+            TransformMetaData.transform(contentSetRole['metadata']);
+            this.transpond(contentSetRole, result, 'metadata');
+        }
 
         return result;
     }

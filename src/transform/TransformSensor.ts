@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import lodash = require('lodash');
 import { TransformParameter } from './TransformParameter';
-import { TransformMetadataItem } from './transform-metadata-item';
+import { TransformMetadataItem } from './TransformMetadataItem';
 import { TransformBase } from './TransformBase';
 
 export class TransformSensor extends TransformBase {

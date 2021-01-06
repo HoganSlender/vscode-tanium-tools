@@ -1,11 +1,16 @@
 export class TransformBase {
     static convertWhitespace(input: string) {
         var converted = input.replace(/\r/g, '').split(/\n/);
+
         if (converted[converted.length - 1] === '') {
             converted.pop();
         }
 
-        return converted;
+        if (converted.length === 1) {
+            return converted[0];
+        } else {
+            return converted;
+        }
     }
 
     static deleteProperty(source: any, name: string) {
@@ -47,7 +52,7 @@ export class TransformBase {
     static transpondBooleanToIntegerInverse(source: any, dest: any, name: string) {
         this.transpondBooleanToIntegerNewNameInverse(source, dest, name, name);
     }
-    
+
     static transpondBooleanToIntegerNewName(source: any, dest: any, name: string, newName: string) {
         if (name in source) {
             if (source[name]) {

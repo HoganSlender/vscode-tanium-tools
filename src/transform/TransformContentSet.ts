@@ -1,15 +1,18 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { TransformMetadataItem } from "./transform-metadata-item";
 import { TransformBase } from "./TransformBase";
+import { TransformMetaData } from "./TransformMetaData";
 
 export class TransformContentSet extends TransformBase {
     public static transformCs(contentSet: any) {
         this.deleteProperty(contentSet, 'disable_action_approval');
         this.deleteProperty(contentSet, 'is_namespace_default_repo');
 
-        // order metadata by name
-        if (contentSet.meta_data) {
-            contentSet.meta_data.meta_data_item.sort((a: any, b: any) => (a.name > b.name) ? 1 : -1);
+        if ('meta_data' in contentSet) {
+            if (contentSet['meta_data'] === '') {
+                this.deleteProperty(contentSet, 'meta_data');
+            } else {
+                TransformMetaData.transformCs(contentSet['meta_data']);
+            }
         }
 
         return contentSet;
@@ -27,18 +30,8 @@ export class TransformContentSet extends TransformBase {
         this.transpond(contentSet, result, 'reserved_name');
 
         if ('metadata' in contentSet) {
-            const metadata: any[] = [];
-            const val = contentSet['metadata'];
-            for (var i = 0; val && i < val.length; i++) {
-                metadata.push(TransformMetadataItem.transform(val[i]));
-            }
-
-            metadata.sort((a: any, b: any) => (a.name > b.name) ? 1 : -1);
-
-            result['meta_data'] = {
-                meta_data_item: metadata
-            };
-            delete result['metadata'];
+            TransformMetaData.transform(contentSet['metadata']);
+            this.transpond(contentSet, result, 'metadata');
         }
 
         return result;

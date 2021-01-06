@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { TransformMetadataItem } from "./transform-metadata-item";
+import { TransformMetadataItem } from "./TransformMetadataItem";
 import { TransformBase } from "./TransformBase";
+import { TransformMetaData } from "./TransformMetaData";
 
 export class TransformPackage extends TransformBase {
     static transformCs(taniumPackage: any) {
@@ -43,7 +44,12 @@ export class TransformPackage extends TransformBase {
             }
         }
 
-        this.transpond(taniumPackage, result, 'meta_data');
+        if ('meta_data' in taniumPackage) {
+            if (taniumPackage['meta_data'] !== '') {
+                TransformMetaData.transformCs(taniumPackage['meta_data']);
+                this.transpond(taniumPackage, result, 'meta_data');
+            }
+        }
 
         if ('parameters' in taniumPackage) {
             if (taniumPackage['parameters'] !== '') {
@@ -94,29 +100,8 @@ export class TransformPackage extends TransformBase {
         result['download_seconds'] = taniumPackage['expire_seconds'] - taniumPackage['command_timeout'];
 
         if ('metadata' in taniumPackage) {
-            const val = taniumPackage['metadata'];
-            if ((val || "") !== "") {
-                if (Array.isArray(val) && val.length === 1) {
-                    result['meta_data'] = {
-                        meta_data_item: TransformMetadataItem.transform(val[0]),
-                    };
-                } else {
-                    var items: any[] = [];
-
-                    for (var i = 0; val && i < val.length; i++) {
-                        items.push(TransformMetadataItem.transform(val[i]));
-                    }
-
-                    // sort by name
-                    items.sort((a, b) => (a.name > b.name) ? 1 : -1);
-
-                    if (items.length !== 0) {
-                        result['meta_data'] = {
-                            meta_data_item: items
-                        };
-                    }
-                }
-            }
+            TransformMetaData.transform(taniumPackage['metadata']);
+            this.transpond(taniumPackage, result, 'metadata');
         }
 
         if ('files' in taniumPackage) {

@@ -27,7 +27,7 @@ export class TransformSavedQuestion extends TransformBase {
                 this.deleteProperty(savedQuestion, 'content_set');
 
                 // process packages
-                if ('packages' in savedQuestion) {
+                if ('packages' in savedQuestion && savedQuestion['packages'] !== '') {
                     var target = savedQuestion['packages']['tanium_package'];
                     if (Array.isArray(target)) {
                         // multiple
@@ -50,7 +50,7 @@ export class TransformSavedQuestion extends TransformBase {
 
                 return resolve(savedQuestion);
             } catch (err) {
-                OutputChannelLogging.logError('error in TransformSavedQuestion.transformCs', err);
+                OutputChannelLogging.logError(`error in TransformSavedQuestion.transformCs: saved question name: ${savedQuestion.name}`, err);
                 return reject();
             }
         });

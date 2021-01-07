@@ -18,6 +18,10 @@ export class TransformDashboardGroup extends TransformBase {
             target.forEach(dashboard => dashboards.push({
                 name: dashboard.name
             }));
+
+            // sort by name
+            dashboards.sort((a: any, b: any) => (a.name > b.name) ? 1 : -1);
+
             result['dashboards'] = {
                 dashboard: dashboards
             };
@@ -54,6 +58,10 @@ export class TransformDashboardGroup extends TransformBase {
             // multiple
             var dashboards: any[] = [];
             target.forEach((item: any) => dashboards.push(item));
+
+            // sort by name
+            dashboards.sort((a: any, b: any) => (a.name > b.name) ? 1 : -1);
+
             result['dashboards'] = {
                 dashboard: dashboards
             };

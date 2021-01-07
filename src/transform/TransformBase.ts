@@ -1,5 +1,9 @@
 export class TransformBase {
     static convertWhitespace(input: string) {
+        if (input === '') {
+            return input;
+        }
+        
         var converted = input.replace(/\r/g, '').split(/\n/);
 
         if (converted[converted.length - 1] === '') {

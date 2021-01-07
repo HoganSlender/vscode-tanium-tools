@@ -53,7 +53,7 @@ export class RestClient {
         const p: Promise<any> = new Promise<any>(async (resolve, reject) => {
             try {
                 options = this._wrapOption(allowSelfSignedCerts, httpTimeout, options);
-                const { body } = await got.post(url, options);
+                const { body } = await got.post(encodeURI(url), options);
 
                 return resolve(body);
             } catch (err) {
@@ -78,7 +78,7 @@ export class RestClient {
         const p: Promise<any> = new Promise<any>(async (resolve, reject) => {
             try {
                 options = this._wrapOption(allowSelfSignedCerts, httpTimeout, options);
-                const { body } = await got.patch(url, options);
+                const { body } = await got.patch(encodeURI(url), options);
 
                 return resolve(body);
             } catch (err) {
@@ -103,7 +103,7 @@ export class RestClient {
         const p: Promise<any> = new Promise<any>(async (resolve, reject) => {
             try {
                 options = this._wrapOption(allowSelfSignedCerts, httpTimeout, options);
-                const { body } = await got.delete(url, options);
+                const { body } = await got.delete(encodeURI(url), options);
 
                 return resolve(body);
             } catch (err) {
@@ -118,7 +118,7 @@ export class RestClient {
         const p: Promise<any> = new Promise<any>(async (resolve, reject) => {
             try {
                 options = this._wrapOption(allowSelfSignedCerts, httpTimeout, options);
-                const { body } = await got.get(url, options);
+                const { body } = await got.get(encodeURI(url), options);
 
                 return resolve(body);
             } catch (err) {
@@ -145,7 +145,7 @@ export class RestClient {
             try {
                 options = this._wrapOption(allowSelfSignedCerts, httpTimeout, options);
                 await pipeline(
-                    got.stream(url, options),
+                    got.stream(encodeURI(url), options),
                     fs.createWriteStream(filePath)
                 );
             } catch (err) {

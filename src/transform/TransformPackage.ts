@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
+import { Transform } from "stream";
 import { TransformBase } from "./TransformBase";
+import { TransformGroup } from "./TransformGroup";
 import { TransformMetaData } from "./TransformMetaData";
 
 export class TransformPackage extends TransformBase {
@@ -7,7 +9,9 @@ export class TransformPackage extends TransformBase {
         var result: any = {};
 
         this.transpond(taniumPackage, result, 'name');
-        this.transpond(taniumPackage, result, 'display_name');
+        if (taniumPackage['name'] === taniumPackage['display_name']) {
+            this.transpond(taniumPackage, result, 'display_name');
+        }
         this.transpond(taniumPackage, result, 'command_line');
 
         // convert prompt text to object and stringify
@@ -34,13 +38,18 @@ export class TransformPackage extends TransformBase {
         }
 
         if ('verify_group' in taniumPackage) {
-            if ('group' in taniumPackage['verify_group']) {
-                if (taniumPackage['verify_group']['group']['id'] === 0) {
-                    //this.deleteProperty(taniumPackage, 'verify_group');
-                } else {
-                    this.transpond(taniumPackage, result, 'verify_group');
-                }
+            var target = taniumPackage['verify_group']['group'];
+
+            if (Array.isArray(target)) {
+                const items: any[] = [];
+                target.forEach(item => {
+                    items.push(TransformGroup.transform(item));
+                });
+                taniumPackage['verify_group']['group'] = items;
+            } else {
+                taniumPackage['verify_group']['group'] = TransformGroup.transform(target);
             }
+            this.transpond(taniumPackage, result, 'verify_group');
         }
 
         if ('meta_data' in taniumPackage) {
@@ -81,7 +90,9 @@ export class TransformPackage extends TransformBase {
         var result: any = {};
 
         this.transpond(taniumPackage, result, 'name');
-        this.transpond(taniumPackage, result, 'display_name');
+        if (taniumPackage['name'] !== taniumPackage['display_name']) {
+            this.transpond(taniumPackage, result, 'display_name');
+        }
         this.transpondNewName(taniumPackage, result, 'command', 'command_line');
 
         if ('parameter_definition' in taniumPackage) {
@@ -99,7 +110,7 @@ export class TransformPackage extends TransformBase {
         result['download_seconds'] = taniumPackage['expire_seconds'] - taniumPackage['command_timeout'];
 
         if ('metadata' in taniumPackage) {
-            if (taniumPackage['metadata'] !== '') {
+            if (taniumPackage['metadata'].length !== 0) {
                 TransformMetaData.transform(taniumPackage['metadata']);
                 this.transpond(taniumPackage, result, 'metadata');
             }

@@ -15,27 +15,37 @@ export class TransformSavedAction extends TransformBase {
                 this.deleteProperty(savedAction, 'policy_row_filter_group');
                 this.deleteProperty(savedAction, 'policy_flag');
 
-                // remove sensor data from filters
-                if ('group' in savedAction.group) {
-                    // kill name
-                    this.deleteProperty(savedAction.group, 'name');
-
-                    var target = savedAction.group.group;
-
-                    if (Array.isArray(target)) {
-                        target.forEach(item => {
-                            this.processGroup(item);
-                        });
-                    } else {
-                        this.processGroup(target);
-                    }
+                if ('group' in savedAction) {
+                    this.processGroup(savedAction['group']);
                 }
 
+                // // remove sensor data from filters
+                // if ('group' in savedAction.group) {
+                //     // kill name
+                //     this.deleteProperty(savedAction.group, 'name');
+
+                //     var target = savedAction.group.group;
+
+                //     if (Array.isArray(target)) {
+                //         target.forEach(item => {
+                //             this.processGroup(item);
+                //         });
+                //     } else {
+                //         this.processGroup(target);
+                //     }
+                // }
+
                 // adjust tanium_package
-                savedAction['tanium_package'] = {
-                    name: savedAction['tanium_package']['name'],
-                    display_name: savedAction['tanium_package']['display_name']
-                };
+                if (savedAction['tanium_package']['name'] === savedAction['tanium_package']['display_name']) {
+                    savedAction['tanium_package'] = {
+                        name: savedAction['tanium_package']['name']
+                    };
+                } else {
+                    savedAction['tanium_package'] = {
+                        name: savedAction['tanium_package']['name'],
+                        display_name: savedAction['tanium_package']['display_name']
+                    };
+                }
 
                 resolve(savedAction);
 
@@ -50,6 +60,18 @@ export class TransformSavedAction extends TransformBase {
 
     static processGroup(item: any) {
         this.deleteProperty(item, 'name');
+
+        if ('group' in item) {
+            var target = item['group'];
+
+            if (Array.isArray(target)) {
+                target.forEach(sub => {
+                    this.processGroup(sub);
+                });
+            } else {
+                this.processGroup(target);
+            }
+        }
 
         if ('sentence' in item) {
             if ('filter_specs' in item.sentence) {
@@ -108,10 +130,16 @@ export class TransformSavedAction extends TransformBase {
                 result['group'] = await TransformGroup.transform(savedAction.target_group);
 
                 // adjust package_spec
-                result['tanium_package'] = {
-                    name: savedAction['package_spec']['name'],
-                    display_name: savedAction['package_spec']['display_name'],
-                };
+                if (savedAction['package_spec']['name'] === savedAction['package_spec']['display_name']) {
+                    result['tanium_package'] = {
+                        name: savedAction['package_spec']['name']
+                    };
+                } else {
+                    result['tanium_package'] = {
+                        name: savedAction['package_spec']['name'],
+                        display_name: savedAction['package_spec']['display_name'],
+                    };
+                }
 
                 resolve(result);
             } catch (err) {

@@ -17,7 +17,7 @@ export class TransformMetaData extends TransformBase {
 
     static transform(item: any) {
         if (item.length === 1) {
-            item = TransformMetadataItem.transform(item);
+            item = TransformMetadataItem.transform(item[0]);
         } else {
             const metaDataItems: any[] = [];
 

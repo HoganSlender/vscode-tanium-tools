@@ -53,10 +53,10 @@ export class TransformSavedAction extends TransformBase {
 
         if ('sentence' in item) {
             if ('filter_specs' in item.sentence) {
-                if ('filter_spec' in item.sentence.filter_specs) {
+                if (item.sentence.filter_specs !== '' && 'filter_spec' in item.sentence.filter_specs) {
                     var target = item.sentence.filter_specs.filter_spec;
                     if (Array.isArray(target)) {
-                        item.sentence.filter_specs.filter_spec.forEach((filter: any) => {
+                        target.forEach((filter: any) => {
                             this.processFilterGroup(filter);
                         });
                     } else {

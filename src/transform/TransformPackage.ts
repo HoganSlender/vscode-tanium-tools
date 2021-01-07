@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { TransformMetadataItem } from "./TransformMetadataItem";
 import { TransformBase } from "./TransformBase";
 import { TransformMetaData } from "./TransformMetaData";
 
@@ -100,8 +99,10 @@ export class TransformPackage extends TransformBase {
         result['download_seconds'] = taniumPackage['expire_seconds'] - taniumPackage['command_timeout'];
 
         if ('metadata' in taniumPackage) {
-            TransformMetaData.transform(taniumPackage['metadata']);
-            this.transpond(taniumPackage, result, 'metadata');
+            if (taniumPackage['metadata'] !== '') {
+                TransformMetaData.transform(taniumPackage['metadata']);
+                this.transpond(taniumPackage, result, 'metadata');
+            }
         }
 
         if ('files' in taniumPackage) {

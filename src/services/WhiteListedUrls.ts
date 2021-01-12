@@ -1,19 +1,20 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { OutputChannelLogging } from "../common/logging";
 import { RestClient } from "../common/restClient";
+import { FqdnSetting } from "../parameter-collection/fqdnSetting";
 
 export class WhiteListedUrls {
     static generateWhiteListedUrlMap(
         allowSelfSignedCerts: boolean,
         httpTimeout: number,
         session: string,
-        fqdn: string
+        fqdn: FqdnSetting
     ) {
         const p = new Promise<any>(async (resolve, reject) => {
             try {
                 const result: any = {};
 
-                const body = await RestClient.get(`https://${fqdn}/api/v2/white_listed_urls`, {
+                const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/white_listed_urls`, {
                     headers: {
                         session: session
                     },

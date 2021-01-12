@@ -18,6 +18,7 @@ import { WebContentUtils } from '../common/webContentUtils';
 import { OpenType } from '../common/enums';
 import { DiffBase } from './DiffBase';
 import { collectSolutionsRefreshInputs } from '../parameter-collection/solutions-refresh-parameters';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -37,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export interface SolutionData {
-    fqdn: string,
+    fqdn: FqdnSetting,
     items: SolutionItemData[]
 }
 
@@ -169,7 +170,7 @@ export class Solutions extends DiffBase {
         const state = await collectSolutionsRefreshInputs(config, context);
 
         // collect values
-        const leftFqdn: string = TaniumSolutionNodeProvider.currentProvider?.getSolutionDataFqdn()!;
+        const leftFqdn: FqdnSetting = TaniumSolutionNodeProvider.currentProvider?.getSolutionDataFqdn()!;
         const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
 
@@ -213,13 +214,13 @@ export class Solutions extends DiffBase {
         const state = await collectSolutionsInputs(config, context);
 
         // collect values
-        const leftFqdn: string = state.leftFqdn;
+        const leftFqdn: FqdnSetting = state.leftFqdn;
         const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn.label}`);
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
 
@@ -245,8 +246,8 @@ export class Solutions extends DiffBase {
         });
     }
 
-    static refreshSolutions(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string) {
-        const restBase = `https://${fqdn}/api/v2`;
+    static refreshSolutions(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string) {
+        const restBase = `https://${fqdn.fqdn}/api/v2`;
 
         const p = new Promise<void>(async (resolve, reject) => {
             try {
@@ -370,7 +371,7 @@ export class Solutions extends DiffBase {
                     }
                 });
             } catch (err) {
-                OutputChannelLogging.logError(`retrieving solutions`, err);
+                OutputChannelLogging.logError(`refreshing solutions`, err);
                 return reject();
             }
         });
@@ -378,8 +379,8 @@ export class Solutions extends DiffBase {
         return p;
     }
 
-    static processSolutions(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string) {
-        const restBase = `https://${fqdn}/api/v2`;
+    static processSolutions(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string) {
+        const restBase = `https://${fqdn.fqdn}/api/v2`;
 
         const p = new Promise<void>(async (resolve, reject) => {
             try {

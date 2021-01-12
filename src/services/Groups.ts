@@ -16,6 +16,7 @@ import path = require('path');
 import { SigningUtils } from '../common/signingUtils';
 import { DiffBase } from './DiffBase';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -275,7 +276,7 @@ export class Groups extends DiffBase {
     static async transferGroup(
         allowSelfSignedCerts: boolean,
         httpTimeout: number,
-        destFqdn: string,
+        destFqdn: FqdnSetting,
         username: string,
         password: string,
         filePath: string,
@@ -306,7 +307,7 @@ export class Groups extends DiffBase {
                     const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
 
                     // import group
-                    OutputChannelLogging.log(`importing ${groupName} into ${destFqdn}`);
+                    OutputChannelLogging.log(`importing ${groupName} into ${destFqdn.label}`);
 
                     const postSignedContentResult = await SigningUtils.postSignedContent(destFqdn, session, signedContent, allowSelfSignedCerts, httpTimeout);
 
@@ -410,9 +411,9 @@ export class Groups extends DiffBase {
         sourceGroupName: string,
         allowSelfSignedCerts: boolean,
         httpTimeout: number,
-        sourceFqdn: string,
+        sourceFqdn: FqdnSetting,
         sourceSession: string,
-        destFqdn: string,
+        destFqdn: FqdnSetting,
         destSession: string,
         signingKey: SigningKey,
         groupType: MrGroupType,
@@ -420,8 +421,8 @@ export class Groups extends DiffBase {
     ): Promise<number> {
         const p = new Promise<number>(async (resolve, reject) => {
             try {
-                const sourceRestBase = `https://${sourceFqdn}/api/v2`;
-                const destRestBase = `https://${destFqdn}/api/v2`;
+                const sourceRestBase = `https://${sourceFqdn.fqdn}/api/v2`;
+                const destRestBase = `https://${destFqdn.fqdn}/api/v2`;
 
                 // check for mrgroup_
                 if (sourceGroupName.startsWith('mrgroup_')) {

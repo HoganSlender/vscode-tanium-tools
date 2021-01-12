@@ -28,6 +28,7 @@ import { ServerServerBase } from './ServerServerBase';
 import { WhiteListedUrls } from './WhiteListedUrls';
 import { TransformDashboardGroup } from '../transform/TransformDashboardGroup';
 import { TransformDashboard } from '../transform/TransformDashboard';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 const diffMatchPatch = require('diff-match-patch');
 
@@ -44,7 +45,7 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 class ContentSet extends ServerServerBase {
-	static async processContentSetContent(fqdn: string, contentUrl: string, context: vscode.ExtensionContext) {
+	static async processContentSetContent(fqdn: FqdnSetting, contentUrl: string, context: vscode.ExtensionContext) {
 		// define output channel
 		OutputChannelLogging.initialize();
 
@@ -68,7 +69,7 @@ class ContentSet extends ServerServerBase {
 
 		OutputChannelLogging.showClear();
 
-		OutputChannelLogging.log(`fqdn: ${fqdn}`);
+		OutputChannelLogging.log(`fqdn: ${fqdn.label}`);
 		OutputChannelLogging.log(`username: ${username}`);
 		OutputChannelLogging.log(`password: XXXXXXXX`);
 
@@ -89,7 +90,7 @@ class ContentSet extends ServerServerBase {
 
 			// create folders
 			const contentDir = path.join(folderPath!, `1 - ${contentFilename.replace('.xml', '')}`);
-			const serverDir = path.join(folderPath!, `2 - ${sanitize(fqdn)}`);
+			const serverDir = path.join(folderPath!, `2 - ${sanitize(fqdn.label)}`);
 
 			if (!fs.existsSync(contentDir)) {
 				fs.mkdirSync(contentDir);
@@ -113,7 +114,7 @@ class ContentSet extends ServerServerBase {
 		});
 	}
 
-	static extractContentSetContentAndCalcDiffs(contentSetFile: string, contentDir: string, serverDir: string, fqdn: string, username: string, password: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
+	static extractContentSetContentAndCalcDiffs(contentSetFile: string, contentDir: string, serverDir: string, fqdn: FqdnSetting, username: string, password: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
 		const p = new Promise<void>(async (resolve, reject) => {
 			try {
 				await this.extractContentSetContent(contentSetFile, contentDir, serverDir, fqdn, username, password, allowSelfSignedCerts, httpTimeout, context);
@@ -132,7 +133,7 @@ class ContentSet extends ServerServerBase {
 		contentSetFile: string,
 		contentDir: string,
 		serverDir: string,
-		fqdn: string,
+		fqdn: FqdnSetting,
 		username: string,
 		password: string,
 		allowSelfSignedCerts: boolean,
@@ -633,7 +634,7 @@ class ContentSet extends ServerServerBase {
 		return p;
 	}
 
-	static processDashboard(dashboard: any, contentDir: string, serverDir: string, fqdn: string, session: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
+	static processDashboard(dashboard: any, contentDir: string, serverDir: string, fqdn: FqdnSetting, session: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
 		const p = new Promise<void>(async (resolve, reject) => {
 			try {
 				const name = sanitize(dashboard.name);
@@ -669,7 +670,7 @@ class ContentSet extends ServerServerBase {
 					}
 
 					// get server data
-					const body = await RestClient.post(`https://${fqdn}/api/v2/export`, {
+					const body = await RestClient.post(`https://${fqdn.fqdn}/api/v2/export`, {
 						headers: {
 							session: session
 						},
@@ -713,7 +714,7 @@ class ContentSet extends ServerServerBase {
 		return p;
 	}
 
-	static processDashboardGroup(dashboardGroup: any, contentDir: string, serverDir: string, fqdn: string, session: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
+	static processDashboardGroup(dashboardGroup: any, contentDir: string, serverDir: string, fqdn: FqdnSetting, session: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
 		const p = new Promise<void>(async (resolve, reject) => {
 			try {
 				const name = sanitize(dashboardGroup.name);
@@ -749,7 +750,7 @@ class ContentSet extends ServerServerBase {
 					}
 
 					// get server data
-					const body = await RestClient.post(`https://${fqdn}/api/v2/export`, {
+					const body = await RestClient.post(`https://${fqdn.fqdn}/api/v2/export`, {
 						headers: {
 							session: session
 						},
@@ -864,7 +865,7 @@ class ContentSet extends ServerServerBase {
 		return p;
 	}
 
-	static processSensor(sensor: any, contentDir: string, serverDir: string, fqdn: string, session: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
+	static processSensor(sensor: any, contentDir: string, serverDir: string, fqdn: FqdnSetting, session: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
 		const p = new Promise<void>(async (resolve, reject) => {
 			try {
 				const name = sanitize(sensor.name);
@@ -900,7 +901,7 @@ class ContentSet extends ServerServerBase {
 					}
 
 					// get server data
-					const body = await RestClient.get(`https://${fqdn}/api/v2/sensors/by-name/${sensor.name}`, {
+					const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/sensors/by-name/${sensor.name}`, {
 						headers: {
 							session: session
 						},
@@ -937,7 +938,7 @@ class ContentSet extends ServerServerBase {
 		return p;
 	}
 
-	static processSavedQuestion(savedQuestion: any, contentDir: string, serverDir: string, fqdn: string, session: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
+	static processSavedQuestion(savedQuestion: any, contentDir: string, serverDir: string, fqdn: FqdnSetting, session: string, allowSelfSignedCerts: boolean, httpTimeout: number, context: vscode.ExtensionContext) {
 		const p = new Promise<void>(async (resolve, reject) => {
 			try {
 				const name = sanitize(savedQuestion.name);
@@ -973,7 +974,7 @@ class ContentSet extends ServerServerBase {
 					}
 
 					// get server data
-					const body = await RestClient.get(`https://${fqdn}/api/v2/saved_questions/by-name/${savedQuestion.name}`, {
+					const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/saved_questions/by-name/${savedQuestion.name}`, {
 						headers: {
 							session: session
 						},
@@ -1014,7 +1015,7 @@ class ContentSet extends ServerServerBase {
 		savedAction: any,
 		contentDir: string,
 		serverDir: string,
-		fqdn: string,
+		fqdn: FqdnSetting,
 		session: string,
 		allowSelfSignedCerts: boolean,
 		httpTimeout: number,
@@ -1055,7 +1056,7 @@ class ContentSet extends ServerServerBase {
 					}
 
 					// get server data
-					const body = await RestClient.get(`https://${fqdn}/api/v2/saved_actions/by-name/${savedAction.name}`, {
+					const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/saved_actions/by-name/${savedAction.name}`, {
 						headers: {
 							session: session
 						},
@@ -1069,7 +1070,7 @@ class ContentSet extends ServerServerBase {
 						var target: any = body.data;
 
 						// get target_group
-						const groupBody = await RestClient.get(`https://${fqdn}/api/v2/groups/${target.target_group.id}`, {
+						const groupBody = await RestClient.get(`https://${fqdn.fqdn}/api/v2/groups/${target.target_group.id}`, {
 							headers: {
 								session: session
 							},
@@ -1106,7 +1107,7 @@ class ContentSet extends ServerServerBase {
 		taniumPackage: any,
 		contentDir: string,
 		serverDir: string,
-		fqdn: string,
+		fqdn: FqdnSetting,
 		session: string,
 		allowSelfSignedCerts: boolean,
 		httpTimeout: number,
@@ -1147,7 +1148,7 @@ class ContentSet extends ServerServerBase {
 					}
 
 					// get server data
-					const body = await RestClient.post(`https://${fqdn}/api/v2/export`, {
+					const body = await RestClient.post(`https://${fqdn.fqdn}/api/v2/export`, {
 						headers: {
 							session: session
 						},
@@ -1267,7 +1268,7 @@ class ContentSet extends ServerServerBase {
 		contentSetPrivilege: any,
 		contentDir: string,
 		serverDir: string,
-		fqdn: string,
+		fqdn: FqdnSetting,
 		session: string,
 		allowSelfSignedCerts: boolean,
 		httpTimeout: number,
@@ -1308,7 +1309,7 @@ class ContentSet extends ServerServerBase {
 					}
 
 					// get server data
-					const body = await RestClient.get(`https://${fqdn}/api/v2/content_set_privileges/by-name/${contentSetPrivilege.name}`, {
+					const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/content_set_privileges/by-name/${contentSetPrivilege.name}`, {
 						headers: {
 							session: session
 						},
@@ -1349,7 +1350,7 @@ class ContentSet extends ServerServerBase {
 		contentSetRole: any,
 		contentDir: string,
 		serverDir: string,
-		fqdn: string,
+		fqdn: FqdnSetting,
 		session: string,
 		allowSelfSignedCerts: boolean,
 		httpTimeout: number,
@@ -1390,7 +1391,7 @@ class ContentSet extends ServerServerBase {
 					}
 
 					// get server data
-					const body = await RestClient.get(`https://${fqdn}/api/v2/content_set_roles/by-name/${contentSetRole.name}`, {
+					const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/content_set_roles/by-name/${contentSetRole.name}`, {
 						headers: {
 							session: session
 						},
@@ -1431,7 +1432,7 @@ class ContentSet extends ServerServerBase {
 		contentSet: any,
 		contentDir: string,
 		serverDir: string,
-		fqdn: string,
+		fqdn: FqdnSetting,
 		session: string,
 		allowSelfSignedCerts: boolean,
 		httpTimeout: number,
@@ -1472,7 +1473,7 @@ class ContentSet extends ServerServerBase {
 					}
 
 					// get server data
-					const body = await RestClient.get(`https://${fqdn}/api/v2/content_sets/by-name/${contentSet.name}`, {
+					const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/content_sets/by-name/${contentSet.name}`, {
 						headers: {
 							session: session
 						},
@@ -1525,18 +1526,18 @@ class ContentSet extends ServerServerBase {
 
 		// collect values
 		const contentUrl: string = state.contentSetUrl;
-		const fqdn: string = state.fqdn;
+		const fqdn: FqdnSetting = state.fqdn;
 		const username: string = state.username;
 		const password: string = state.password;
 		const extractCommentWhitespace: boolean = state.extractCommentWhitespace;
 
-		const restBase = `https://${fqdn}/api/v2`;
+		const restBase = `https://${fqdn.fqdn}/api/v2`;
 
 		OutputChannelLogging.showClear();
 
 		OutputChannelLogging.log(`contentSet: ${contentUrl}`);
 		OutputChannelLogging.log(`commentWhitespace: ${extractCommentWhitespace.toString()}`);
-		OutputChannelLogging.log(`fqdn: ${fqdn}`);
+		OutputChannelLogging.log(`fqdn: ${fqdn.label}`);
 		OutputChannelLogging.log(`username: ${username}`);
 		OutputChannelLogging.log(`password: XXXXXXXX`);
 
@@ -1557,10 +1558,10 @@ class ContentSet extends ServerServerBase {
 
 			// create folders
 			const contentDir = path.join(folderPath!, `1 - ${contentFilename.replace('.xml', '')}`);
-			const serverDir = path.join(folderPath!, `2 - ${sanitize(fqdn)}`);
+			const serverDir = path.join(folderPath!, `2 - ${sanitize(fqdn.label)}`);
 			const commentDir = path.join(folderPath!, 'Comments Only');
 			const commentContentDir = path.join(commentDir, `1 - ${contentFilename.replace('.xml', '')}`);
-			const commentServerDir = path.join(commentDir, `2 - ${sanitize(fqdn)}`);
+			const commentServerDir = path.join(commentDir, `2 - ${sanitize(fqdn.label)}`);
 
 			if (!fs.existsSync(contentDir)) {
 				fs.mkdirSync(contentDir);
@@ -1594,7 +1595,7 @@ class ContentSet extends ServerServerBase {
 				await RestClient.downloadFile(contentUrl, contentSetFile, {}, allowSelfSignedCerts, httpTimeout);
 				progress.report({ increment: increment, message: 'extracting sensors' });
 				await this.extractContentSetSensors(contentSetFile, contentDir, sensorInfo);
-				progress.report({ increment: increment, message: `retrieving sensors from ${fqdn}` });
+				progress.report({ increment: increment, message: `retrieving sensors from ${fqdn.label}` });
 				await this.retrieveServerSensors(sensorInfo, allowSelfSignedCerts, httpTimeout, username, password, serverDir, fqdn);
 				progress.report({ increment: increment, message: 'Extracting sensors with comments/whitspaces changes only' });
 				await this.extractCommentWhitespaceSensors(contentDir, serverDir, commentContentDir, commentServerDir);
@@ -1608,7 +1609,7 @@ class ContentSet extends ServerServerBase {
 				await RestClient.downloadFile(contentUrl, contentSetFile, {}, allowSelfSignedCerts, httpTimeout);
 				progress.report({ increment: increment, message: 'extracting sensors' });
 				await this.extractContentSetSensors(contentSetFile, contentDir, sensorInfo);
-				progress.report({ increment: increment, message: `retrieving sensors from ${fqdn}` });
+				progress.report({ increment: increment, message: `retrieving sensors from ${fqdn.fqdn}` });
 				await this.retrieveServerSensors(sensorInfo, allowSelfSignedCerts, httpTimeout, username, password, serverDir, fqdn);
 				const p = new Promise<void>(resolve => {
 					setTimeout(() => {
@@ -1693,7 +1694,7 @@ class ContentSet extends ServerServerBase {
 		return p;
 	}
 
-	static retrieveServerSensors(sensorInfos: any[], allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, serverDir: string, fqdn: string) {
+	static retrieveServerSensors(sensorInfos: any[], allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, serverDir: string, fqdn: FqdnSetting) {
 		const p = new Promise<void>(async resolve => {
 			// get session
 			var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
@@ -1714,7 +1715,7 @@ class ContentSet extends ServerServerBase {
 						responseType: 'json',
 					};
 
-					const body = await RestClient.get(`https://${fqdn}/api/v2/sensors/by-hash/${hash}`, options, allowSelfSignedCerts, httpTimeout);
+					const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/sensors/by-hash/${hash}`, options, allowSelfSignedCerts, httpTimeout);
 
 					let sensor: any = body.data;
 					const name: string = sanitize(sensor.name);
@@ -1740,7 +1741,7 @@ class ContentSet extends ServerServerBase {
 					}
 				} catch (err) {
 					if (!err.message.includes('404')) {
-						OutputChannelLogging.logError(`error retrieving ${sensorInfo.name} from ${fqdn}`, err);
+						OutputChannelLogging.logError(`error retrieving ${sensorInfo.name} from ${fqdn.label}`, err);
 					}
 
 					sensorCounter++;

@@ -1,5 +1,6 @@
 import { collectInputs, MyButton, Step, StepType } from "./multi-step-input";
 import { QuickPickItem, WorkspaceConfiguration, ExtensionContext, Uri, ConfigurationTarget } from "vscode";
+import { FqdnSetting } from "./fqdnSetting";
 
 interface ServerServerContentSetState {
     leftFqdnQp: QuickPickItem | string;
@@ -8,9 +9,9 @@ interface ServerServerContentSetState {
     rightFqdnQp: QuickPickItem | string;
     rightUsernameQp: QuickPickItem | string;
     rightPassword: string;
-    leftFqdn: string;
+    leftFqdn: FqdnSetting;
     leftUsername: string;
-    rightFqdn: string;
+    rightFqdn: FqdnSetting;
     rightUsername: string;
 }
 
@@ -21,7 +22,7 @@ export async function collectServerServerContentSetInputs(config: WorkspaceConfi
     }, '');
 
     // get fqdns
-    const fqdns: string[] = config.get('fqdns', []);
+    const fqdns: FqdnSetting[] = config.get('fqdns', []);
 
     // get usernames
     const usernames: string[] = config.get('usernames', []);
@@ -32,7 +33,7 @@ export async function collectServerServerContentSetInputs(config: WorkspaceConfi
             stepType: StepType.quickPick,
             step: 1,
             totalSteps: 6,
-            quickPickItems: fqdns.map(label => ({ label })),
+            quickPickItems: fqdns.map(fqdn => ({ label: fqdn.label })),
             quickPickButtons: [
                 addButton
             ],
@@ -66,7 +67,7 @@ export async function collectServerServerContentSetInputs(config: WorkspaceConfi
             stepType: StepType.quickPick,
             step: 4,
             totalSteps: 6,
-            quickPickItems: fqdns.map(label => ({ label })),
+            quickPickItems: fqdns.map(fqdn => ({ label: fqdn.label })),
             quickPickButtons: [
                 addButton
             ],
@@ -100,15 +101,25 @@ export async function collectServerServerContentSetInputs(config: WorkspaceConfi
 
     const state = {} as Partial<ServerServerContentSetState>;
     await collectInputs('Compare Tanium Server Content Sets to Tanium Server Content Sets', state, steps);
-
     if (typeof state.leftFqdnQp === 'string') {
-        if (fqdns.indexOf(state.leftFqdnQp) === -1) {
-            fqdns.push(state.leftFqdnQp);
+        // new one
+        const inIndex = fqdns.filter(fqdn => (fqdn.label === state.leftFqdnQp));
+
+        if (inIndex.length === 0) {
+            const newFqdn = {
+                fqdn: state.leftFqdnQp,
+                label: state.leftFqdnQp
+            };
+            fqdns.push(newFqdn);
             config.update('fqdns', fqdns, ConfigurationTarget.Global);
+            state.leftFqdn = newFqdn;
+        } else {
+            state.leftFqdn = inIndex[0];
         }
-        state.leftFqdn = state.leftFqdnQp;
     } else {
-        state.leftFqdn = state.leftFqdnQp!.label;
+        // existing one
+        const target: QuickPickItem = state.leftFqdnQp!;
+        state.leftFqdn = fqdns.filter(fqdn => (fqdn.label === target.label))[0];
     }
 
     if (typeof state.leftUsernameQp === 'string') {
@@ -122,13 +133,24 @@ export async function collectServerServerContentSetInputs(config: WorkspaceConfi
     }
 
     if (typeof state.rightFqdnQp === 'string') {
-        if (fqdns.indexOf(state.rightFqdnQp) === -1) {
-            fqdns.push(state.rightFqdnQp);
+        // new one
+        const inIndex = fqdns.filter(fqdn => (fqdn.label === state.rightFqdnQp));
+
+        if (inIndex.length === 0) {
+            const newFqdn = {
+                fqdn: state.rightFqdnQp,
+                label: state.rightFqdnQp
+            };
+            fqdns.push(newFqdn);
             config.update('fqdns', fqdns, ConfigurationTarget.Global);
+            state.rightFqdn = newFqdn;
+        } else {
+            state.rightFqdn = inIndex[0];
         }
-        state.rightFqdn = state.rightFqdnQp;
     } else {
-        state.rightFqdn = state.rightFqdnQp!.label;
+        // existing one
+        const target: QuickPickItem = state.rightFqdnQp!;
+        state.rightFqdn = fqdns.filter(fqdn => (fqdn.label === target.label))[0];
     }
 
     if (typeof state.rightUsernameQp === 'string') {

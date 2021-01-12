@@ -9,6 +9,7 @@ import { PathUtils } from '../common/pathUtils';
 import { RestClient } from '../common/restClient';
 import { SigningUtils } from '../common/signingUtils';
 import { WebContentUtils } from '../common/webContentUtils';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { SigningKey } from '../types/signingKey';
 import { DiffBase } from './DiffBase';
@@ -293,11 +294,11 @@ export class ContentSetRolePrivileges extends DiffBase {
         return p;
     }
 
-    static generateContentSetRolePrivilegeMap(allowSelfSignedCerts: boolean, httpTimeout: number, session: string, fqdn: string) {
+    static generateContentSetRolePrivilegeMap(allowSelfSignedCerts: boolean, httpTimeout: number, session: string, fqdn: FqdnSetting) {
 
         const p = new Promise<any>(async (resolve, reject) => {
             try {
-                const restBase = `https://${fqdn}/api/v2`;
+                const restBase = `https://${fqdn.fqdn}/api/v2`;
 
                 const retval: any = {};
 

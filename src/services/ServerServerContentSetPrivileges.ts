@@ -13,6 +13,7 @@ import { ContentSetPrivileges } from './ContentSetPrivileges';
 import path = require('path');
 import { checkResolve } from '../common/checkResolve';
 import { ServerServerBase } from './ServerServerBase';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -43,25 +44,25 @@ export class ServerServerContentSetPrivileges extends ServerServerBase {
         const state = await collectServerServerContentSetPrivilegeInputs(config, context);
 
         // collect values
-        const leftFqdn: string = state.leftFqdn;
+        const leftFqdn: FqdnSetting = state.leftFqdn;
         const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
-        const rightFqdn: string = state.rightFqdn;
+        const rightFqdn: FqdnSetting = state.rightFqdn;
         const rightUsername: string = state.rightUsername;
         const rightPassword: string = state.rightPassword;
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn.label}`);
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
-        OutputChannelLogging.log(`right fqdn: ${rightFqdn}`);
+        OutputChannelLogging.log(`right fqdn: ${rightFqdn.label}`);
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}%ContentSetPrivileges`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}%ContentSetPrivileges`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn.label)}%ContentSetPrivileges`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn.label)}%ContentSetPrivileges`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -80,9 +81,9 @@ export class ServerServerContentSetPrivileges extends ServerServerBase {
 
             const increment = 50;
 
-            progress.report({ increment: increment, message: `content set privilege retrieval from ${leftFqdn}` });
+            progress.report({ increment: increment, message: `content set privilege retrieval from ${leftFqdn.label}` });
             await this.processServerContentSetPrivileges(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-            progress.report({ increment: increment, message: `content set privilege retrieval from ${rightFqdn}` });
+            progress.report({ increment: increment, message: `content set privilege retrieval from ${rightFqdn.label}` });
             await this.processServerContentSetPrivileges(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {
@@ -97,8 +98,8 @@ export class ServerServerContentSetPrivileges extends ServerServerBase {
         ContentSetPrivileges.analyzeContentSetPrivileges(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
     }
 
-    static processServerContentSetPrivileges(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
-        const restBase = `https://${fqdn}/api/v2`;
+    static processServerContentSetPrivileges(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
+        const restBase = `https://${fqdn.fqdn}/api/v2`;
 
         const p = new Promise<void>(async (resolve, reject) => {
             try {
@@ -106,7 +107,7 @@ export class ServerServerContentSetPrivileges extends ServerServerBase {
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
                 (async () => {
-                    OutputChannelLogging.log(`content set privilege retrieval - initialized for ${fqdn}`);
+                    OutputChannelLogging.log(`content set privilege retrieval - initialized for ${fqdn.label}`);
                     var content_set_privileges: [any];
 
                     // get packages
@@ -123,11 +124,11 @@ export class ServerServerContentSetPrivileges extends ServerServerBase {
                             responseType: 'json',
                         }, allowSelfSignedCerts, httpTimeout);
 
-                        OutputChannelLogging.log(`content set privilege retrieval - complete for ${fqdn}`);
+                        OutputChannelLogging.log(`content set privilege retrieval - complete for ${fqdn.label}`);
                         content_set_privileges = body.data.object_list.content_set_privileges;
                     } catch (err) {
-                        OutputChannelLogging.logError(`retrieving content set privileges from ${fqdn}`, err);
-                        return reject(`retrieving content_set_privileges from ${fqdn}`);
+                        OutputChannelLogging.logError(`retrieving content set privileges from ${fqdn.label}`, err);
+                        return reject(`retrieving content_set_privileges from ${fqdn.label}`);
                     }
 
                     // iterate through each download export
@@ -135,7 +136,7 @@ export class ServerServerContentSetPrivileges extends ServerServerBase {
                     var contentSetPrivilegeTotal: number = content_set_privileges.length;
 
                     if (contentSetPrivilegeTotal === 0) {
-                        OutputChannelLogging.log(`there are 0 content set privileges for ${fqdn}`);
+                        OutputChannelLogging.log(`there are 0 content set privileges for ${fqdn.label}`);
                         return resolve();
                     } else {
                         var i = 0;
@@ -172,7 +173,7 @@ export class ServerServerContentSetPrivileges extends ServerServerBase {
                                     }
                                 }
                             } catch (err) {
-                                OutputChannelLogging.logError(`saving content set privilege file for ${contentSetPrivilege.name} from ${fqdn}`, err);
+                                OutputChannelLogging.logError(`saving content set privilege file for ${contentSetPrivilege.name} from ${fqdn.label}`, err);
 
                                 if (checkResolve(++contentSetPrivilegesCounter, contentSetPrivilegeTotal, 'content set privileges', fqdn)) {
                                     return resolve();

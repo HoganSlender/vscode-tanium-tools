@@ -13,6 +13,7 @@ import { Dashboards } from './Dashboards';
 import { ServerServerBase } from './ServerServerBase';
 
 import path = require('path');
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -42,25 +43,25 @@ class ServerServerDashboards extends ServerServerBase {
         const state = await collectServerServerDashboardInputs(config, context);
 
         // collect values
-        const leftFqdn: string = state.leftFqdn;
+        const leftFqdn: FqdnSetting = state.leftFqdn;
         const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
-        const rightFqdn: string = state.rightFqdn;
+        const rightFqdn: FqdnSetting = state.rightFqdn;
         const rightUsername: string = state.rightUsername;
         const rightPassword: string = state.rightPassword;
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn.label}`);
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
-        OutputChannelLogging.log(`right fqdn: ${rightFqdn}`);
+        OutputChannelLogging.log(`right fqdn: ${rightFqdn.label}`);
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}%Dashboards`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}%Dashboards`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn.label)}%Dashboards`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn.label)}%Dashboards`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -79,9 +80,9 @@ class ServerServerDashboards extends ServerServerBase {
 
             const increment = 50;
 
-            progress.report({ increment: increment, message: `dashboard retrieval from ${leftFqdn}` });
+            progress.report({ increment: increment, message: `dashboard retrieval from ${leftFqdn.label}` });
             await this.processServerDashboards(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-            progress.report({ increment: increment, message: `dashboard retrieval from ${rightFqdn}` });
+            progress.report({ increment: increment, message: `dashboard retrieval from ${rightFqdn.label}` });
             await this.processServerDashboards(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {
@@ -96,8 +97,8 @@ class ServerServerDashboards extends ServerServerBase {
         Dashboards.analyzeDashboards(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
     }
 
-    static processServerDashboards(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
-        const restBase = `https://${fqdn}/api/v2`;
+    static processServerDashboards(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
+        const restBase = `https://${fqdn.fqdn}/api/v2`;
 
         const p = new Promise<void>(async (resolve, reject) => {
             try {
@@ -105,7 +106,7 @@ class ServerServerDashboards extends ServerServerBase {
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
                 (async () => {
-                    OutputChannelLogging.log(`dashboard retrieval - initialized for ${fqdn}`);
+                    OutputChannelLogging.log(`dashboard retrieval - initialized for ${fqdn.label}`);
                     var dashboards: [any];
 
                     // get dashboards
@@ -117,11 +118,11 @@ class ServerServerDashboards extends ServerServerBase {
                             responseType: 'json',
                         }, allowSelfSignedCerts, httpTimeout);
 
-                        OutputChannelLogging.log(`dashboard retrieval - complete for ${fqdn}`);
+                        OutputChannelLogging.log(`dashboard retrieval - complete for ${fqdn.label}`);
                         dashboards = body.data;
                     } catch (err) {
-                        OutputChannelLogging.logError(`retrieving dashboards from ${fqdn}`, err);
-                        return reject(`retrieving dashboards from ${fqdn}`);
+                        OutputChannelLogging.logError(`retrieving dashboards from ${fqdn.label}`, err);
+                        return reject(`retrieving dashboards from ${fqdn.label}`);
                     }
 
                     // iterate through each download export
@@ -129,7 +130,7 @@ class ServerServerDashboards extends ServerServerBase {
                     var dashboardTotal: number = dashboards.length;
 
                     if (dashboardTotal === 0) {
-                        OutputChannelLogging.log(`there are 0 dashboards for ${fqdn}`);
+                        OutputChannelLogging.log(`there are 0 dashboards for ${fqdn.label}`);
                         return resolve();
                     } else {
                         for (var i = 0; i < dashboards.length; i++) {
@@ -184,7 +185,7 @@ class ServerServerDashboards extends ServerServerBase {
                                         }
                                     }
                                 } catch (err) {
-                                    OutputChannelLogging.logError(`retrieving dashboardExport for ${dashboard.name} from ${fqdn}`, err);
+                                    OutputChannelLogging.logError(`retrieving dashboardExport for ${dashboard.name} from ${fqdn.label}`, err);
 
                                     if (checkResolve(++dashboardCounter, dashboardTotal, 'dashboards', fqdn)) {
                                         return resolve();

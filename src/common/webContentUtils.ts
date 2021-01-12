@@ -1,5 +1,6 @@
 import * as pug from 'pug';
 import * as vscode from 'vscode';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 import { OpenType } from './enums';
 
@@ -46,7 +47,7 @@ export class WebContentUtils {
 
     static getBaseWebContent(pugData: WebContentData, scriptFile: string, pugFile: string, panel: vscode.WebviewPanel, context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
         // get fqdns
-        const fqdnsString: string = config.get('fqdns', []).join();
+        const fqdnsString: string = JSON.stringify(config.get('fqdns', []));
 
         // get usernames
         const usernamesString: string = config.get('usernames', []).join();

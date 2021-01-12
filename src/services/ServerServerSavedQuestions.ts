@@ -12,6 +12,7 @@ import path = require('path');
 import { checkResolve } from '../common/checkResolve';
 import { collectServerServerSavedQuestionInputs } from '../parameter-collection/server-server-saved-questions-parameters';
 import { SavedQuestions } from './SavedQuestions';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -37,25 +38,25 @@ export class ServerServerSavedQuestions {
         const state = await collectServerServerSavedQuestionInputs(config, context);
 
         // collect values
-        const leftFqdn: string = state.leftFqdn;
+        const leftFqdn: FqdnSetting = state.leftFqdn;
         const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
-        const rightFqdn: string = state.rightFqdn;
+        const rightFqdn: FqdnSetting = state.rightFqdn;
         const rightUsername: string = state.rightUsername;
         const rightPassword: string = state.rightPassword;
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn.label}`);
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
-        OutputChannelLogging.log(`right fqdn: ${rightFqdn}`);
+        OutputChannelLogging.log(`right fqdn: ${rightFqdn.label}`);
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath.uri.fsPath, `1 - ${sanitize(leftFqdn)}%SavedQuestions`);
-        const rightDir = path.join(folderPath.uri.fsPath, `2 - ${sanitize(rightFqdn)}%SavedQuestions`);
+        const leftDir = path.join(folderPath.uri.fsPath, `1 - ${sanitize(leftFqdn.label)}%SavedQuestions`);
+        const rightDir = path.join(folderPath.uri.fsPath, `2 - ${sanitize(rightFqdn.label)}%SavedQuestions`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -74,9 +75,9 @@ export class ServerServerSavedQuestions {
 
             const increment = 50;
 
-            progress.report({ increment: increment, message: `saved question retrieval from ${leftFqdn}` });
+            progress.report({ increment: increment, message: `saved question retrieval from ${leftFqdn.label}` });
             await this.processServerSavedQuestions(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-            progress.report({ increment: increment, message: `saved question retrieval from ${rightFqdn}` });
+            progress.report({ increment: increment, message: `saved question retrieval from ${rightFqdn.label}` });
             await this.processServerSavedQuestions(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {
@@ -91,8 +92,8 @@ export class ServerServerSavedQuestions {
         SavedQuestions.analyzeSavedQuestions(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
     }
 
-    static processServerSavedQuestions(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
-        const restBase = `https://${fqdn}/api/v2`;
+    static processServerSavedQuestions(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
+        const restBase = `https://${fqdn.fqdn}/api/v2`;
 
         const p = new Promise<void>(async (resolve, reject) => {
             try {
@@ -100,7 +101,7 @@ export class ServerServerSavedQuestions {
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
                 (async () => {
-                    OutputChannelLogging.log(`saved question retrieval - initialized for ${fqdn}`);
+                    OutputChannelLogging.log(`saved question retrieval - initialized for ${fqdn.label}`);
                     var saved_questions: [any];
 
                     // get saved questions
@@ -112,11 +113,11 @@ export class ServerServerSavedQuestions {
                             responseType: 'json',
                         }, allowSelfSignedCerts, httpTimeout);
 
-                        OutputChannelLogging.log(`saved question retrieval - complete for ${fqdn}`);
+                        OutputChannelLogging.log(`saved question retrieval - complete for ${fqdn.label}`);
                         saved_questions = body.data;
                     } catch (err) {
-                        OutputChannelLogging.logError(`retrieving saved questions from ${fqdn}`, err);
-                        return reject(`retrieving saved questions from ${fqdn}`);
+                        OutputChannelLogging.logError(`retrieving saved questions from ${fqdn.label}`, err);
+                        return reject(`retrieving saved questions from ${fqdn.label}`);
                     }
 
                     // remove cache object
@@ -127,7 +128,7 @@ export class ServerServerSavedQuestions {
                     var savedQuestionTotal: number = saved_questions.length;
 
                     if (savedQuestionTotal === 0) {
-                        OutputChannelLogging.log(`there are 0 saved questions for ${fqdn}`);
+                        OutputChannelLogging.log(`there are 0 saved questions for ${fqdn.label}`);
                         return resolve();
                     } else {
                         for (var i = 0; i < saved_questions.length; i++) {
@@ -182,7 +183,7 @@ export class ServerServerSavedQuestions {
                                         }
                                     }
                                 } catch (err) {
-                                    OutputChannelLogging.logError(`retrieving saved questionExport for ${savedQuestion.name} from ${fqdn}`, err);
+                                    OutputChannelLogging.logError(`retrieving saved questionExport for ${savedQuestion.name} from ${fqdn.label}`, err);
 
                                     if (checkResolve(++savedQuestionCounter, savedQuestionTotal, 'saved questions', fqdn)) {
                                         return resolve();

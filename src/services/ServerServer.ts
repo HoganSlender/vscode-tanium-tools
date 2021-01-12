@@ -13,6 +13,7 @@ import { collectServerServerSensorInputs } from '../parameter-collection/server-
 import { TransformSensor } from '../transform/TransformSensor';
 
 import path = require('path');
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 const diffMatchPatch = require('diff-match-patch');
 
@@ -43,15 +44,15 @@ class ServerServer {
         const state = await collectServerServerModifiedSensorInputs(config, context);
 
         // collect values
-        const leftFqdn: string = state.leftFqdn;
+        const leftFqdn: FqdnSetting = state.leftFqdn;
         const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
 
-        const leftRestBase = `https://${leftFqdn}/api/v2`;
+        const leftRestBase = `https://${leftFqdn.fqdn}/api/v2`;
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn.label}`);
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
 
@@ -101,13 +102,13 @@ class ServerServer {
 
         // make export call from left to get all sensors
         if (exportSensorObj.sensors.include.length !== 0) {
-            OutputChannelLogging.log(`exporting ${exportSensorObj.sensors.include.length} sensors from ${leftFqdn}`);
+            OutputChannelLogging.log(`exporting ${exportSensorObj.sensors.include.length} sensors from ${leftFqdn.label}`);
             OutputChannelLogging.log(`retrieving session`);
 
             var leftSession: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword);
 
             // get export output
-            OutputChannelLogging.log(`retrieving export data from ${leftFqdn}`);
+            OutputChannelLogging.log(`retrieving export data from ${leftFqdn.label}`);
             try {
                 const body = await RestClient.post(`${leftRestBase}/export`, {
                     headers: {
@@ -152,15 +153,15 @@ class ServerServer {
         const state = await collectServerServerMissingSensorInputs(config, context);
 
         // collect values
-        const leftFqdn: string = state.leftFqdn;
+        const leftFqdn: FqdnSetting = state.leftFqdn;
         const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
 
-        const leftRestBase = `https://${leftFqdn}/api/v2`;
+        const leftRestBase = `https://${leftFqdn.fqdn}/api/v2`;
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn.label}`);
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
 
@@ -192,7 +193,7 @@ class ServerServer {
 
         // make export call from left to get all sensors
         if (exportSensorObj.sensors.include.length !== 0) {
-            OutputChannelLogging.log(`exporting ${exportSensorObj.sensors.include.length} sensors from ${leftFqdn}`);
+            OutputChannelLogging.log(`exporting ${exportSensorObj.sensors.include.length} sensors from ${leftFqdn.label}`);
             OutputChannelLogging.log(`retrieving session`);
 
             var leftSession: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword);
@@ -212,7 +213,7 @@ class ServerServer {
             }
 
             // get export output
-            OutputChannelLogging.log(`retrieving export data from ${leftFqdn}`);
+            OutputChannelLogging.log(`retrieving export data from ${leftFqdn.label}`);
             try {
                 const body = await RestClient.post(`${leftRestBase}/export`, {
                     headers: {
@@ -257,33 +258,33 @@ class ServerServer {
         const state = await collectServerServerSensorInputs(config, context);
 
         // collect values
-        const leftFqdn: string = state.leftFqdn;
+        const leftFqdn: FqdnSetting = state.leftFqdn;
         const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
-        const rightFqdn: string = state.rightFqdn;
+        const rightFqdn: FqdnSetting = state.rightFqdn;
         const rightUsername: string = state.rightUsername;
         const rightPassword: string = state.rightPassword;
         //const extractCommentWhitespaceBoolean: boolean = state.extractCommentWhitespace;
 
-        const leftRestBase = `https://${leftFqdn}/api/v2`;
-        const rightRestBase = `https://${rightFqdn}/api/v2`;
+        const leftRestBase = `https://${leftFqdn.fqdn}/api/v2`;
+        const rightRestBase = `https://${rightFqdn.fqdn}/api/v2`;
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn.label}`);
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
-        OutputChannelLogging.log(`right fqdn: ${rightFqdn}`);
+        OutputChannelLogging.log(`right fqdn: ${rightFqdn.label}`);
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
         //OutputChannelLogging.log(`commentWhitespace: ${extractCommentWhitespaceBoolean.toString()}`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn.label)}`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn.label)}`);
         const commentDir = path.join(folderPath!, 'Comments Only');
-        const commentLeftDir = path.join(commentDir, `1 - ${sanitize(leftFqdn)}`);
-        const commentRightDir = path.join(commentDir, `2 - ${sanitize(rightFqdn)}`);
+        const commentLeftDir = path.join(commentDir, `1 - ${sanitize(leftFqdn.label)}`);
+        const commentRightDir = path.join(commentDir, `2 - ${sanitize(rightFqdn.label)}`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -332,7 +333,7 @@ class ServerServer {
 
             //     return p;
             // } else {
-            progress.report({ increment: increment, message: `sensor retrieval from ${leftFqdn}` });
+            progress.report({ increment: increment, message: `sensor retrieval from ${leftFqdn.label}` });
             await this.processServerSensors(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
             progress.report({ increment: increment, message: `sensor retrieval from ${rightFqdn}` });
             await this.processServerSensors(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
@@ -347,14 +348,14 @@ class ServerServer {
         });
     }
 
-    static processServerSensors(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
+    static processServerSensors(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
         const p = new Promise<void>(async (resolve, reject) => {
             try {
                 // get session
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
                 (async () => {
-                    const body = await RestClient.get(`https://${fqdn}/api/v2/sensors`, {
+                    const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/sensors`, {
                         headers: {
                             session: session,
                         },
@@ -388,7 +389,7 @@ class ServerServer {
                     resolve();
                 })();
             } catch (err) {
-                OutputChannelLogging.logError(`error downloading sensors from ${fqdn}`, err);
+                OutputChannelLogging.logError(`error downloading sensors from ${fqdn.label}`, err);
                 reject();
             }
         });

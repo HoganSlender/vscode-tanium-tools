@@ -14,6 +14,7 @@ import { Users } from './Users';
 import path = require('path');
 import { checkResolve } from '../common/checkResolve';
 import { ServerServerBase } from './ServerServerBase';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -43,25 +44,25 @@ class ServerServerUsers extends ServerServerBase {
         const state = await collectServerServerUsersInputs(config, context);
 
         // collect values
-        const leftFqdn: string = state.leftFqdn;
+        const leftFqdn: FqdnSetting = state.leftFqdn;
         const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
-        const rightFqdn: string = state.rightFqdn;
+        const rightFqdn: FqdnSetting = state.rightFqdn;
         const rightUsername: string = state.rightUsername;
         const rightPassword: string = state.rightPassword;
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn.label}`);
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
-        OutputChannelLogging.log(`right fqdn: ${rightFqdn}`);
+        OutputChannelLogging.log(`right fqdn: ${rightFqdn.label}`);
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}%Users`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}%Users`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn.label)}%Users`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn.label)}%Users`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -80,9 +81,9 @@ class ServerServerUsers extends ServerServerBase {
 
             const increment = 50;
 
-            progress.report({ increment: increment, message: `user retrieval from ${leftFqdn}` });
+            progress.report({ increment: increment, message: `user retrieval from ${leftFqdn.label}` });
             await this.processServerUsers(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-            progress.report({ increment: increment, message: `user retrieval from ${rightFqdn}` });
+            progress.report({ increment: increment, message: `user retrieval from ${rightFqdn.label}` });
             await this.processServerUsers(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {
@@ -97,8 +98,8 @@ class ServerServerUsers extends ServerServerBase {
         Users.analyzeUsers(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
     }
 
-    static processServerUsers(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
-        const restBase = `https://${fqdn}/api/v2`;
+    static processServerUsers(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
+        const restBase = `https://${fqdn.fqdn}/api/v2`;
 
         const p = new Promise<void>(async (resolve, reject) => {
             try {
@@ -106,7 +107,7 @@ class ServerServerUsers extends ServerServerBase {
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
                 (async () => {
-                    OutputChannelLogging.log(`user retrieval - initialized for ${fqdn}`);
+                    OutputChannelLogging.log(`user retrieval - initialized for ${fqdn.label}`);
                     var users: [any];
 
                     // get users
@@ -118,11 +119,11 @@ class ServerServerUsers extends ServerServerBase {
                             responseType: 'json',
                         }, allowSelfSignedCerts, httpTimeout);
 
-                        OutputChannelLogging.log(`user retrieval - complete for ${fqdn}`);
+                        OutputChannelLogging.log(`user retrieval - complete for ${fqdn.label}`);
                         users = body.data;
                     } catch (err) {
-                        OutputChannelLogging.logError(`retrieving users from ${fqdn}`, err);
-                        return reject(`retrieving content_set_privileges from ${fqdn}`);
+                        OutputChannelLogging.logError(`retrieving users from ${fqdn.label}`, err);
+                        return reject(`retrieving content_set_privileges from ${fqdn.label}`);
                     }
 
                     // iterate through each download export
@@ -130,7 +131,7 @@ class ServerServerUsers extends ServerServerBase {
                     var userTotal: number = users.length;
 
                     if (userTotal === 0) {
-                        OutputChannelLogging.log(`there are 0 users for ${fqdn}`);
+                        OutputChannelLogging.log(`there are 0 users for ${fqdn.label}`);
                         resolve();
                     } else {
                         // get groups map
@@ -174,7 +175,7 @@ class ServerServerUsers extends ServerServerBase {
                                         }
                                     }
                                 } catch (err) {
-                                    OutputChannelLogging.logError(`saving user file for ${user.name} from ${fqdn}`, err);
+                                    OutputChannelLogging.logError(`saving user file for ${user.name} from ${fqdn.label}`, err);
 
                                     if (checkResolve(++userCounter, userTotal, 'users', fqdn)) {
                                         return resolve();

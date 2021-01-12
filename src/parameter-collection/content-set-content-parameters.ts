@@ -14,9 +14,6 @@ export async function collectContentSetContentInputs(config: WorkspaceConfigurat
         light: Uri.file(context.asAbsolutePath('resources/light/add.svg')),
     }, '');
 
-    // get fqdns
-    const fqdns: string[] = config.get('fqdns', []);
-
     // get usernames
     const usernames: string[] = config.get('usernames', []);
 

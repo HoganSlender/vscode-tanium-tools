@@ -15,6 +15,7 @@ import { Session } from '../common/session';
 import { SigningUtils } from '../common/signingUtils';
 import { DiffBase } from './DiffBase';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -260,7 +261,7 @@ export class Dashboards extends DiffBase {
     static async transferItems(
         allowSelfSignedCerts: boolean,
         httpTimeout: number,
-        sourceFqdn: string,
+        sourceFqdn: FqdnSetting,
         sourceUsername: string,
         sourcePassword: string,
         signingKey: SigningKey,
@@ -299,7 +300,7 @@ export class Dashboards extends DiffBase {
                 var session = await Session.getSession(allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceUsername, sourcePassword);
 
                 // get saved_questions export so we can get needed sensors
-                const body = await RestClient.post(`https://${sourceFqdn}/api/v2/export`, {
+                const body = await RestClient.post(`https://${sourceFqdn.fqdn}/api/v2/export`, {
                     headers: {
                         session: session,
                     },

@@ -1,11 +1,12 @@
 import { collectInputs, MyButton, Step, StepType } from "./multi-step-input";
 import { QuickPickItem, WorkspaceConfiguration, ExtensionContext, Uri, ConfigurationTarget } from "vscode";
+import { FqdnSetting } from "./fqdnSetting";
 
 export interface SensorByHashState {
     fqdnQp: QuickPickItem | string;
     usernameQp: QuickPickItem | string;
     password: string;
-    fqdn: string;
+    fqdn: FqdnSetting;
     username: string;
     sensorHash: string;
 }
@@ -17,7 +18,7 @@ export async function collectSensorByHashInputs(config: WorkspaceConfiguration, 
     }, '');
 
     // get fqdns
-    const fqdns: string[] = config.get('fqdns', []);
+    const fqdns: FqdnSetting[] = config.get('fqdns', []);
 
     // get usernames
     const usernames: string[] = config.get('usernames', []);
@@ -28,7 +29,7 @@ export async function collectSensorByHashInputs(config: WorkspaceConfiguration, 
             stepType: StepType.quickPick,
             step: 1,
             totalSteps: 7,
-            quickPickItems: fqdns.map(label => ({ label })),
+            quickPickItems: fqdns.map(fqdn => ({ label: fqdn.label })),
             quickPickButtons: [
                 addButton
             ],
@@ -71,13 +72,24 @@ export async function collectSensorByHashInputs(config: WorkspaceConfiguration, 
     await collectInputs('Retrieve Sensor By Hash', state, steps);
 
     if (typeof state.fqdnQp === 'string') {
-        if (fqdns.indexOf(state.fqdnQp) === -1) {
-            fqdns.push(state.fqdnQp);
+        // new one
+        const inIndex = fqdns.filter(fqdn => (fqdn.label === state.fqdnQp));
+
+        if (inIndex.length === 0) {
+            const newFqdn = {
+                fqdn: state.fqdnQp,
+                label: state.fqdnQp
+            };
+            fqdns.push(newFqdn);
             config.update('fqdns', fqdns, ConfigurationTarget.Global);
+            state.fqdn = newFqdn;
+        } else {
+            state.fqdn = inIndex[0];
         }
-        state.fqdn = state.fqdnQp;
     } else {
-        state.fqdn = state.fqdnQp!.label;
+        // existing one
+        const target: QuickPickItem = state.fqdnQp!;
+        state.fqdn = fqdns.filter(fqdn => (fqdn.label === target.label))[0];
     }
 
     if (typeof state.usernameQp === 'string') {

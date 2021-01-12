@@ -13,6 +13,7 @@ import { Groups } from './Groups';
 import { ServerServerBase } from './ServerServerBase';
 
 import path = require('path');
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -54,19 +55,19 @@ class ServerServerGroups extends ServerServerBase {
         const state = await collectServerServerGroupInputs(config, context);
 
         // collect values
-        const leftFqdn: string = state.leftFqdn;
+        const leftFqdn: FqdnSetting = state.leftFqdn;
         const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
-        const rightFqdn: string = state.rightFqdn;
+        const rightFqdn: FqdnSetting = state.rightFqdn;
         const rightUsername: string = state.rightUsername;
         const rightPassword: string = state.rightPassword;
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn.label}`);
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
-        OutputChannelLogging.log(`right fqdn: ${rightFqdn}`);
+        OutputChannelLogging.log(`right fqdn: ${rightFqdn.label}`);
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
@@ -95,8 +96,8 @@ class ServerServerGroups extends ServerServerBase {
                 break;
         }
 
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}${folderLabel}`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}${folderLabel}`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn.label)}${folderLabel}`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn.label)}${folderLabel}`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -115,9 +116,9 @@ class ServerServerGroups extends ServerServerBase {
 
             const increment = 50;
 
-            progress.report({ increment: increment, message: `group retrieval from ${leftFqdn}` });
+            progress.report({ increment: increment, message: `group retrieval from ${leftFqdn.label}` });
             await this.processServerGroups(allowSelfSignedCerts, httpTimeout, targetGroupType, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-            progress.report({ increment: increment, message: `group retrieval from ${rightFqdn}` });
+            progress.report({ increment: increment, message: `group retrieval from ${rightFqdn.label}` });
             await this.processServerGroups(allowSelfSignedCerts, httpTimeout, targetGroupType, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {
@@ -132,8 +133,8 @@ class ServerServerGroups extends ServerServerBase {
         Groups.analyzeGroups(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), targetGroupType, context);
     }
 
-    static processServerGroups(allowSelfSignedCerts: boolean, httpTimeout: number, targetGroupType: number, fqdn: string, username: string, password: string, directory: string, label: string) {
-        const restBase = `https://${fqdn}/api/v2`;
+    static processServerGroups(allowSelfSignedCerts: boolean, httpTimeout: number, targetGroupType: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
+        const restBase = `https://${fqdn.fqdn}/api/v2`;
 
         const p = new Promise<void>(async (resolve, reject) => {
             try {
@@ -141,7 +142,7 @@ class ServerServerGroups extends ServerServerBase {
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
                 (async () => {
-                    OutputChannelLogging.log(`group retrieval - initialized for ${fqdn}`);
+                    OutputChannelLogging.log(`group retrieval - initialized for ${fqdn.label}`);
                     var groups: [any];
 
                     // get groups
@@ -156,11 +157,11 @@ class ServerServerGroups extends ServerServerBase {
 
                         const body = await RestClient.get(`${restBase}/groups`, options, allowSelfSignedCerts, httpTimeout);
 
-                        OutputChannelLogging.log(`group retrieval - complete for ${fqdn}`);
+                        OutputChannelLogging.log(`group retrieval - complete for ${fqdn.label}`);
                         groups = body.data;
                     } catch (err) {
-                        OutputChannelLogging.logError(`retrieving groups from ${fqdn}`, err);
-                        return reject(`retrieving groups from ${fqdn}`);
+                        OutputChannelLogging.logError(`retrieving groups from ${fqdn.label}`, err);
+                        return reject(`retrieving groups from ${fqdn.label}`);
                     }
 
                     // remove cache object
@@ -171,7 +172,7 @@ class ServerServerGroups extends ServerServerBase {
                     var groupTotal: number = groups.length;
 
                     if (groupTotal === 0) {
-                        OutputChannelLogging.log(`there are 0 groups for ${fqdn}`);
+                        OutputChannelLogging.log(`there are 0 groups for ${fqdn.label}`);
                         return resolve();
                     } else {
                         for (var i = 0; i < groups.length; i++) {
@@ -226,7 +227,7 @@ class ServerServerGroups extends ServerServerBase {
                                         }
                                     }
                                 } catch (err) {
-                                    OutputChannelLogging.logError(`retrieving groupExport for ${group.name} from ${fqdn}`, err);
+                                    OutputChannelLogging.logError(`retrieving groupExport for ${group.name} from ${fqdn.label}`, err);
 
                                     if (checkResolve(++groupCounter, groupTotal, 'groups', fqdn)) {
                                         return resolve();

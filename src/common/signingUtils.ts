@@ -9,6 +9,7 @@ import { PostTextPlainData, RestClient } from './restClient';
 
 import path = require('path');
 import { SigningKey } from '../types/signingKey';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export interface ImportStatusData {
     id: number,
@@ -78,18 +79,18 @@ export class SigningUtils {
     }
 
     static postSignedContent(
-        destFqdn: string,
+        destFqdn: FqdnSetting,
         destSession: string,
         signedContent: string,
         allowSelfSignedCerts: boolean,
         httpTimeout: number
     ) {
         const p = new Promise<ImportStatusData>(async (resolve, reject) => {
-            var hostname: string = destFqdn;
+            var hostname: string = destFqdn.fqdn;
             var port: number = 443;
 
-            if (destFqdn.includes(':')) {
-                const items = destFqdn.split(':');
+            if (destFqdn.fqdn.includes(':')) {
+                const items = destFqdn.fqdn.split(':');
                 hostname = items[0];
                 port = Number(items[1]);
             }

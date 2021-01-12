@@ -16,6 +16,7 @@ import { SigningKey } from '../types/signingKey';
 import path = require('path');
 import { DiffBase } from './DiffBase';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -217,7 +218,7 @@ export class SavedQuestions extends DiffBase {
     }
 
     static transferItems(
-        sourceFqdn: string,
+        sourceFqdn: FqdnSetting,
         sourceUsername: string,
         sourcePassword: string,
         signingKey: SigningKey,
@@ -246,7 +247,7 @@ export class SavedQuestions extends DiffBase {
 
                 const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceUsername, sourcePassword);
 
-                const body = await RestClient.post(`https://${sourceFqdn}/api/v2/export`, {
+                const body = await RestClient.post(`https://${sourceFqdn.fqdn}/api/v2/export`, {
                     headers: {
                         session: session,
                     },

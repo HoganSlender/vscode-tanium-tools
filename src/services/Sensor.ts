@@ -4,6 +4,7 @@ import * as commands from '../common/commands';
 import { OutputChannelLogging } from '../common/logging';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 import { collectSensorByHashInputs, SensorByHashState } from '../parameter-collection/sensor-by-hash-parameters';
 import { collectSensorByNameInputs, SensorByNameState } from '../parameter-collection/sensor-by-name-parameters';
 
@@ -44,16 +45,16 @@ class Sensor implements vscode.TextDocumentContentProvider {
         const state: SensorByHashState = await collectSensorByHashInputs(config, context);
 
         // collect values
-        const fqdn: string = state.fqdn;
+        const fqdn: FqdnSetting = state.fqdn;
         const username: string = state.username;
         const password: string = state.password;
         const sensorHash: string = state.sensorHash;
 
-        const leftRestBase = `https://${fqdn}/api/v2`;
+        const leftRestBase = `https://${fqdn.fqdn}/api/v2`;
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${fqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${fqdn.label}`);
         OutputChannelLogging.log(`left username: ${username}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
         OutputChannelLogging.log(`sensor name: ${sensorHash}`);
@@ -76,7 +77,7 @@ class Sensor implements vscode.TextDocumentContentProvider {
             try {
                 this.sensorOutput = JSON.stringify(sensor, null, 2);
 
-                let uri = vscode.Uri.parse(`hoganslender://by-hash/${sensorName} (${fqdn})`);
+                let uri = vscode.Uri.parse(`hoganslender://by-hash/${sensorName} (${fqdn.label})`);
                 let doc = await vscode.workspace.openTextDocument(uri);
                 await vscode.window.showTextDocument(doc, { preview: false });
             } catch (err) {
@@ -100,16 +101,16 @@ class Sensor implements vscode.TextDocumentContentProvider {
         const state: SensorByNameState = await collectSensorByNameInputs(config, context);
 
         // collect values
-        const fqdn: string = state.fqdn;
+        const fqdn: FqdnSetting = state.fqdn;
         const username: string = state.username;
         const password: string = state.password;
         const sensorName: string = state.sensorName;
 
-        const leftRestBase = `https://${fqdn}/api/v2`;
+        const leftRestBase = `https://${fqdn.fqdn}/api/v2`;
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${fqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${fqdn.label}`);
         OutputChannelLogging.log(`left username: ${username}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
         OutputChannelLogging.log(`sensor name: ${sensorName}`);
@@ -145,7 +146,7 @@ class Sensor implements vscode.TextDocumentContentProvider {
             try {
                 this.sensorOutput = JSON.stringify(sensor, null, 2);
 
-                let uri = vscode.Uri.parse(`hoganslender://by-name/${sensorName} (${fqdn})`);
+                let uri = vscode.Uri.parse(`hoganslender://by-name/${sensorName} (${fqdn.label})`);
                 let doc = await vscode.workspace.openTextDocument(uri);
                 await vscode.window.showTextDocument(doc, { preview: false });
             } catch (err) {

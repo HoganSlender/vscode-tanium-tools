@@ -9,6 +9,7 @@ import { PathUtils } from '../common/pathUtils';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { WebContentUtils } from '../common/webContentUtils';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { SigningKey } from '../types/signingKey';
 import { DiffBase } from './DiffBase';
@@ -287,7 +288,7 @@ export class Users extends DiffBase {
         return p;
     }
 
-    static retrieveUserMapByName(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, session: string): any {
+    static retrieveUserMapByName(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, session: string): any {
         const p = new Promise<any>((resolve, reject) => {
             try {
                 (async () => {
@@ -296,7 +297,7 @@ export class Users extends DiffBase {
 
                     // get users
                     try {
-                        const body = await RestClient.get(`https://${fqdn}/api/v2/users`, {
+                        const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/users`, {
                             headers: {
                                 session: session,
                             },
@@ -345,10 +346,10 @@ export class Users extends DiffBase {
     static async transferUser(
         allowSelfSignedCerts: boolean,
         httpTimeout: number,
-        sourceFqdn: string,
+        sourceFqdn: FqdnSetting,
         sourceUsername: string,
         sourcePassword: string,
-        destFqdn: string,
+        destFqdn: FqdnSetting,
         destUsername: string,
         destPassword: string,
         filePath: string,
@@ -366,12 +367,12 @@ export class Users extends DiffBase {
 
                 try {
                     // import user
-                    const destRestBase = `https://${destFqdn}/api/v2`;
+                    const destRestBase = `https://${destFqdn.fqdn}/api/v2`;
 
                     const sourceSession = await Session.getSession(allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceUsername, sourcePassword);
                     const destSession = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, destUsername, destPassword);
 
-                    OutputChannelLogging.log(`importing ${userName} into ${destFqdn}`);
+                    OutputChannelLogging.log(`importing ${userName} into ${destFqdn.label}`);
 
                     // get group info from source
                     if (userFromFile.group !== undefined) {

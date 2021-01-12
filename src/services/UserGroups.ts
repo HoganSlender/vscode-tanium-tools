@@ -9,6 +9,7 @@ import { PathUtils } from '../common/pathUtils';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { WebContentUtils } from '../common/webContentUtils';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { SigningKey } from '../types/signingKey';
 import { DiffBase } from './DiffBase';
@@ -273,10 +274,10 @@ export class UserGroups extends DiffBase {
     static async transferUserGroup(
         allowSelfSignedCerts: boolean,
         httpTimeout: number,
-        sourceFqdn: string,
+        sourceFqdn: FqdnSetting,
         sourceUsername: string,
         sourcePassword: string,
-        destFqdn: string,
+        destFqdn: FqdnSetting,
         destUsername: string,
         destPassword: string,
         filePath: string,
@@ -294,12 +295,12 @@ export class UserGroups extends DiffBase {
 
                 try {
                     // import user
-                    const destRestBase = `https://${destFqdn}/api/v2`;
+                    const destRestBase = `https://${destFqdn.fqdn}/api/v2`;
 
                     const sourceSession = await Session.getSession(allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceUsername, sourcePassword);
                     const destSession = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, destUsername, destPassword);
 
-                    OutputChannelLogging.log(`importing ${userGroupName} into ${destFqdn}`);
+                    OutputChannelLogging.log(`importing ${userGroupName} into ${destFqdn.label}`);
 
                     // get group info from source
                     if (userGroupFromFile.group !== undefined) {
@@ -351,18 +352,18 @@ export class UserGroups extends DiffBase {
         return p;
     }
 
-    static async retrieveUserGroupByName(groupName: string, allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, session: string): Promise<any> {
+    static async retrieveUserGroupByName(groupName: string, allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, session: string): Promise<any> {
         const userGroupMap = await this.retrieveUserGroupMapByName(allowSelfSignedCerts, httpTimeout, fqdn, session);
 
         return userGroupMap[groupName];
     }
 
-    static retrieveUserGroupMapByName(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, session: string): any {
+    static retrieveUserGroupMapByName(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, session: string): any {
         const p = new Promise<any>(async (resolve, reject) => {
             var userGroups: any = {};
             var userGroupData: [any];
             try {
-                const body = await RestClient.get(`https://${fqdn}/api/v2/user_groups`, {
+                const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/user_groups`, {
                     headers: {
                         session: session
                     },

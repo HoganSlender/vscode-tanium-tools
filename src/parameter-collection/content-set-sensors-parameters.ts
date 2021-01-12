@@ -1,4 +1,5 @@
 import { ConfigurationTarget, ExtensionContext, QuickPickItem, Uri, WorkspaceConfiguration } from "vscode";
+import { FqdnSetting } from "./fqdnSetting";
 
 import { collectInputs, MyButton, Step, StepType } from "./multi-step-input";
 
@@ -8,7 +9,7 @@ interface ContentSetSensorState {
     usernameQp: QuickPickItem | string;
     extractCommentWhitespaceQp: QuickPickItem;
     password: string;
-    fqdn: string;
+    fqdn: FqdnSetting;
     username: string;
     extractCommentWhitespace: boolean;
 }
@@ -24,7 +25,7 @@ export async function collectContentSetSensorInputs(config: WorkspaceConfigurati
     const lastUsedUrl = retval === undefined ? '' : retval;
 
     // get fqdns
-    const fqdns: string[] = config.get('fqdns', []);
+    const fqdns: FqdnSetting[] = config.get('fqdns', []);
 
     // get usernames
     const usernames: string[] = config.get('usernames', []);
@@ -50,7 +51,7 @@ export async function collectContentSetSensorInputs(config: WorkspaceConfigurati
             stepType: StepType.quickPick,
             step: 3,
             totalSteps: 5,
-            quickPickItems: fqdns.map(label => ({ label })),
+            quickPickItems: fqdns.map(fqdn => ({ label: fqdn.label })),
             quickPickButtons: [
                 addButton
             ],
@@ -89,11 +90,24 @@ export async function collectContentSetSensorInputs(config: WorkspaceConfigurati
     context.globalState.update('hoganslender.tanium.contentset.url', state.contentSetUrl);
 
     if (typeof state.fqdnQp === 'string') {
-        fqdns.push(state.fqdnQp);
-        config.update('fqdns', fqdns, ConfigurationTarget.Global);
-        state.fqdn = state.fqdnQp;
+        // new one
+        const inIndex = fqdns.filter(fqdn => (fqdn.label === state.fqdnQp));
+
+        if (inIndex.length === 0) {
+            const newFqdn = {
+                fqdn: state.fqdnQp,
+                label: state.fqdnQp
+            };
+            fqdns.push(newFqdn);
+            config.update('fqdns', fqdns, ConfigurationTarget.Global);
+            state.fqdn = newFqdn;
+        } else {
+            state.fqdn = inIndex[0];
+        }
     } else {
-        state.fqdn = state.fqdnQp!.label;
+        // existing one
+        const target: QuickPickItem = state.fqdnQp!;
+        state.fqdn = fqdns.filter(fqdn => (fqdn.label === target.label))[0];
     }
 
     if (typeof state.usernameQp === 'string') {

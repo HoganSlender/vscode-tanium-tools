@@ -14,6 +14,7 @@ import { SigningKey } from '../types/signingKey';
 import { SigningUtils } from '../common/signingUtils';
 import { DiffBase } from './DiffBase';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -288,10 +289,10 @@ export class ContentSetRoles extends DiffBase {
         return p;
     }
 
-    static retrieveContentSetRoleByName(name: string, fqdn: string, session: string, allowSelfSignedCerts: boolean, httpTimeout: number): any {
+    static retrieveContentSetRoleByName(name: string, fqdn: FqdnSetting, session: string, allowSelfSignedCerts: boolean, httpTimeout: number): any {
         const p: Promise<any> = new Promise<any>(async (resolve, reject) => {
             try {
-                const body = await RestClient.get(`https://${fqdn}/api/v2/content_set_roles/by-name/${name}`, {
+                const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/content_set_roles/by-name/${name}`, {
                     headers: {
                         session: session,
                     },

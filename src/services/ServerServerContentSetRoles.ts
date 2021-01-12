@@ -13,6 +13,7 @@ import { ContentSetRoles } from './ContentSetRoles';
 import path = require('path');
 import { checkResolve } from '../common/checkResolve';
 import { ServerServerBase } from './ServerServerBase';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -42,25 +43,25 @@ export class ServerServerContentSetRoles extends ServerServerBase {
         const state = await collectServerServerContentSetRoleInputs(config, context);
 
         // collect values
-        const leftFqdn: string = state.leftFqdn;
+        const leftFqdn: FqdnSetting = state.leftFqdn;
         const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
-        const rightFqdn: string = state.rightFqdn;
+        const rightFqdn: FqdnSetting = state.rightFqdn;
         const rightUsername: string = state.rightUsername;
         const rightPassword: string = state.rightPassword;
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn.label}`);
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
-        OutputChannelLogging.log(`right fqdn: ${rightFqdn}`);
+        OutputChannelLogging.log(`right fqdn: ${rightFqdn.label}`);
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}%ContentSetRoles`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}%ContentSetRoles`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn.label)}%ContentSetRoles`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn.label)}%ContentSetRoles`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -79,9 +80,9 @@ export class ServerServerContentSetRoles extends ServerServerBase {
 
             const increment = 50;
 
-            progress.report({ increment: increment, message: `content set role retrieval from ${leftFqdn}` });
+            progress.report({ increment: increment, message: `content set role retrieval from ${leftFqdn.label}` });
             await this.processServerContentSetRoles(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-            progress.report({ increment: increment, message: `content set role retrieval from ${rightFqdn}` });
+            progress.report({ increment: increment, message: `content set role retrieval from ${rightFqdn.label}` });
             await this.processServerContentSetRoles(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {
@@ -96,8 +97,8 @@ export class ServerServerContentSetRoles extends ServerServerBase {
         ContentSetRoles.analyzeContentSetRoles(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
     }
 
-    static processServerContentSetRoles(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
-        const restBase = `https://${fqdn}/api/v2`;
+    static processServerContentSetRoles(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
+        const restBase = `https://${fqdn.fqdn}/api/v2`;
 
         const p = new Promise<void>(async (resolve, reject) => {
             try {
@@ -105,7 +106,7 @@ export class ServerServerContentSetRoles extends ServerServerBase {
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
                 (async () => {
-                    OutputChannelLogging.log(`content set role retrieval - initialized for ${fqdn}`);
+                    OutputChannelLogging.log(`content set role retrieval - initialized for ${fqdn.label}`);
                     var content_set_roles: [any];
 
                     // get packages
@@ -122,11 +123,11 @@ export class ServerServerContentSetRoles extends ServerServerBase {
                             responseType: 'json',
                         }, allowSelfSignedCerts, httpTimeout);
 
-                        OutputChannelLogging.log(`content set role retrieval - complete for ${fqdn}`);
+                        OutputChannelLogging.log(`content set role retrieval - complete for ${fqdn.label}`);
                         content_set_roles = body.data.object_list.content_set_roles;
                     } catch (err) {
-                        OutputChannelLogging.logError(`retrieving content set roles from ${fqdn}`, err);
-                        return reject(`retrieving content_set_roles from ${fqdn}`);
+                        OutputChannelLogging.logError(`retrieving content set roles from ${fqdn.label}`, err);
+                        return reject(`retrieving content_set_roles from ${fqdn.label}`);
                     }
 
                     // iterate through each download export
@@ -134,7 +135,7 @@ export class ServerServerContentSetRoles extends ServerServerBase {
                     var contentSetRoleTotal: number = content_set_roles.length;
 
                     if (contentSetRoleTotal === 0) {
-                        OutputChannelLogging.log(`there are 0 content set roles for ${fqdn}`);
+                        OutputChannelLogging.log(`there are 0 content set roles for ${fqdn.label}`);
                         resolve();
                     } else {
                         var i = 0;
@@ -176,7 +177,7 @@ export class ServerServerContentSetRoles extends ServerServerBase {
                                         }
                                     }
                                 } catch (err) {
-                                    OutputChannelLogging.logError(`saving content set role file for ${contentSetRole.name} from ${fqdn}`, err);
+                                    OutputChannelLogging.logError(`saving content set role file for ${contentSetRole.name} from ${fqdn.label}`, err);
 
                                     if (checkResolve(++contentSetRoleCounter, contentSetRoleTotal, 'content set roles', fqdn)) {
                                         return resolve();

@@ -15,6 +15,7 @@ import { Users } from './Users';
 import path = require('path');
 import { checkResolve } from '../common/checkResolve';
 import { ServerServerBase } from './ServerServerBase';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -45,25 +46,25 @@ class ServerServerContentSetRoleMemberships extends ServerServerBase {
         const state = await collectServerServerContentSetRoleMembershipInputs(config, context);
 
         // collect values
-        const leftFqdn: string = state.leftFqdn;
+        const leftFqdn: FqdnSetting = state.leftFqdn;
         const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
-        const rightFqdn: string = state.rightFqdn;
+        const rightFqdn: FqdnSetting = state.rightFqdn;
         const rightUsername: string = state.rightUsername;
         const rightPassword: string = state.rightPassword;
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn.label}`);
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
-        OutputChannelLogging.log(`right fqdn: ${rightFqdn}`);
+        OutputChannelLogging.log(`right fqdn: ${rightFqdn.label}`);
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}%ContentSetRoleMemberships`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}%ContentSetRoleMemberships`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn.label)}%ContentSetRoleMemberships`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn.label)}%ContentSetRoleMemberships`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -82,9 +83,9 @@ class ServerServerContentSetRoleMemberships extends ServerServerBase {
 
             const increment = 20;
 
-            progress.report({ increment: increment, message: `content set role membership retrieval from ${leftFqdn}` });
+            progress.report({ increment: increment, message: `content set role membership retrieval from ${leftFqdn.label}` });
             await this.processServerContentSetRoleMemberships(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-            progress.report({ increment: increment, message: `content set role membership retrieval from ${rightFqdn}` });
+            progress.report({ increment: increment, message: `content set role membership retrieval from ${rightFqdn.label}` });
             await this.processServerContentSetRoleMemberships(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {
@@ -98,22 +99,22 @@ class ServerServerContentSetRoleMemberships extends ServerServerBase {
         // analyze content sets
         ContentSetRoleMemberships.analyzeContentSetRoleMemberships(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
     }
-    static processServerContentSetRoleMemberships(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
-        const restBase = `https://${fqdn}/api/v2`;
+    static processServerContentSetRoleMemberships(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
+        const restBase = `https://${fqdn.fqdn}/api/v2`;
 
         const p = new Promise<void>(async (resolve, reject) => {
             try {
                 // get session
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
-                OutputChannelLogging.log(`content set role retrieval - initialized for ${fqdn}`);
+                OutputChannelLogging.log(`content set role retrieval - initialized for ${fqdn.label}`);
                 var contentSetRoles = await ServerServerContentSetRoles.retrieveContentSetRoleMap(allowSelfSignedCerts, httpTimeout, restBase, session);
 
-                OutputChannelLogging.log(`user retrieval - initialized for ${fqdn}`);
+                OutputChannelLogging.log(`user retrieval - initialized for ${fqdn.label}`);
                 var users = await Users.retrieveUserMapById(allowSelfSignedCerts, httpTimeout, restBase, session);
 
                 (async () => {
-                    OutputChannelLogging.log(`content set role memberships retrieval - initialized for ${fqdn}`);
+                    OutputChannelLogging.log(`content set role memberships retrieval - initialized for ${fqdn.label}`);
                     var content_set_role_memberships: [any];
 
                     // get
@@ -125,11 +126,11 @@ class ServerServerContentSetRoleMemberships extends ServerServerBase {
                             responseType: 'json',
                         }, allowSelfSignedCerts, httpTimeout);
 
-                        OutputChannelLogging.log(`content set role memberships retrieval - complete for ${fqdn}`);
+                        OutputChannelLogging.log(`content set role memberships retrieval - complete for ${fqdn.label}`);
                         content_set_role_memberships = body.data;
                     } catch (err) {
-                        OutputChannelLogging.logError(`retrieving content set role memberships from ${fqdn}`, err);
-                        return reject(`retrieving content_set_role memberships from ${fqdn}`);
+                        OutputChannelLogging.logError(`retrieving content set role memberships from ${fqdn.label}`, err);
+                        return reject(`retrieving content_set_role memberships from ${fqdn.label}`);
                     }
 
                     // iterate through each download export
@@ -137,7 +138,7 @@ class ServerServerContentSetRoleMemberships extends ServerServerBase {
                     var contentSetRoleMembershipTotal: number = content_set_role_memberships.length;
 
                     if (contentSetRoleMembershipTotal === 0) {
-                        OutputChannelLogging.log(`there are 0 content set role memberships for ${fqdn}`);
+                        OutputChannelLogging.log(`there are 0 content set role memberships for ${fqdn.label}`);
                         return resolve();
                     } else {
                         var i = 0;
@@ -188,7 +189,7 @@ class ServerServerContentSetRoleMemberships extends ServerServerBase {
                                         }
                                     }
                                 } catch (err) {
-                                    OutputChannelLogging.logError(`saving content set role membership file for ${contentSetRoleMembership.name} from ${fqdn}`, err);
+                                    OutputChannelLogging.logError(`saving content set role membership file for ${contentSetRoleMembership.name} from ${fqdn.label}`, err);
 
                                     if (checkResolve(++contentSetRoleMembershipCounter, contentSetRoleMembershipTotal, 'content set role memberships', fqdn)) {
                                         return resolve();

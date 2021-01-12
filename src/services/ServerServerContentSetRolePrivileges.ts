@@ -16,6 +16,7 @@ import { ServerServerContentSets } from './ServerServerContentSets';
 import path = require('path');
 import { checkResolve } from '../common/checkResolve';
 import { ServerServerBase } from './ServerServerBase';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -45,25 +46,25 @@ class ServerServerContentSetRolePrivileges extends ServerServerBase {
         const state = await collectServerServerContentSetRolePrivilegeInputs(config, context);
 
         // collect values
-        const leftFqdn: string = state.leftFqdn;
+        const leftFqdn: FqdnSetting = state.leftFqdn;
         const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
-        const rightFqdn: string = state.rightFqdn;
+        const rightFqdn: FqdnSetting = state.rightFqdn;
         const rightUsername: string = state.rightUsername;
         const rightPassword: string = state.rightPassword;
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn.label}`);
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
-        OutputChannelLogging.log(`right fqdn: ${rightFqdn}`);
+        OutputChannelLogging.log(`right fqdn: ${rightFqdn.label}`);
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}%ContentSetRolePrivileges`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}%ContentSetRolePrivileges`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn.label)}%ContentSetRolePrivileges`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn.label)}%ContentSetRolePrivileges`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -82,9 +83,9 @@ class ServerServerContentSetRolePrivileges extends ServerServerBase {
 
             const increment = 20;
 
-            progress.report({ increment: increment, message: `content set role privilege retrieval from ${leftFqdn}` });
+            progress.report({ increment: increment, message: `content set role privilege retrieval from ${leftFqdn.label}` });
             await this.processServerContentSetRolePrivileges(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-            progress.report({ increment: increment, message: `content set role privilege retrieval from ${rightFqdn}` });
+            progress.report({ increment: increment, message: `content set role privilege retrieval from ${rightFqdn.label}` });
             await this.processServerContentSetRolePrivileges(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {
@@ -99,25 +100,25 @@ class ServerServerContentSetRolePrivileges extends ServerServerBase {
         ContentSetRolePrivileges.analyzeContentSetRolePrivileges(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
     }
 
-    static processServerContentSetRolePrivileges(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
-        const restBase = `https://${fqdn}/api/v2`;
+    static processServerContentSetRolePrivileges(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
+        const restBase = `https://${fqdn.fqdn}/api/v2`;
 
         const p = new Promise<void>(async (resolve, reject) => {
             try {
                 // get session
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
-                OutputChannelLogging.log(`content set retrieval - initialized for ${fqdn}`);
+                OutputChannelLogging.log(`content set retrieval - initialized for ${fqdn.label}`);
                 var contentSets = await ServerServerContentSets.retrieveContentSetMap(allowSelfSignedCerts, httpTimeout, restBase, session);
 
-                OutputChannelLogging.log(`content set role retrieval - initialized for ${fqdn}`);
+                OutputChannelLogging.log(`content set role retrieval - initialized for ${fqdn.label}`);
                 var contentSetRoles = await ServerServerContentSetRoles.retrieveContentSetRoleMap(allowSelfSignedCerts, httpTimeout, restBase, session);
 
-                OutputChannelLogging.log(`content set privilege retrieval - initialized for ${fqdn}`);
+                OutputChannelLogging.log(`content set privilege retrieval - initialized for ${fqdn.label}`);
                 var contentSetPrivileges = await ServerServerContentSetPrivileges.retrieveContentSetPrivilegeMap(allowSelfSignedCerts, httpTimeout, restBase, session);
 
                 (async () => {
-                    OutputChannelLogging.log(`content set role privileges retrieval - initialized for ${fqdn}`);
+                    OutputChannelLogging.log(`content set role privileges retrieval - initialized for ${fqdn.label}`);
                     var content_set_role_privileges: [any];
 
                     // get
@@ -129,11 +130,11 @@ class ServerServerContentSetRolePrivileges extends ServerServerBase {
                             responseType: 'json',
                         }, allowSelfSignedCerts, httpTimeout);
 
-                        OutputChannelLogging.log(`content set role privileges retrieval - complete for ${fqdn}`);
+                        OutputChannelLogging.log(`content set role privileges retrieval - complete for ${fqdn.label}`);
                         content_set_role_privileges = body.data;
                     } catch (err) {
-                        OutputChannelLogging.logError(`retrieving content set role privileges from ${fqdn}`, err);
-                        return reject(`retrieving content_set_role privileges from ${fqdn}`);
+                        OutputChannelLogging.logError(`retrieving content set role privileges from ${fqdn.label}`, err);
+                        return reject(`retrieving content_set_role privileges from ${fqdn.label}`);
                     }
 
                     // iterate through each download export
@@ -141,7 +142,7 @@ class ServerServerContentSetRolePrivileges extends ServerServerBase {
                     var contentSetRolePrivilegeTotal: number = content_set_role_privileges.length;
 
                     if (contentSetRolePrivilegeTotal === 0) {
-                        OutputChannelLogging.log(`there are 0 content set user group role privileges for ${fqdn}`);
+                        OutputChannelLogging.log(`there are 0 content set user group role privileges for ${fqdn.label}`);
                         return resolve();
                     } else {
                         var i = 0;
@@ -210,7 +211,7 @@ class ServerServerContentSetRolePrivileges extends ServerServerBase {
                                         }
                                     }
                                 } catch (err) {
-                                    OutputChannelLogging.logError(`saving content set role privilege file for ${contentSetRolePrivilege.name} from ${fqdn}`, err);
+                                    OutputChannelLogging.logError(`saving content set role privilege file for ${contentSetRolePrivilege.name} from ${fqdn.label}`, err);
 
                                     if (checkResolve(++contentSetRolePrivilegeCounter, contentSetRolePrivilegeTotal, 'content set role privileges', fqdn)) {
                                         return resolve();

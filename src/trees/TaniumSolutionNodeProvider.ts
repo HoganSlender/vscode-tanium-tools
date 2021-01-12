@@ -1,5 +1,6 @@
 import path = require('path');
 import * as vscode from 'vscode';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 import { SolutionData } from '../services/Solutions';
 import { TaniumSolutionTreeItem } from './TaniumSolutionTreeItem';
 
@@ -40,7 +41,7 @@ export class TaniumSolutionNodeProvider implements vscode.TreeDataProvider<Taniu
         this.refresh();
     }
 
-    public getSolutionDataFqdn(): string {
+    public getSolutionDataFqdn(): FqdnSetting {
         return this.solutionData?.fqdn!;
     }
 
@@ -228,7 +229,7 @@ export class TaniumSolutionNodeProvider implements vscode.TreeDataProvider<Taniu
                                         {
                                             title: 'Compare Content Set Content',
                                             command: 'hoganslendertanium.compareContentSetContent',
-                                            arguments: [solution.content_url]
+                                            arguments: [this.solutionData?.fqdn, solution.content_url]
                                         }
                                     ));
                                 }
@@ -246,7 +247,7 @@ export class TaniumSolutionNodeProvider implements vscode.TreeDataProvider<Taniu
             // roots
             const roots: TaniumSolutionTreeItem[] = [];
 
-            this.label = this.solutionData ? `Solutions - ${this.solutionData.fqdn}` : 'Solutions';
+            this.label = this.solutionData ? `Solutions - ${this.solutionData.fqdn.label}` : 'Solutions';
 
             const serverSolutions = new TaniumSolutionTreeItem(element, this.label, 'Show differences between Solutions and Tanium Server', vscode.TreeItemCollapsibleState.Expanded, {
                 light: path.join(this.resourcePath, 'light', 'folder.svg'),

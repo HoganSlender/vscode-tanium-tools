@@ -1,10 +1,11 @@
 import { collectInputs, MyButton, Step, StepType } from "./multi-step-input";
 import { QuickPickItem, WorkspaceConfiguration, ExtensionContext, Uri, ConfigurationTarget } from "vscode";
+import { FqdnSetting } from "./fqdnSetting";
 
 interface PackagesDownloadFilesState {
     leftFqdnQp: QuickPickItem | string;
     leftUsernameQp: QuickPickItem | string;
-    leftFqdn: string;
+    leftFqdn: FqdnSetting;
     leftUsername: string;
     leftPassword: string;
 }
@@ -16,7 +17,7 @@ export async function collectPackageFilesInputs(config: WorkspaceConfiguration, 
     }, '');
 
     // get fqdns
-    const fqdns: string[] = config.get('fqdns', []);
+    const fqdns: FqdnSetting[] = config.get('fqdns', []);
 
     // get usernames
     const usernames: string[] = config.get('usernames', []);
@@ -27,7 +28,7 @@ export async function collectPackageFilesInputs(config: WorkspaceConfiguration, 
             stepType: StepType.quickPick,
             step: 1,
             totalSteps: 7,
-            quickPickItems: fqdns.map(label => ({ label })),
+            quickPickItems: fqdns.map(fqdn => ({ label: fqdn.label })),
             quickPickButtons: [
                 addButton
             ],
@@ -63,13 +64,24 @@ export async function collectPackageFilesInputs(config: WorkspaceConfiguration, 
     await collectInputs('package download files', state, steps);
 
     if (typeof state.leftFqdnQp === 'string') {
-        if (fqdns.indexOf(state.leftFqdnQp) === -1) {
-            fqdns.push(state.leftFqdnQp);
+        // new one
+        const inIndex = fqdns.filter(fqdn => (fqdn.label === state.leftFqdnQp));
+
+        if (inIndex.length === 0) {
+            const newFqdn = {
+                fqdn: state.leftFqdnQp,
+                label: state.leftFqdnQp
+            };
+            fqdns.push(newFqdn);
             config.update('fqdns', fqdns, ConfigurationTarget.Global);
+            state.leftFqdn = newFqdn;
+        } else {
+            state.leftFqdn = inIndex[0];
         }
-        state.leftFqdn = state.leftFqdnQp;
     } else {
-        state.leftFqdn = state.leftFqdnQp!.label;
+        // existing one
+        const target: QuickPickItem = state.leftFqdnQp!;
+        state.leftFqdn = fqdns.filter(fqdn => (fqdn.label === target.label))[0];
     }
 
     if (typeof state.leftUsernameQp === 'string') {

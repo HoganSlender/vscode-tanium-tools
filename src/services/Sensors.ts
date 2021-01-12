@@ -11,6 +11,7 @@ import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { SigningUtils } from '../common/signingUtils';
 import { WebContentUtils } from '../common/webContentUtils';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { SigningKey } from "../types/signingKey";
 import { DiffBase } from './DiffBase';
@@ -256,7 +257,7 @@ export class Sensors extends DiffBase {
     }
     
     static transferItems(
-        sourceFqdn: string,
+        sourceFqdn: FqdnSetting,
         sourceUsername: string,
         sourcePassword: string,
         signingKey: SigningKey,
@@ -285,7 +286,7 @@ export class Sensors extends DiffBase {
 
                 const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceUsername, sourcePassword);
 
-                const body = await RestClient.post(`https://${sourceFqdn}/api/v2/export`, {
+                const body = await RestClient.post(`https://${sourceFqdn.fqdn}/api/v2/export`, {
                     headers: {
                         session: session,
                     },

@@ -91,7 +91,7 @@ if (!showServerInfo) {
 
     var fqdnsText = divFqdns.innerHTML;
 
-    var fqdns = fqdnsText.split(',');
+    var fqdns = JSON.parse(fqdnsText);
 
     var usernamesText = divUsernames.innerHTML;
 
@@ -106,7 +106,7 @@ if (!showServerInfo) {
     }
 
     if (divSourceFqdn !== null) {
-        processInput(fqdns, divSourceFqdn, 'taniumSourceFqdnSelect', false);
+        processInputFqdn(fqdns, divSourceFqdn, 'taniumSourceFqdnSelect', false);
     }
 
     if (divSourceUsername !== null) {
@@ -114,7 +114,7 @@ if (!showServerInfo) {
     }
 
     if (divDestFqdn !== null) {
-        processInput(fqdns, divDestFqdn, 'taniumDestFqdnSelect', true);
+        processInputFqdn(fqdns, divDestFqdn, 'taniumDestFqdnSelect', true);
     }
 
     if (divDestUsername !== null) {
@@ -165,6 +165,26 @@ window.addEventListener('message', event => {
             break;
     }
 });
+
+function processInputFqdn(inputArray, targetDiv, targetId, isLast) {
+    console.log(`inputArray.length: ${inputArray.length}`);
+    var tag = document.createElement("select");
+    tag.setAttribute("id", `${targetId}`);
+    targetDiv.appendChild(tag);
+
+    inputArray.forEach(item => {
+        var option = document.createElement("option");
+        option.setAttribute("value", item.fqdn);
+        var text = document.createTextNode(item.label);
+        option.appendChild(text);
+        tag.appendChild(option);
+    });
+
+    // set selected index
+    if (isLast) {
+        tag.selectedIndex = inputArray.length - 1;
+    }
+}
 
 function processInput(inputArray, targetDiv, targetId, isLast) {
     console.log(`inputArray.length: ${inputArray.length}`);
@@ -298,12 +318,33 @@ function processItems() {
     console.log('inside processItems');
     processButton.disabled = true;
 
-    const sourceFqdn = taniumSourceFqdnSelect?.value ?? '';
-    console.log(`sourceFqdn: ${sourceFqdn}`);
+    var sourceFqdn = '';
+    const sourceFqdnString = taniumSourceFqdnSelect?.value ?? '';
+
+    if (sourceFqdnString !== '') {
+        sourceFqdn = {
+            fqdn: sourceFqdnString,
+            label: taniumSourceFqdnSelect.options[taniumSourceFqdnSelect.selectedIndex].text
+        };
+
+        console.log(`sourceFqdn: ${JSON.stringify(sourceFqdn)}`);
+    }
+
     const sourceUsername = taniumSourceUsernameSelect?.value ?? '';
     console.log(`sourceUsername: ${sourceUsername}`);
-    const destFqdn = taniumDestFqdnSelect?.value ?? '';
-    console.log(`destFqdn: ${destFqdn}`);
+
+    var destFqdn = '';
+    const destFqdnString = taniumDestFqdnSelect?.value ?? '';
+
+    if (destFqdnString !== '') {
+        destFqdn = {
+            fqdn: destFqdnString,
+            label: taniumDestFqdnSelect.options[taniumDestFqdnSelect.selectedIndex].text
+        };
+
+        console.log(`sourceFqdn: ${JSON.stringify(sourceFqdn)}`);
+    }
+
     const destUsername = taniumDestUsernameSelect?.value ?? '';
     console.log(`destUsername: ${destUsername}`);
     const signingKey = taniumSigningKeySelect?.value ?? '';

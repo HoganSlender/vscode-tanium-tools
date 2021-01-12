@@ -16,6 +16,7 @@ import { SigningKey } from '../types/signingKey';
 import path = require('path');
 import { DiffBase } from './DiffBase';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -244,10 +245,10 @@ export class Packages extends DiffBase {
     static async transferPackage(
         allowSelfSignedCerts: boolean,
         httpTimeout: number,
-        sourceFqdn: string,
+        sourceFqdn: FqdnSetting,
         sourceUsername: string,
         sourcePassword: string,
-        destFqdn: string,
+        destFqdn: FqdnSetting,
         destUsername: string,
         destPassword: string,
         filePath: string,
@@ -276,7 +277,7 @@ export class Packages extends DiffBase {
 
                 const sourceSession = await Session.getSession(allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceUsername, sourcePassword);
 
-                const body = await RestClient.post(`https://${sourceFqdn}/api/v2/export`, {
+                const body = await RestClient.post(`https://${sourceFqdn.fqdn}/api/v2/export`, {
                     headers: {
                         session: sourceSession,
                     },
@@ -297,7 +298,7 @@ export class Packages extends DiffBase {
                     const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, destUsername, destPassword);
 
                     // check for existing package; if exists then delete it
-                    const restBase = `https://${destFqdn}/api/v2`;
+                    const restBase = `https://${destFqdn.fqdn}/api/v2`;
                     try {
                         const body = await RestClient.get(`${restBase}/packages/by-name/${packageSpecFromFile.package_specs[0].name}`, {
                             headers: {
@@ -323,7 +324,7 @@ export class Packages extends DiffBase {
                     }
 
                     // import package
-                    OutputChannelLogging.log(`importing ${packageName} into ${destFqdn}`);
+                    OutputChannelLogging.log(`importing ${packageName} into ${destFqdn.label}`);
 
                     const res = SigningUtils.postSignedContent(destFqdn, session, signedContent, allowSelfSignedCerts, httpTimeout);
 
@@ -340,11 +341,11 @@ export class Packages extends DiffBase {
                             // download file to temp dir
                             const tempDir = os.tmpdir();
                             const tempFilePath = path.join(tempDir, packageFile.hash);
-                            await RestClient.downloadFile(`https://${sourceFqdn}/cache/${packageFile.hash}`, tempFilePath, {}, allowSelfSignedCerts, httpTimeout);
+                            await RestClient.downloadFile(`https://${sourceFqdn.fqdn}/cache/${packageFile.hash}`, tempFilePath, {}, allowSelfSignedCerts, httpTimeout);
                             OutputChannelLogging.log(`downloaded ${packageFile.name} to ${tempFilePath}`);
 
                             // upload file to tanium server
-                            OutputChannelLogging.log(`uploading ${packageFile.name} to ${destFqdn}`);
+                            OutputChannelLogging.log(`uploading ${packageFile.name} to ${destFqdn.label}`);
                             await this.uploadFile(destFqdn, allowSelfSignedCerts, httpTimeout, destUsername, destPassword, tempFilePath, packageFile.name);
                             OutputChannelLogging.log(`uploading ${packageFile.name} complete.`);
 
@@ -376,7 +377,7 @@ export class Packages extends DiffBase {
         return p;
     }
 
-    static async uploadFile(destFqdn: string, allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, tempFilePath: string, packageFileName: string) {
+    static async uploadFile(destFqdn: FqdnSetting, allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, tempFilePath: string, packageFileName: string) {
         const constPartSize = 524288;
 
         // get bytes of file to upload
@@ -414,7 +415,7 @@ export class Packages extends DiffBase {
         }
     }
 
-    static uploadFileTotal(destFqdn: string, allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, bytes: Buffer): Promise<any> {
+    static uploadFileTotal(destFqdn: FqdnSetting, allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, bytes: Buffer): Promise<any> {
         const p = new Promise<any>(async (resolve, reject) => {
             // get session
             const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
@@ -433,7 +434,7 @@ export class Packages extends DiffBase {
                     responseType: 'json',
                 };
 
-                const body = await RestClient.post(`https://${destFqdn}/api/v2/upload_file`, options, allowSelfSignedCerts, httpTimeout);
+                const body = await RestClient.post(`https://${destFqdn.fqdn}/api/v2/upload_file`, options, allowSelfSignedCerts, httpTimeout);
                 return resolve(body);
             } catch (err) {
                 OutputChannelLogging.logError(`error transferring file bits`, err);
@@ -444,7 +445,7 @@ export class Packages extends DiffBase {
         return p;
     }
 
-    static uploadFileBits(destFqdn: string, allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, uploadId: number, base64: string, fileSize: number, startPos: number, partSize: number): Promise<any> {
+    static uploadFileBits(destFqdn: FqdnSetting, allowSelfSignedCerts: boolean, httpTimeout: number, username: string, password: string, uploadId: number, base64: string, fileSize: number, startPos: number, partSize: number): Promise<any> {
         const p = new Promise<any>(async (resolve, reject) => {
             // get session
             const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, destFqdn, username, password);
@@ -477,7 +478,7 @@ export class Packages extends DiffBase {
                     responseType: 'json',
                 };
 
-                const body = await RestClient.post(`https://${destFqdn}/api/v2/upload_file`, options, allowSelfSignedCerts, httpTimeout);
+                const body = await RestClient.post(`https://${destFqdn.fqdn}/api/v2/upload_file`, options, allowSelfSignedCerts, httpTimeout);
                 return resolve(body);
             } catch (err) {
                 OutputChannelLogging.logError(`error transferring file bits`, err);

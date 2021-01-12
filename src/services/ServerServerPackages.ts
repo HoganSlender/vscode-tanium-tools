@@ -11,9 +11,9 @@ import { collectServerServerPackageInputs } from '../parameter-collection/server
 import { Packages } from './Packages';
 
 import path = require('path');
-import { ServerServerSensors } from './ServerServerSensors';
 import { checkResolve } from '../common/checkResolve';
 import { ServerServerBase } from './ServerServerBase';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -43,25 +43,25 @@ class ServerServerPackages extends ServerServerBase {
         const state = await collectServerServerPackageInputs(config, context);
 
         // collect values
-        const leftFqdn: string = state.leftFqdn;
+        const leftFqdn: FqdnSetting = state.leftFqdn;
         const leftUsername: string = state.leftUsername;
         const leftPassword: string = state.leftPassword;
-        const rightFqdn: string = state.rightFqdn;
+        const rightFqdn: FqdnSetting = state.rightFqdn;
         const rightUsername: string = state.rightUsername;
         const rightPassword: string = state.rightPassword;
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn.label}`);
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
-        OutputChannelLogging.log(`right fqdn: ${rightFqdn}`);
+        OutputChannelLogging.log(`right fqdn: ${rightFqdn.label}`);
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn)}%Packages`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn)}%Packages`);
+        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn.label)}%Packages`);
+        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn.label)}%Packages`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -80,9 +80,9 @@ class ServerServerPackages extends ServerServerBase {
 
             const increment = 50;
 
-            progress.report({ increment: increment, message: `package retrieval from ${leftFqdn}` });
+            progress.report({ increment: increment, message: `package retrieval from ${leftFqdn.label}` });
             await this.processServerPackages(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-            progress.report({ increment: increment, message: `package retrieval from ${rightFqdn}` });
+            progress.report({ increment: increment, message: `package retrieval from ${rightFqdn.label}` });
             await this.processServerPackages(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {
@@ -97,8 +97,8 @@ class ServerServerPackages extends ServerServerBase {
         Packages.analyzePackages(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
     }
 
-    static processServerPackages(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: string, username: string, password: string, directory: string, label: string) {
-        const restBase = `https://${fqdn}/api/v2`;
+    static processServerPackages(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
+        const restBase = `https://${fqdn.fqdn}/api/v2`;
 
         const p = new Promise<void>(async (resolve, reject) => {
             try {
@@ -106,7 +106,7 @@ class ServerServerPackages extends ServerServerBase {
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
                 (async () => {
-                    OutputChannelLogging.log(`package retrieval - initialized for ${fqdn}`);
+                    OutputChannelLogging.log(`package retrieval - initialized for ${fqdn.label}`);
                     var package_specs: [any];
 
                     // get packages
@@ -118,11 +118,11 @@ class ServerServerPackages extends ServerServerBase {
                             responseType: 'json',
                         }, allowSelfSignedCerts, httpTimeout);
 
-                        OutputChannelLogging.log(`package_spec retrieval - complete for ${fqdn}`);
+                        OutputChannelLogging.log(`package_spec retrieval - complete for ${fqdn.label}`);
                         package_specs = body.data;
                     } catch (err) {
-                        OutputChannelLogging.logError(`retrieving package_specs from ${fqdn}`, err);
-                        return reject(`retrieving package_specs from ${fqdn}`);
+                        OutputChannelLogging.logError(`retrieving package_specs from ${fqdn.label}`, err);
+                        return reject(`retrieving package_specs from ${fqdn.label}`);
                     }
 
                     // remove cache object
@@ -133,7 +133,7 @@ class ServerServerPackages extends ServerServerBase {
                     var packageSpecTotal: number = package_specs.length;
 
                     if (packageSpecTotal === 0) {
-                        OutputChannelLogging.log(`there are 0 packages for ${fqdn}`);
+                        OutputChannelLogging.log(`there are 0 packages for ${fqdn.label}`);
                         return resolve();
                     } else {
                         for (var i = 0; i < package_specs.length; i++) {
@@ -188,7 +188,7 @@ class ServerServerPackages extends ServerServerBase {
                                         }
                                     }
                                 } catch (err) {
-                                    OutputChannelLogging.logError(`retrieving packageExport for ${packageSpec.name} from ${fqdn}`, err);
+                                    OutputChannelLogging.logError(`retrieving packageExport for ${packageSpec.name} from ${fqdn.label}`, err);
 
                                     if (checkResolve(++packageSpecCounter, packageSpecTotal, 'packages', fqdn)) {
                                         return resolve();

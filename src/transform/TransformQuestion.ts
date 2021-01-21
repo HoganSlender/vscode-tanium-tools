@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { OutputChannelLogging } from "../common/logging";
 import { TransformBase } from "./TransformBase";
+import { TransformGroup } from "./TransformGroup";
 import { TransformSelect } from "./TransformSelect";
 
 export class TransformQuestion extends TransformBase {
@@ -38,10 +39,11 @@ export class TransformQuestion extends TransformBase {
             try {
                 var result: any = {};
 
-                this.transpondNewName(question, result, 'query_text', 'text');
-                this.transpondBooleanToInteger(question, result, 'skip_lock_flag');
-                this.transpondBooleanToInteger(question, result, 'force_computer_id_flag');
+                // this.transpondNewName(question, result, 'query_text', 'text');
+                // this.transpondBooleanToInteger(question, result, 'skip_lock_flag');
+                // this.transpondBooleanToInteger(question, result, 'force_computer_id_flag');
 
+                // process selects
                 var selects: any[] = [];
                 for (var i = 0; i < question.selects.length; i++) {
                     const select = question.selects[i];
@@ -56,6 +58,11 @@ export class TransformQuestion extends TransformBase {
                     result['select_specs'] = {
                         select_spec: selects
                     };
+                }
+
+                // process filter
+                if ('group' in question) {
+                    result['group'] = await TransformGroup.transform(question['group']);
                 }
 
                 return resolve(result);

@@ -7,48 +7,49 @@ export class TransformSavedQuestion extends TransformBase {
     static transformCs(savedQuestion: any) {
         const p = new Promise<any>(async (resolve, reject) => {
             try {
-                // if ('question' in savedQuestion) {
-                //     savedQuestion['question'] = await TransformQuestion.transformCs(savedQuestion.question);
-                // }
+                var result: any = {};
 
-                this.deleteProperty(savedQuestion, 'question');
-                this.deleteProperty(savedQuestion, 'sentence');
+                this.transpond(savedQuestion, result, 'name');
+                this.transpond(savedQuestion, result, 'public_flag');
+                this.transpond(savedQuestion, result, 'issue_seconds');
+                this.transpond(savedQuestion, result, 'public_flag');
+                this.transpond(savedQuestion, result, 'issue_seconds_never_flag');
+                this.transpond(savedQuestion, result, 'expire_seconds');
+                this.transpond(savedQuestion, result, 'row_count_flag');
+                this.transpond(savedQuestion, result, 'disabled_flag');
+                this.transpond(savedQuestion, result, 'hidden_flag');
+                this.transpond(savedQuestion, result, 'keep_seconds');
 
-                this.deleteProperty(savedQuestion, 'merge_flag');
-                this.deleteProperty(savedQuestion, 'drilldown_flag');
-                this.deleteProperty(savedQuestion, 'default_tab');
-                this.deleteProperty(savedQuestion, 'default_grid_zoom_level');
-                this.deleteProperty(savedQuestion, 'default_line_zoom_level');
+                result['question'] = this.processSentence(savedQuestion['sentence']);
 
-                // remove metadata
-                this.deleteProperty(savedQuestion, 'meta_data');
-
-                // remove content set
-                this.deleteProperty(savedQuestion, 'content_set');
-
-                // process packages
-                if ('packages' in savedQuestion && savedQuestion['packages'] !== '') {
-                    var target = savedQuestion['packages']['tanium_package'];
+                if ('packages' in savedQuestion) {
+                    var target = savedQuestion.packages.tanium_package;
                     if (Array.isArray(target)) {
-                        // multiple
-                        var packages: any[] = [];
-                        target.forEach(taniumPackage => packages.push({
-                            name: taniumPackage.name
-                        }));
-                        savedQuestion['packages'] = {
-                            tanium_package: packages
-                        };
+                        // process packages
+                        const items: any[] = [];
+                        target.forEach((pkg: any) => {
+                            items.push({
+                                tanium_package: {
+                                    name: pkg.name
+                                }
+                            });
+                        });
+
+                        result['packages'] = items;
                     } else {
-                        // singular
-                        savedQuestion['packages'] = {
-                            tanium_package: {
-                                name: savedQuestion['packages']['tanium_package']['name']
-                            }
-                        };
+                        if (target === undefined) {
+                            result['packages'] = '';
+                        } else {
+                            result['packages'] = {
+                                tanium_package: {
+                                    name: target.name
+                                }
+                            };
+                        }
                     }
                 }
 
-                return resolve(savedQuestion);
+                return resolve(result);
             } catch (err) {
                 OutputChannelLogging.logError(`error in TransformSavedQuestion.transformCs: saved question name: ${savedQuestion.name}`, err);
                 return reject();
@@ -56,6 +57,140 @@ export class TransformSavedQuestion extends TransformBase {
         });
 
         return p;
+    }
+
+    static processSentence(sentence: any): any {
+        // process each select_spec
+        var result: any = {};
+
+        // process selects
+        var target = sentence.select_specs.select_spec;
+
+        if (Array.isArray(target)) {
+            // multiple selects
+            const items: any[] = [];
+
+            target.forEach(select => {
+                if (('how_hash' in select && select.how_hash !== 0) || ('what_hash' in select && select.what_hash !== 0) || ('how_reg_ex' in select && select.how_reg_ex !== '')) {
+                    //if (select.start_time.startsWith('1900-01-01')) {
+                    // need to process
+                    items.push(this.processSelect(select));
+                }
+            });
+
+            if (items.length === 1) {
+                // single
+                result['select_specs'] = {
+                    select_spec: items[0]
+                };
+            } else {
+                // multiple
+                result['select_specs'] = {
+                    select_spec: items
+                };
+            }
+        } else {
+            // single select
+            result['select_specs'] = {
+                select_spec: this.processSelect(target)
+            };
+        }
+
+        // process filters
+        target = sentence.filter_specs.filter_spec;
+
+        if (Array.isArray(target)) {
+            // multiple
+            const items: any[] = [];
+            target.forEach(filter => {
+                if (!(filter.how_hash === 0 && filter.what_hash === 0 && filter.how_reg_ex === '')) {
+                    items.push(this.processFilter(filter));
+                }
+            });
+
+            if (items.length !== 0) {
+                result['group'] = {
+                    sentence: {
+                        not_flag: 0,
+                        and_flag: 1,
+                        filter_specs: {
+                            filter_spec: items
+                        }
+                    }
+                };
+            }
+        } else {
+            // single
+            if (!(target.how_hash === 0 && target.what_hash === 0 && target.how_reg_ex === '')) {
+                result['group'] = {
+                    sentence: {
+                        not_flag: 0,
+                        and_flag: 1,
+                        filter_specs: {
+                            filter_spec: this.processFilter(target)
+                        }
+                    }
+                };
+            }
+        }
+
+        return result;
+    }
+
+    static processFilter(filter: any): any {
+        if (filter['how_hash'] === 0) {
+            this.deleteProperty(filter, 'how_hash');
+        }
+
+        this.deleteProperty(filter, 'delimiter');
+        this.deleteProperty(filter, 'delimiter_index');
+
+        this.deleteProperty(filter, 'start_time');
+        this.deleteProperty(filter, 'end_time');
+
+        // remove sensor
+        this.deleteProperty(filter, 'sensor');
+
+        return filter;
+    }
+
+    static processSelect(select: any) {
+        var result: any = {
+            type: 'select'
+        };
+
+        if ('sensor' in select) {
+            result['sensor'] = {
+                name: select['sensor']['name']
+            };
+            this.transpond(select, result, 'what_hash');
+        }
+
+        if ('temp_sensor' in select) {
+            result['sensor'] = {
+                name: select['temp_sensor']['display_name']
+            };
+            this.transpond(select['temp_sensor']['sensor'], result, 'what_hash');
+        }
+
+        this.transpond(select, result, 'how_reg_ex');
+        this.transpond(select, result, 'equal_flag');
+        this.transpond(select, result, 'not_flag');
+        this.transpond(select, result, 'greater_flag');
+        this.transpond(select, result, 'result_type');
+        this.transpond(select, result, 'aggregation');
+        this.transpond(select, result, 'all_times_flag');
+        this.transpond(select, result, 'all_values_flag');
+        this.transpond(select, result, 'delimiter');
+        this.transpond(select, result, 'delimiter_index');
+        this.transpond(select, result, 'ignore_case_flag');
+        this.transpond(select, result, 'max_age_seconds');
+
+        result['start_time'] = (select.start_time.startsWith('2001') || select.start_time.startsWith('1900')) ? '' : select.start_time;
+        result['end_time'] = (select.end_time.startsWith('2001') || select.end_time.startsWith('1900')) ? '' : select.end_time;
+        // this.transpond(select, result, 'utf8_flag');
+
+        return result;
     }
 
     static transform(savedQuestion: any) {
@@ -72,11 +207,7 @@ export class TransformSavedQuestion extends TransformBase {
                 this.transpondBooleanToIntegerNewNameInverse(savedQuestion, result, 'archive_enabled_flag', 'disabled_flag');
                 this.transpondBooleanToInteger(savedQuestion, result, 'hidden_flag');
                 this.transpond(savedQuestion, result, 'keep_seconds');
-                this.transpondNewName(savedQuestion, result, 'query_text', 'text');
-
-                // if ('question' in savedQuestion) {
-                //     result['question'] = await TransformQuestion.transform(savedQuestion.question);
-                // }
+                result['question'] = await TransformQuestion.transform(savedQuestion['question']);
 
                 if (savedQuestion.packages.length === 0) {
                     result['packages'] = '';

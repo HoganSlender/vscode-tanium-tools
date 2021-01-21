@@ -10,5 +10,5 @@ export class TransformParameter {
         }
 
         return result;
-    }
+}
 }

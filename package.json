@@ -15,6 +15,7 @@
 	"engines": {
 		"vscode": "^1.46.0"
 	},
+	"main": "./dist/extension.js",
 	"categories": [
 		"Other"
 	],
@@ -68,7 +69,6 @@
 		"onCommand:hoganslendertanium.signContentFile",
 		"onCommand:hoganslendertanium.workspaceInit"
 	],
-	"main": "./dist/extension.js",
 	"contributes": {
 		"views": {
 			"explorer": [
@@ -599,9 +599,9 @@
 		"@types/node": "^14.0.27",
 		"@types/rimraf": "^3.0.0",
 		"@types/vscode": "^1.46.0",
-		"@typescript-eslint/eslint-plugin": "^3.8.0",
-		"@typescript-eslint/parser": "^3.8.0",
-		"eslint": "^7.6.0",
+		"@typescript-eslint/eslint-plugin": "^3.10.1",
+		"@typescript-eslint/parser": "^3.10.1",
+		"eslint": "^7.17.0",
 		"glob": "^7.1.6",
 		"mocha": "^8.0.1",
 		"ts-loader": "^8.0.3",

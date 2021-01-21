@@ -198,418 +198,436 @@ class ContentSet extends ServerServerBase {
 
 							for (const property in jsonObj.content) {
 								try {
-									switch (property) {
-										case 'solution':
-											progress.report({
-												increment: increment,
-												message: `extracting solution`
-											});
-											break;
+									const items: string[] = [
+										'solution',
+										'api_requests',
+										'dashboard',
+										'dashboard_group',
+										'white_listed_url',
+										'sensor',
+										'saved_question',
+										'saved_action',
+										'tanium_package',
+										'content_set_role_privilege',
+										'content_set_privilege',
+										'content_set_role',
+										'content_set'
+									];
 
-										case 'api_requests':
-											progress.report({
-												increment: increment,
-												message: `extracting api_requests`
-											});
-											break;
-
-										case 'dashboard':
-											progress.report({
-												increment: increment,
-												message: `extracting dashboards`
-											});
-
-											var target = jsonObj.content.dashboard;
-											if (Array.isArray(target)) {
-												await vscode.window.withProgress({
-													location: vscode.ProgressLocation.Notification,
-													title: 'Dashboards',
-													cancellable: false
-												}, async (innerProgress) => {
-													innerProgress.report({ increment: 0 });
-
-													const innerIncrement = 100 / target.length;
-
-													// process each
-													for (var i = 0; i < target.length; i++) {
-														const dashboard = target[i];
-
-														innerProgress.report({
-															increment: innerIncrement,
-															message: dashboard.name
-														});
-
-														await this.processDashboard(dashboard, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-													}
+									if (items.includes(property)) {
+										switch (property) {
+											case 'solution':
+												progress.report({
+													increment: increment,
+													message: `extracting solution`
 												});
-											} else {
-												// process one
-												await this.processDashboard(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-											}
-											break;
+												break;
 
-										case 'dashboard_group':
-											progress.report({
-												increment: increment,
-												message: `extracting dashboard groups`
-											});
-
-											var target = jsonObj.content.dashboard_group;
-											if (Array.isArray(target)) {
-												await vscode.window.withProgress({
-													location: vscode.ProgressLocation.Notification,
-													title: 'Dashboard Groups',
-													cancellable: false
-												}, async (innerProgress) => {
-													innerProgress.report({ increment: 0 });
-
-													const innerIncrement = 100 / target.length;
-
-													// process each
-													for (var i = 0; i < target.length; i++) {
-														const dashboardGroup = target[i];
-
-														innerProgress.report({
-															increment: innerIncrement,
-															message: dashboardGroup.name
-														});
-
-														await this.processDashboardGroup(dashboardGroup, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-													}
+											case 'api_requests':
+												progress.report({
+													increment: increment,
+													message: `extracting api_requests`
 												});
-											} else {
-												// process one
-												await this.processDashboardGroup(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-											}
-											break;
+												break;
 
-										case 'white_listed_url':
-											progress.report({
-												increment: increment,
-												message: `extracting white listed urls`
-											});
-
-											if (!serverWhiteListedUrlsMap) {
-												serverWhiteListedUrlsMap = await WhiteListedUrls.generateWhiteListedUrlMap(allowSelfSignedCerts, httpTimeout, session, fqdn);
-											}
-
-											var target = jsonObj.content.white_listed_url;
-											if (Array.isArray(target)) {
-												await vscode.window.withProgress({
-													location: vscode.ProgressLocation.Notification,
-													title: 'White Listed Urls',
-													cancellable: false
-												}, async (innerProgress) => {
-													innerProgress.report({ increment: 0 });
-
-													const innerIncrement = 100 / target.length;
-
-													// process each
-													for (var i = 0; i < target.length; i++) {
-														const whiteListedUrl = target[i];
-
-														innerProgress.report({
-															increment: innerIncrement,
-															message: whiteListedUrl.url
-														});
-
-														await this.processWhiteListedUrl(whiteListedUrl, contentDir, serverDir, context, serverWhiteListedUrlsMap);
-													}
+											case 'dashboard':
+												progress.report({
+													increment: increment,
+													message: `extracting dashboards`
 												});
-											} else {
-												// process one
-												await this.processWhiteListedUrl(target, contentDir, serverDir, context, serverWhiteListedUrlsMap);
-											}
-											break;
 
-										case 'sensor':
-											progress.report({
-												increment: increment,
-												message: `extracting sensors`
-											});
+												var target = jsonObj.content.dashboard;
+												if (Array.isArray(target)) {
+													await vscode.window.withProgress({
+														location: vscode.ProgressLocation.Notification,
+														title: 'Dashboards',
+														cancellable: false
+													}, async (innerProgress) => {
+														innerProgress.report({ increment: 0 });
 
-											var target = jsonObj.content.sensor;
-											if (Array.isArray(target)) {
-												await vscode.window.withProgress({
-													location: vscode.ProgressLocation.Notification,
-													title: 'Sensors',
-													cancellable: false
-												}, async (innerProgress) => {
-													innerProgress.report({ increment: 0 });
+														const innerIncrement = 100 / target.length;
 
-													const innerIncrement = 100 / target.length;
+														// process each
+														for (var i = 0; i < target.length; i++) {
+															const dashboard = target[i];
 
-													// process each
-													for (var i = 0; i < target.length; i++) {
-														const sensor = target[i];
+															innerProgress.report({
+																increment: innerIncrement,
+																message: dashboard.name
+															});
 
-														innerProgress.report({
-															increment: innerIncrement,
-															message: sensor.name
-														});
+															await this.processDashboard(dashboard, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+														}
+													});
+												} else {
+													// process one
+													await this.processDashboard(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+												break;
 
-														await this.processSensor(sensor, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-													}
+											case 'dashboard_group':
+												progress.report({
+													increment: increment,
+													message: `extracting dashboard groups`
 												});
-											} else {
-												// process one
-												await this.processSensor(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-											}
-											break;
 
-										case 'saved_question':
-											progress.report({
-												increment: increment,
-												message: `extracting saved questions`
-											});
+												var target = jsonObj.content.dashboard_group;
+												if (Array.isArray(target)) {
+													await vscode.window.withProgress({
+														location: vscode.ProgressLocation.Notification,
+														title: 'Dashboard Groups',
+														cancellable: false
+													}, async (innerProgress) => {
+														innerProgress.report({ increment: 0 });
 
-											var target = jsonObj.content.saved_question;
-											if (Array.isArray(target)) {
-												await vscode.window.withProgress({
-													location: vscode.ProgressLocation.Notification,
-													title: 'Saved Questions',
-													cancellable: false
-												}, async (innerProgress) => {
-													innerProgress.report({ increment: 0 });
+														const innerIncrement = 100 / target.length;
 
-													const innerIncrement = 100 / target.length;
+														// process each
+														for (var i = 0; i < target.length; i++) {
+															const dashboardGroup = target[i];
 
-													// process each
-													for (var i = 0; i < target.length; i++) {
-														const savedQuestion = target[i];
+															innerProgress.report({
+																increment: innerIncrement,
+																message: dashboardGroup.name
+															});
 
-														innerProgress.report({
-															increment: innerIncrement,
-															message: savedQuestion.name
-														});
+															await this.processDashboardGroup(dashboardGroup, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+														}
+													});
+												} else {
+													// process one
+													await this.processDashboardGroup(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+												break;
 
-														await this.processSavedQuestion(savedQuestion, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-													}
+											case 'white_listed_url':
+												progress.report({
+													increment: increment,
+													message: `extracting white listed urls`
 												});
-											} else {
-												// process one
-												await this.processSavedQuestion(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-											}
-											break;
 
-										case 'saved_action':
-											progress.report({
-												increment: increment,
-												message: `extracting saved actions`
-											});
+												if (!serverWhiteListedUrlsMap) {
+													serverWhiteListedUrlsMap = await WhiteListedUrls.generateWhiteListedUrlMap(allowSelfSignedCerts, httpTimeout, session, fqdn);
+												}
 
-											var target = jsonObj.content.saved_action;
-											if (Array.isArray(target)) {
-												await vscode.window.withProgress({
-													location: vscode.ProgressLocation.Notification,
-													title: 'Saved Actions',
-													cancellable: false
-												}, async (innerProgress) => {
-													innerProgress.report({ increment: 0 });
+												var target = jsonObj.content.white_listed_url;
+												if (Array.isArray(target)) {
+													await vscode.window.withProgress({
+														location: vscode.ProgressLocation.Notification,
+														title: 'White Listed Urls',
+														cancellable: false
+													}, async (innerProgress) => {
+														innerProgress.report({ increment: 0 });
 
-													const innerIncrement = 100 / target.length;
+														const innerIncrement = 100 / target.length;
 
-													// process each
-													for (var i = 0; i < target.length; i++) {
-														const savedAction = target[i];
+														// process each
+														for (var i = 0; i < target.length; i++) {
+															const whiteListedUrl = target[i];
 
-														innerProgress.report({
-															increment: innerIncrement,
-															message: savedAction.name
-														});
+															innerProgress.report({
+																increment: innerIncrement,
+																message: whiteListedUrl.url
+															});
 
-														await this.processSavedAction(savedAction, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-													}
+															await this.processWhiteListedUrl(whiteListedUrl, contentDir, serverDir, context, serverWhiteListedUrlsMap);
+														}
+													});
+												} else {
+													// process one
+													await this.processWhiteListedUrl(target, contentDir, serverDir, context, serverWhiteListedUrlsMap);
+												}
+												break;
+
+											case 'sensor':
+												progress.report({
+													increment: increment,
+													message: `extracting sensors`
 												});
-											} else {
-												// process one
-												await this.processSavedAction(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-											}
-											break;
 
-										case 'tanium_package':
-											progress.report({
-												increment: increment,
-												message: `extracting packages`
-											});
+												var target = jsonObj.content.sensor;
+												if (Array.isArray(target)) {
+													await vscode.window.withProgress({
+														location: vscode.ProgressLocation.Notification,
+														title: 'Sensors',
+														cancellable: false
+													}, async (innerProgress) => {
+														innerProgress.report({ increment: 0 });
 
-											var target = jsonObj.content.tanium_package;
-											if (Array.isArray(target)) {
-												await vscode.window.withProgress({
-													location: vscode.ProgressLocation.Notification,
-													title: 'Packages',
-													cancellable: false
-												}, async (innerProgress) => {
-													innerProgress.report({ increment: 0 });
+														const innerIncrement = 100 / target.length;
 
-													const innerIncrement = 100 / target.length;
+														// process each
+														for (var i = 0; i < target.length; i++) {
+															const sensor = target[i];
 
-													// process each
-													for (var i = 0; i < target.length; i++) {
-														const taniumPackage = target[i];
+															innerProgress.report({
+																increment: innerIncrement,
+																message: sensor.name
+															});
 
-														innerProgress.report({
-															increment: innerIncrement,
-															message: taniumPackage.name
-														});
+															await this.processSensor(sensor, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+														}
+													});
+												} else {
+													// process one
+													await this.processSensor(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+												break;
 
-														await this.processPackage(taniumPackage, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-													}
+											case 'saved_question':
+												progress.report({
+													increment: increment,
+													message: `extracting saved questions`
 												});
-											} else {
-												// process one
-												await this.processPackage(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-											}
-											break;
 
-										case 'content_set_role_privilege':
-											progress.report({
-												increment: increment,
-												message: `extracting content set role privileges`
-											});
+												var target = jsonObj.content.saved_question;
+												if (Array.isArray(target)) {
+													await vscode.window.withProgress({
+														location: vscode.ProgressLocation.Notification,
+														title: 'Saved Questions',
+														cancellable: false
+													}, async (innerProgress) => {
+														innerProgress.report({ increment: 0 });
 
-											if (!serverContentSetRolePrivilegesMap) {
-												// load up map on first use
-												serverContentSetRolePrivilegesMap = await ContentSetRolePrivileges.generateContentSetRolePrivilegeMap(allowSelfSignedCerts, httpTimeout, session, fqdn);
-											}
+														const innerIncrement = 100 / target.length;
 
-											var target = jsonObj.content.content_set_role_privilege;
-											if (Array.isArray(target)) {
-												await vscode.window.withProgress({
-													location: vscode.ProgressLocation.Notification,
-													title: 'Content Set Role Privileges',
-													cancellable: false
-												}, async (innerProgress) => {
-													innerProgress.report({ increment: 0 });
+														// process each
+														for (var i = 0; i < target.length; i++) {
+															const savedQuestion = target[i];
 
-													const innerIncrement = 100 / target.length;
+															innerProgress.report({
+																increment: innerIncrement,
+																message: savedQuestion.name
+															});
 
-													// process each
-													for (var i = 0; i < target.length; i++) {
-														const contentSetRolePrivilege = target[i];
+															await this.processSavedQuestion(savedQuestion, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+														}
+													});
+												} else {
+													// process one
+													await this.processSavedQuestion(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+												break;
 
-														innerProgress.report({
-															increment: innerIncrement,
-															message: contentSetRolePrivilege.content_set.name + '-' + contentSetRolePrivilege.content_set_role.name + '-' + contentSetRolePrivilege.content_set_privilege.name
-														});
-
-														await this.processContentSetRolePrivilege(contentSetRolePrivilege, contentDir, serverDir, context, serverContentSetRolePrivilegesMap);
-													}
+											case 'saved_action':
+												progress.report({
+													increment: increment,
+													message: `extracting saved actions`
 												});
-											} else {
-												// process one
-												await this.processContentSetRolePrivilege(target, contentDir, serverDir, context, serverContentSetRolePrivilegesMap);
-											}
-											break;
 
-										case 'content_set_privilege':
-											progress.report({
-												increment: increment,
-												message: `extracting content set privileges`
-											});
+												var target = jsonObj.content.saved_action;
+												if (Array.isArray(target)) {
+													await vscode.window.withProgress({
+														location: vscode.ProgressLocation.Notification,
+														title: 'Saved Actions',
+														cancellable: false
+													}, async (innerProgress) => {
+														innerProgress.report({ increment: 0 });
 
-											var target = jsonObj.content.content_set_privilege;
-											if (Array.isArray(target)) {
-												await vscode.window.withProgress({
-													location: vscode.ProgressLocation.Notification,
-													title: 'Content Set Privileges',
-													cancellable: false
-												}, async (innerProgress) => {
-													innerProgress.report({ increment: 0 });
+														const innerIncrement = 100 / target.length;
 
-													const innerIncrement = 100 / target.length;
+														// process each
+														for (var i = 0; i < target.length; i++) {
+															const savedAction = target[i];
 
-													// process each
-													for (var i = 0; i < target.length; i++) {
-														const contentSetPrivilege = target[i];
+															innerProgress.report({
+																increment: innerIncrement,
+																message: savedAction.name
+															});
 
-														innerProgress.report({
-															increment: innerIncrement,
-															message: contentSetPrivilege.name
-														});
+															await this.processSavedAction(savedAction, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+														}
+													});
+												} else {
+													// process one
+													await this.processSavedAction(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+												break;
 
-														await this.processContentSetPrivilege(contentSetPrivilege, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-													}
+											case 'tanium_package':
+												progress.report({
+													increment: increment,
+													message: `extracting packages`
 												});
-											} else {
-												// process one
-												await this.processContentSetPrivilege(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-											}
-											break;
 
-										case 'content_set_role':
-											progress.report({
-												increment: increment,
-												message: `extracting content set roles`
-											});
+												var target = jsonObj.content.tanium_package;
+												if (Array.isArray(target)) {
+													await vscode.window.withProgress({
+														location: vscode.ProgressLocation.Notification,
+														title: 'Packages',
+														cancellable: false
+													}, async (innerProgress) => {
+														innerProgress.report({ increment: 0 });
 
-											var target = jsonObj.content.content_set_role;
-											if (Array.isArray(target)) {
-												await vscode.window.withProgress({
-													location: vscode.ProgressLocation.Notification,
-													title: 'Content Set Roles',
-													cancellable: false
-												}, async (innerProgress) => {
-													innerProgress.report({ increment: 0 });
+														const innerIncrement = 100 / target.length;
 
-													const innerIncrement = 100 / target.length;
+														// process each
+														for (var i = 0; i < target.length; i++) {
+															const taniumPackage = target[i];
 
-													// process each
-													for (var i = 0; i < target.length; i++) {
-														const contentSetRole = target[i];
+															innerProgress.report({
+																increment: innerIncrement,
+																message: taniumPackage.name
+															});
 
-														innerProgress.report({
-															increment: innerIncrement,
-															message: contentSetRole.name
-														});
+															await this.processPackage(taniumPackage, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+														}
+													});
+												} else {
+													// process one
+													await this.processPackage(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+												break;
 
-														await this.processContentSetRole(contentSetRole, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-													}
+											case 'content_set_role_privilege':
+												progress.report({
+													increment: increment,
+													message: `extracting content set role privileges`
 												});
-											} else {
-												// process one
-												await this.processContentSetRole(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-											}
-											break;
 
-										case 'content_set':
-											progress.report({
-												increment: increment,
-												message: `extracting content sets`
-											});
+												if (!serverContentSetRolePrivilegesMap) {
+													// load up map on first use
+													serverContentSetRolePrivilegesMap = await ContentSetRolePrivileges.generateContentSetRolePrivilegeMap(allowSelfSignedCerts, httpTimeout, session, fqdn);
+												}
 
-											var target = jsonObj.content.content_set;
-											if (Array.isArray(target)) {
-												await vscode.window.withProgress({
-													location: vscode.ProgressLocation.Notification,
-													title: 'Content Set',
-													cancellable: false
-												}, async (innerProgress) => {
-													innerProgress.report({ increment: 0 });
+												var target = jsonObj.content.content_set_role_privilege;
+												if (Array.isArray(target)) {
+													await vscode.window.withProgress({
+														location: vscode.ProgressLocation.Notification,
+														title: 'Content Set Role Privileges',
+														cancellable: false
+													}, async (innerProgress) => {
+														innerProgress.report({ increment: 0 });
 
-													const innerIncrement = 100 / target.length;
+														const innerIncrement = 100 / target.length;
 
-													// process each
-													for (var i = 0; i < target.length; i++) {
-														const contentSet = target[i];
+														// process each
+														for (var i = 0; i < target.length; i++) {
+															const contentSetRolePrivilege = target[i];
 
-														innerProgress.report({
-															increment: innerIncrement,
-															message: contentSet.name
-														});
+															innerProgress.report({
+																increment: innerIncrement,
+																message: contentSetRolePrivilege.content_set.name + '-' + contentSetRolePrivilege.content_set_role.name + '-' + contentSetRolePrivilege.content_set_privilege.name
+															});
 
-														await this.processContentSet(contentSet, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-													}
+															await this.processContentSetRolePrivilege(contentSetRolePrivilege, contentDir, serverDir, context, serverContentSetRolePrivilegesMap);
+														}
+													});
+												} else {
+													// process one
+													await this.processContentSetRolePrivilege(target, contentDir, serverDir, context, serverContentSetRolePrivilegesMap);
+												}
+												break;
+
+											case 'content_set_privilege':
+												progress.report({
+													increment: increment,
+													message: `extracting content set privileges`
 												});
-											} else {
-												// process one
-												await this.processContentSet(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
-											}
-											break;
 
-										default:
-											OutputChannelLogging.log(`${property} not set up for processing in extractContentSetContent`);
-										//return reject();
+												var target = jsonObj.content.content_set_privilege;
+												if (Array.isArray(target)) {
+													await vscode.window.withProgress({
+														location: vscode.ProgressLocation.Notification,
+														title: 'Content Set Privileges',
+														cancellable: false
+													}, async (innerProgress) => {
+														innerProgress.report({ increment: 0 });
+
+														const innerIncrement = 100 / target.length;
+
+														// process each
+														for (var i = 0; i < target.length; i++) {
+															const contentSetPrivilege = target[i];
+
+															innerProgress.report({
+																increment: innerIncrement,
+																message: contentSetPrivilege.name
+															});
+
+															await this.processContentSetPrivilege(contentSetPrivilege, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+														}
+													});
+												} else {
+													// process one
+													await this.processContentSetPrivilege(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+												break;
+
+											case 'content_set_role':
+												progress.report({
+													increment: increment,
+													message: `extracting content set roles`
+												});
+
+												var target = jsonObj.content.content_set_role;
+												if (Array.isArray(target)) {
+													await vscode.window.withProgress({
+														location: vscode.ProgressLocation.Notification,
+														title: 'Content Set Roles',
+														cancellable: false
+													}, async (innerProgress) => {
+														innerProgress.report({ increment: 0 });
+
+														const innerIncrement = 100 / target.length;
+
+														// process each
+														for (var i = 0; i < target.length; i++) {
+															const contentSetRole = target[i];
+
+															innerProgress.report({
+																increment: innerIncrement,
+																message: contentSetRole.name
+															});
+
+															await this.processContentSetRole(contentSetRole, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+														}
+													});
+												} else {
+													// process one
+													await this.processContentSetRole(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+												break;
+
+											case 'content_set':
+												progress.report({
+													increment: increment,
+													message: `extracting content sets`
+												});
+
+												var target = jsonObj.content.content_set;
+												if (Array.isArray(target)) {
+													await vscode.window.withProgress({
+														location: vscode.ProgressLocation.Notification,
+														title: 'Content Set',
+														cancellable: false
+													}, async (innerProgress) => {
+														innerProgress.report({ increment: 0 });
+
+														const innerIncrement = 100 / target.length;
+
+														// process each
+														for (var i = 0; i < target.length; i++) {
+															const contentSet = target[i];
+
+															innerProgress.report({
+																increment: innerIncrement,
+																message: contentSet.name
+															});
+
+															await this.processContentSet(contentSet, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+														}
+													});
+												} else {
+													// process one
+													await this.processContentSet(target, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
+												}
+												break;
+
+											default:
+												OutputChannelLogging.log(`${property} not set up for processing in extractContentSetContent`);
+											//return reject();
+										}
 									}
 
 								} catch (err) {
@@ -987,6 +1005,46 @@ class ContentSet extends ServerServerBase {
 					} else if (body.data) {
 						var target: any = body.data;
 
+						// load up filter sensors
+						if (target.question.group) {
+							if (target.question.group.filters) {
+								for (var i = 0; i < target.question.group.filters.length; i++) {
+									const filter = target.question.group.filters[i];
+
+									const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/sensors/by-hash/${filter.sensor.hash}`, {
+										headers: {
+											session: session
+										},
+										responseType: 'json',
+									}, allowSelfSignedCerts, httpTimeout, true);
+
+									if (body.statusCode) {
+										// doesn't exist on server
+									} else {
+										filter.sensor = body.data;
+									}
+								}
+							}
+						}
+
+						// load up source sensors
+						if (target.question.selects) {
+							for (var i = 0; i < target.question.selects.length; i++) {
+								const select = target.question.selects[i];
+
+								if ('source_id' in select.sensor && select.sensor.source_id !== 0) {
+									const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/sensors/${select.sensor.source_id}`, {
+										headers: {
+											session: session
+										},
+										responseType: 'json'
+									}, allowSelfSignedCerts, httpTimeout);
+
+									select['source'] = body.data;
+								}
+							}
+						}
+
 						target = await TransformSavedQuestion.transform(target);
 						const serverContent = JSON.stringify(target, null, 2);
 
@@ -1113,7 +1171,7 @@ class ContentSet extends ServerServerBase {
 		httpTimeout: number,
 		context: vscode.ExtensionContext
 	) {
-		const p = new Promise<void>((resolve, reject) => {
+		const p = new Promise<void>(async (resolve, reject) => {
 			try {
 				const name = sanitize(taniumPackage.name);
 				const subDirName = 'Packages';
@@ -1136,7 +1194,7 @@ class ContentSet extends ServerServerBase {
 					fs.mkdirSync(contentSubDir);
 				}
 
-				taniumPackage = TransformPackage.transformCs(taniumPackage);
+				taniumPackage = await TransformPackage.transformCs(taniumPackage);
 				const contentContent = JSON.stringify(taniumPackage, null, 2);
 
 				const contentFile = path.join(contentSubDir, `${name}.json`);
@@ -1168,7 +1226,7 @@ class ContentSet extends ServerServerBase {
 					} else if (body.data) {
 						var target: any = body.data.object_list.package_specs[0];
 
-						target = TransformPackage.transform(target);
+						target = await TransformPackage.transform(target);
 						const serverContent = JSON.stringify(target, null, 2);
 
 						const serverFile = path.join(serverSubDir, `${name}.json`);
@@ -1223,7 +1281,7 @@ class ContentSet extends ServerServerBase {
 					fs.mkdirSync(contentSubDir);
 				}
 
-				contentSetRolePrivilege = TransformContentSetRolePrivilege.transformCs(contentSetRolePrivilege);
+				contentSetRolePrivilege = await TransformContentSetRolePrivilege.transformCs(contentSetRolePrivilege);
 				const contentContent = JSON.stringify(contentSetRolePrivilege, null, 2);
 
 				const contentFile = path.join(contentSubDir, `${name}.json`);
@@ -1274,7 +1332,7 @@ class ContentSet extends ServerServerBase {
 		httpTimeout: number,
 		context: vscode.ExtensionContext
 	) {
-		const p = new Promise<void>((resolve, reject) => {
+		const p = new Promise<void>(async (resolve, reject) => {
 			try {
 				const name = sanitize(contentSetPrivilege.name);
 				const subDirName = 'ContentSetPrivileges';
@@ -1297,7 +1355,7 @@ class ContentSet extends ServerServerBase {
 					fs.mkdirSync(contentSubDir);
 				}
 
-				contentSetPrivilege = TransformContentSetPrivilege.transformCs(contentSetPrivilege);
+				contentSetPrivilege = await TransformContentSetPrivilege.transformCs(contentSetPrivilege);
 				const contentContent = JSON.stringify(contentSetPrivilege, null, 2);
 
 				const contentFile = path.join(contentSubDir, `${name}.json`);
@@ -1322,7 +1380,7 @@ class ContentSet extends ServerServerBase {
 					} else if (body.data) {
 						var target: any = body.data;
 
-						target = TransformContentSetPrivilege.transform(target);
+						target = await TransformContentSetPrivilege.transform(target);
 						const serverContent = JSON.stringify(target, null, 2);
 
 						const serverFile = path.join(serverSubDir, `${name}.json`);
@@ -1356,7 +1414,7 @@ class ContentSet extends ServerServerBase {
 		httpTimeout: number,
 		context: vscode.ExtensionContext
 	) {
-		const p = new Promise<void>((resolve, reject) => {
+		const p = new Promise<void>(async (resolve, reject) => {
 			try {
 				const name = sanitize(contentSetRole.name);
 				const subDirName = 'ContentSetRoles';
@@ -1379,7 +1437,7 @@ class ContentSet extends ServerServerBase {
 					fs.mkdirSync(contentSubDir);
 				}
 
-				contentSetRole = TransformContentSetRole.transformCs(contentSetRole);
+				contentSetRole = await TransformContentSetRole.transformCs(contentSetRole);
 				const contentContent = JSON.stringify(contentSetRole, null, 2);
 
 				const contentFile = path.join(contentSubDir, `${name}.json`);
@@ -1404,7 +1462,7 @@ class ContentSet extends ServerServerBase {
 					} else if (body.data) {
 						var target: any = body.data;
 
-						target = TransformContentSetRole.transform(target);
+						target = await TransformContentSetRole.transform(target);
 						const serverContent = JSON.stringify(target, null, 2);
 
 						const serverFile = path.join(serverSubDir, `${name}.json`);
@@ -1438,7 +1496,7 @@ class ContentSet extends ServerServerBase {
 		httpTimeout: number,
 		context: vscode.ExtensionContext
 	) {
-		const p = new Promise<void>((resolve, reject) => {
+		const p = new Promise<void>(async (resolve, reject) => {
 			try {
 				const name = sanitize(contentSet.name);
 				const subDirName = 'ContentSets';
@@ -1461,7 +1519,7 @@ class ContentSet extends ServerServerBase {
 					fs.mkdirSync(contentSubDir);
 				}
 
-				contentSet = TransformContentSet.transformCs(contentSet);
+				contentSet = await TransformContentSet.transformCs(contentSet);
 				const contentContent = JSON.stringify(contentSet, null, 2);
 
 				const contentFile = path.join(contentSubDir, `${name}.json`);
@@ -1486,7 +1544,7 @@ class ContentSet extends ServerServerBase {
 					} else if (body.data) {
 						var target: any = body.data;
 
-						target = TransformContentSet.transform(target);
+						target = await TransformContentSet.transform(target);
 						const serverContent = JSON.stringify(target, null, 2);
 
 						const serverFile = path.join(serverSubDir, `${name}.json`);

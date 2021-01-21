@@ -176,7 +176,7 @@ export class Solutions extends DiffBase {
 
         OutputChannelLogging.showClear();
 
-        OutputChannelLogging.log(`left fqdn: ${leftFqdn}`);
+        OutputChannelLogging.log(`left fqdn: ${leftFqdn.label}`);
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
 
@@ -190,7 +190,7 @@ export class Solutions extends DiffBase {
 
             const increment = 100;
 
-            progress.report({ increment: increment, message: `solutions retrieval from ${leftFqdn}` });
+            progress.report({ increment: increment, message: `solutions retrieval from ${leftFqdn.label}` });
             await this.refreshSolutions(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword);
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {
@@ -234,7 +234,7 @@ export class Solutions extends DiffBase {
 
             const increment = 100;
 
-            progress.report({ increment: increment, message: `solutions retrieval from ${leftFqdn}` });
+            progress.report({ increment: increment, message: `solutions retrieval from ${leftFqdn.label}` });
             await this.processSolutions(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword);
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {

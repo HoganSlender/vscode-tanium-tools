@@ -196,7 +196,7 @@ export class TransformSensor extends TransformBase {
         },
         'parameters': function (result: any, val: any[]) {
             if (val) {
-                var params = lodash.map(val, (p) => {
+                var params = lodash.map(val, async (p) => {
                     // this function is called on the result of sensor.toObject()
                     // hence the need for '.parameter' here.
                     if (p && p.parameter) {
@@ -231,24 +231,36 @@ export class TransformSensor extends TransformBase {
             if ((val || "") === "") {
                 result['columns'] = '';
             } else {
-                result['columns'] = {
-                    column: []
-                };
-                for (var i = 0; val && i < val.length; i++) {
-                    //var exclude_from_parse = val[i].subcolumn.exclude_from_parse_flag === 0 ? 0 : 1;
-                    result['columns']['column'].push(
-                        {
-                            'name': val[i].name,
-                            'column_index': val[i].index,
-                            'hidden_flag': val[i].hidden_flag ? 1 : 0,
-                            'ignore_case_flag': val[i].ignore_case_flag ? 1 : 0,
-                            'result_type': TransformSensor.soapValueTypeToResultType(val[i].value_type),
+                if (val.length === 1) {
+                    result['columns'] = {
+                        column: {
+                            'name': val[0].name,
+                            'column_index': val[0].index,
+                            'hidden_flag': val[0].hidden_flag ? 1 : 0,
+                            'ignore_case_flag': val[0].ignore_case_flag ? 1 : 0,
+                            'result_type': TransformSensor.soapValueTypeToResultType(val[0].value_type),
                         }
-                    );
+                    };
+                } else {
+                    result['columns'] = {
+                        column: []
+                    };
+                    for (var i = 0; val && i < val.length; i++) {
+                        //var exclude_from_parse = val[i].subcolumn.exclude_from_parse_flag === 0 ? 0 : 1;
+                        result['columns']['column'].push(
+                            {
+                                'name': val[i].name,
+                                'column_index': val[i].index,
+                                'hidden_flag': val[i].hidden_flag ? 1 : 0,
+                                'ignore_case_flag': val[i].ignore_case_flag ? 1 : 0,
+                                'result_type': TransformSensor.soapValueTypeToResultType(val[i].value_type),
+                            }
+                        );
+                    }
                 }
             }
         },
-        'metadata': function (result: any, val: any) {
+        'metadata': async function (result: any, val: any) {
             if ((val || "") !== "") {
                 if (val.length === 1) {
                     result['meta_data'] = {

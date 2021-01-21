@@ -4,6 +4,41 @@ import { TransformSensor } from "./TransformSensor";
 import { TransformBase } from "./TransformBase";
 
 export class TransformGroup extends TransformBase {
+    static transformCs(group: any) {
+        const p = new Promise<any>((resolve, reject) => {
+            try {
+                // adjust sensors
+                if ('sentence' in group) {
+                    var target = group['sentence']['filter_specs']['filter_spec'];
+
+                    if (Array.isArray(target)) {
+                        // multiple
+                        target.forEach(item => {
+                            this.processFilter(item);
+                        });
+                    } else {
+                        // single
+                        this.processFilter(target);
+                    }
+                }
+
+                return resolve(group);
+
+            } catch (err) {
+                OutputChannelLogging.logError('error in TransformGroup.transform', err);
+                return reject();
+            }
+        });
+
+        return p;
+    }
+
+    static processFilter(filter: any) {
+        this.deleteProperty(filter, 'sensor');
+        this.deleteProperty(filter, 'delimiter');
+        this.deleteProperty(filter, 'delimiter_index');
+}
+
     static transform(group: any) {
         const p = new Promise<any>(async (resolve, reject) => {
             try {
@@ -74,11 +109,9 @@ export class TransformGroup extends TransformBase {
                     this.transpondStringToIntegerNewName(filter, result, 'value', 'how_hash');
                 }
                 result['type'] = 'filter';
-                result['what_hash'] = filter.sensor.hash;
+                this.transpondStringToIntegerNewName(filter.sensor, result, 'hash', 'what_hash');
                 if (filterValueType !== 0) {
-                    result['how_reg_ex'] = filter.value;
-                } else {
-                    result['how_reg_ex'] = '';
+                    this.transpondStringToIntegerNewName(filter, result, 'value', 'how_reg_ex');
                 }
 
                 this.transpond(filter, result, 'max_age_seconds');
@@ -108,7 +141,7 @@ export class TransformGroup extends TransformBase {
                 this.transpond(filter, result, 'substring_start');
                 this.transpond(filter, result, 'substring_length');
 
-                result['end_time'] = '';
+                //result['end_time'] = '';
 
                 return resolve(result);
 

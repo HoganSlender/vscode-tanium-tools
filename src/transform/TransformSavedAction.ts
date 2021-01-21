@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { OutputChannelLogging } from "../common/logging";
-import { SavedQuestions } from "../services/SavedQuestions";
 import { TransformBase } from "./TransformBase";
 import { TransformGroup } from "./TransformGroup";
 
@@ -19,21 +18,7 @@ export class TransformSavedAction extends TransformBase {
                     this.processGroup(savedAction['group']);
                 }
 
-                // // remove sensor data from filters
-                // if ('group' in savedAction.group) {
-                //     // kill name
-                //     this.deleteProperty(savedAction.group, 'name');
-
-                //     var target = savedAction.group.group;
-
-                //     if (Array.isArray(target)) {
-                //         target.forEach(item => {
-                //             this.processGroup(item);
-                //         });
-                //     } else {
-                //         this.processGroup(target);
-                //     }
-                // }
+                this.deleteProperty(savedAction, 'sentence');
 
                 // adjust tanium_package
                 if (savedAction['tanium_package']['name'] === savedAction['tanium_package']['display_name']) {
@@ -47,11 +32,11 @@ export class TransformSavedAction extends TransformBase {
                     };
                 }
 
-                resolve(savedAction);
+                return resolve(savedAction);
 
             } catch (err) {
                 OutputChannelLogging.logError('error in TransformSavedAction.transformCs', err);
-                reject();
+                return reject();
             }
         });
 
@@ -94,6 +79,8 @@ export class TransformSavedAction extends TransformBase {
         this.deleteProperty(filter, 'sensor');
         this.deleteProperty(filter, 'delimiter');
         this.deleteProperty(filter, 'delimiter_index');
+        this.deleteProperty(filter, 'start_time');
+        this.deleteProperty(filter, 'end_time');
     }
 
     static transform(savedAction: any) {

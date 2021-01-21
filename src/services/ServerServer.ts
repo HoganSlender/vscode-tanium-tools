@@ -335,7 +335,7 @@ class ServerServer {
             // } else {
             progress.report({ increment: increment, message: `sensor retrieval from ${leftFqdn.label}` });
             await this.processServerSensors(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-            progress.report({ increment: increment, message: `sensor retrieval from ${rightFqdn}` });
+            progress.report({ increment: increment, message: `sensor retrieval from ${rightFqdn.label}` });
             await this.processServerSensors(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {

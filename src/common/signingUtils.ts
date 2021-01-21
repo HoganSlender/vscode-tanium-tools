@@ -161,7 +161,7 @@ export class SigningUtils {
                 var isRunning = true;
                 while (isRunning) {
                     // get status
-                    const body = await RestClient.get(`https://${destFqdn}/api/v2/import/${importStatusId}`, {
+                    const body = await RestClient.get(`https://${destFqdn.fqdn}/api/v2/import/${importStatusId}`, {
                         headers: {
                             session: destSession,
                         },

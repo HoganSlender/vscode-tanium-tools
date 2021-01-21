@@ -9,6 +9,7 @@ import { PathUtils } from '../common/pathUtils';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { WebContentUtils } from '../common/webContentUtils';
+import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { ContentSetRoles } from './ContentSetRoles';
 import { DiffBase } from './DiffBase';
@@ -218,10 +219,10 @@ export class ContentSetUserGroupRoleMemberships extends DiffBase {
     static async transferContentSetUserGroupRoleMembership(
         allowSelfSignedCerts: boolean,
         httpTimeout: number,
-        destFqdn: any,
-        username: any,
-        password: any,
-        filePath: any,
+        destFqdn: FqdnSetting,
+        username: string,
+        password: string,
+        filePath: string,
         targetFilePath: any,
         name: any) {
 
@@ -251,7 +252,7 @@ export class ContentSetUserGroupRoleMemberships extends DiffBase {
                     }
                 };
 
-                const data = await RestClient.post(`https://${destFqdn}/api/v2/content_set_user_group_role_memberships`, {
+                const data = await RestClient.post(`https://${destFqdn.fqdn}/api/v2/content_set_user_group_role_memberships`, {
                     headers: {
                         session: session,
                     },

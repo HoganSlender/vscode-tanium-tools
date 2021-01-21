@@ -18,7 +18,7 @@ export class TransformMetadataItem extends TransformBase {
         if (Array.isArray(input)) {
             return input;
         }
-        
+
         if (input === 'true') {
             return true;
         } else if (input === 'false') {

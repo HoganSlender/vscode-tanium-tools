@@ -12,6 +12,7 @@ import * as dashboardGroups from './services/DashboardGroups';
 import * as dashboards from './services/Dashboards';
 import * as groups from './services/Groups';
 import * as packages from './services/Packages';
+import * as SavedActions from './services/SavedActions';
 import * as savedQuestions from './services/SavedQuestions';
 import * as sensor from './services/Sensor';
 import * as sensors from './services/Sensors';
@@ -26,6 +27,7 @@ import * as serverServerDashboardGroups from './services/ServerServerDashboardGr
 import * as serverServerDashboards from './services/ServerServerDashboards';
 import * as serverServerGroups from './services/ServerServerGroups';
 import * as serverServerPackages from './services/ServerServerPackages';
+import * as serverServerSavedActions from './services/ServerServerSavedActions';
 import * as serverServerSavedQuestions from './services/ServerServerSavedQuestions';
 import * as serverServerSensors from './services/ServerServerSensors';
 import * as serverServerUserGroups from './services/ServerServerUserGroups';
@@ -53,6 +55,7 @@ export function activate(context: ExtensionContext) {
 	dashboards.activate(context);
 	groups.activate(context);
 	packages.activate(context);
+	SavedActions.activate(context);
 	savedQuestions.activate(context);
 	sensor.activate(context);
 	sensors.activate(context);
@@ -67,6 +70,7 @@ export function activate(context: ExtensionContext) {
 	serverServerDashboards.activate(context);
 	serverServerGroups.activate(context);
 	serverServerPackages.activate(context);
+	serverServerSavedActions.activate(context);
 	serverServerSavedQuestions.activate(context);
 	serverServerSensors.activate(context);
 	serverServerUserGroups.activate(context);

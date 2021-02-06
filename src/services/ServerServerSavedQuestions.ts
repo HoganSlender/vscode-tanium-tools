@@ -13,22 +13,29 @@ import { checkResolve } from '../common/checkResolve';
 import { collectServerServerSavedQuestionInputs } from '../parameter-collection/server-server-saved-questions-parameters';
 import { SavedQuestions } from './SavedQuestions';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
+import { ServerServerBase } from './ServerServerBase';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
+import { PathUtils } from '../common/pathUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.compareServerServerSavedQuestions': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+        'hoganslendertanium.compareServerServerSavedQuestions': () => {
             ServerServerSavedQuestions.processSavedQuestions(context);
         },
     });
 }
 
-export class ServerServerSavedQuestions {
+export class ServerServerSavedQuestions extends ServerServerBase {
     static async processSavedQuestions(context: vscode.ExtensionContext) {
-        // get the current folder
-        const folderPath = vscode.workspace.workspaceFolders![0];
-
         // define output channel
         OutputChannelLogging.initialize();
+
+        if (this.invalidWorkspaceFolders()) {
+            return;
+        }
+
+        // get the current folder
+        const folderPath = vscode.workspace.workspaceFolders![0];
 
         // get configurations
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');
@@ -89,7 +96,17 @@ export class ServerServerSavedQuestions {
         });
 
         // analyze saved questions
-        SavedQuestions.analyzeSavedQuestions(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
+        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir, true);
+
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'Saved Questions',
+            leftDir: leftDir,
+            rightDir: rightDir,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzeSavedQuestions',
+        }, context);
+
+        SavedQuestions.analyzeSavedQuestions(diffItems, context);
     }
 
     static processServerSavedQuestions(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
@@ -100,43 +117,53 @@ export class ServerServerSavedQuestions {
                 // get session
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
-                (async () => {
-                    OutputChannelLogging.log(`saved question retrieval - initialized for ${fqdn.label}`);
-                    var saved_questions: [any];
+                OutputChannelLogging.log(`saved question retrieval - initialized for ${fqdn.label}`);
+                var saved_questions: [any];
 
-                    // get saved questions
-                    try {
-                        const body = await RestClient.get(`${restBase}/saved_questions`, {
-                            headers: {
-                                session: session,
-                            },
-                            responseType: 'json',
-                        }, allowSelfSignedCerts, httpTimeout);
+                // get saved questions
+                try {
+                    const body = await RestClient.get(`${restBase}/saved_questions`, {
+                        headers: {
+                            session: session,
+                        },
+                        responseType: 'json',
+                    }, allowSelfSignedCerts, httpTimeout);
 
-                        OutputChannelLogging.log(`saved question retrieval - complete for ${fqdn.label}`);
-                        saved_questions = body.data;
-                    } catch (err) {
-                        OutputChannelLogging.logError(`retrieving saved questions from ${fqdn.label}`, err);
-                        return reject(`retrieving saved questions from ${fqdn.label}`);
-                    }
+                    OutputChannelLogging.log(`saved question retrieval - complete for ${fqdn.label}`);
+                    saved_questions = body.data;
+                } catch (err) {
+                    OutputChannelLogging.logError(`retrieving saved questions from ${fqdn.label}`, err);
+                    return reject(`retrieving saved questions from ${fqdn.label}`);
+                }
 
-                    // remove cache object
-                    saved_questions.pop();
+                // remove cache object
+                saved_questions.pop();
 
-                    // iterate through each download export
-                    var savedQuestionCounter: number = 0;
-                    var savedQuestionTotal: number = saved_questions.length;
+                // iterate through each download export
+                var savedQuestionCounter: number = 0;
+                var savedQuestionTotal: number = saved_questions.length;
 
-                    if (savedQuestionTotal === 0) {
-                        OutputChannelLogging.log(`there are 0 saved questions for ${fqdn.label}`);
-                        return resolve();
-                    } else {
+                if (savedQuestionTotal === 0) {
+                    OutputChannelLogging.log(`there are 0 saved questions for ${fqdn.label}`);
+                    return resolve();
+                } else {
+                    await vscode.window.withProgress({
+                        location: vscode.ProgressLocation.Notification,
+                        cancellable: false
+                    }, async (innerProgress) => {
+                        innerProgress.report({
+                            increment: 0
+                        });
+
+                        const innerIncrement = 100 / saved_questions.length;
+
                         for (var i = 0; i < saved_questions.length; i++) {
                             const savedQuestion = saved_questions[i];
 
-                            if (i % 30 === 0 || i === savedQuestionTotal) {
-                                OutputChannelLogging.log(`processing ${i} of ${savedQuestionTotal}`);
-                            }
+                            innerProgress.report({
+                                increment: innerIncrement,
+                                message: `${i + 1}/${saved_questions.length}: ${savedQuestion.name}`
+                            });
 
                             if (savedQuestion.hidden_flag) {
                                 if (checkResolve(++savedQuestionCounter, savedQuestionTotal, 'saved questions', fqdn)) {
@@ -170,11 +197,11 @@ export class ServerServerSavedQuestions {
                                             if (err) {
                                                 OutputChannelLogging.logError(`could not write ${savedQuestionFile}`, err);
                                             }
-                                        });
 
-                                        if (checkResolve(++savedQuestionCounter, savedQuestionTotal, 'saved questions', fqdn)) {
-                                            return resolve();
-                                        }
+                                            if (checkResolve(++savedQuestionCounter, savedQuestionTotal, 'saved questions', fqdn)) {
+                                                return resolve();
+                                            }
+                                        });
                                     } catch (err) {
                                         OutputChannelLogging.logError(`error processing ${label} saved question ${savedQuestionName}`, err);
 
@@ -191,8 +218,8 @@ export class ServerServerSavedQuestions {
                                 }
                             }
                         }
-                    }
-                })();
+                    });
+                }
             } catch (err) {
                 OutputChannelLogging.logError(`error downloading saved questions from ${restBase}`, err);
                 return reject(`error downloading saved questions from ${restBase}`);

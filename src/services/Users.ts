@@ -5,7 +5,7 @@ import * as vscode from 'vscode';
 import * as commands from '../common/commands';
 import { MrGroupType, OpenType, Operation } from '../common/enums';
 import { OutputChannelLogging } from '../common/logging';
-import { PathUtils } from '../common/pathUtils';
+import { DiffItemData, PathUtils } from '../common/pathUtils';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { WebContentUtils } from '../common/webContentUtils';
@@ -17,25 +17,15 @@ import { Groups } from './Groups';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.analyzeUsers': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            Users.analyzeUsers(uris[0], uris[1], context);
+        'hoganslendertanium.analyzeUsers': (diffItems: DiffItemData) => {
+            Users.analyzeUsers(diffItems, context);
         },
     });
 }
 
 export class Users extends DiffBase {
-    static async analyzeUsers(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
+    static async analyzeUsers(diffItems: DiffItemData, context: vscode.ExtensionContext) {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-
-        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
-
-        TaniumDiffProvider.currentProvider?.addDiffData({
-            label: 'Users',
-            leftDir: left.fsPath,
-            rightDir: right.fsPath,
-            diffItems: diffItems,
-            commandString: 'hoganslendertanium.analyzeUsers',
-        }, context);
 
         const panels = this.createPanels('Users', diffItems);
 
@@ -47,9 +37,6 @@ export class Users extends DiffBase {
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');
         const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
         const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
-
-        OutputChannelLogging.log(`left dir: ${left.fsPath}`);
-        OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
         OutputChannelLogging.log(`missing users: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified users: ${diffItems.modified.length}`);
@@ -269,7 +256,7 @@ export class Users extends DiffBase {
                     }
 
                     // get groups map
-                    const groupMap = Groups.getGroupMapById(allowSelfSignedCerts, httpTimeout, restBase, session);
+                    const groupMap = await Groups.getGroupMapById(allowSelfSignedCerts, httpTimeout, restBase, session);
 
                     // create map
                     userData.forEach(user => {

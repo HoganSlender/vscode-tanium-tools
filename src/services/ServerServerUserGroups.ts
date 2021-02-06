@@ -15,6 +15,8 @@ import path = require('path');
 import { checkResolve } from '../common/checkResolve';
 import { ServerServerBase } from './ServerServerBase';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
+import { PathUtils } from '../common/pathUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -95,7 +97,17 @@ export class ServerServerUserGroups extends ServerServerBase {
         });
 
         // analyze content sets
-        UserGroups.analyzeUserGroups(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
+        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir);
+
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'User Groups',
+            leftDir: leftDir,
+            rightDir: rightDir,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzeUserGroups',
+        }, context);
+
+        UserGroups.analyzeUserGroups(diffItems, context);
     }
 
     static processServerUserGroups(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
@@ -134,55 +146,67 @@ export class ServerServerUserGroups extends ServerServerBase {
                         OutputChannelLogging.log(`there are 0 user groups for ${fqdn.label}`);
                         resolve();
                     } else {
-                        // get groups map
-                        const groupMap = await Groups.getGroupMapById(allowSelfSignedCerts, httpTimeout, restBase, session);
+                        await vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            cancellable: false
+                        }, async (innerProgress) => {
+                            innerProgress.report({
+                                increment: 0
+                            });
 
-                        for (var i = 0; i < userGroups.length; i++) {
-                            const userGroup = userGroups[i];
+                            const innerIncrement = 100 / userGroups.length;
 
-                            if (i % 30 === 0 || i === userGroupTotal) {
-                                OutputChannelLogging.log(`processing ${i} of ${userGroupTotal}`);
-                            }
+                            // get groups map
+                            const groupMap = await Groups.getGroupMapById(allowSelfSignedCerts, httpTimeout, restBase, session);
 
-                            if (userGroup.deleted_flag === 1) {
-                                if (checkResolve(++userGroupCounter, userGroupTotal, 'user groups', fqdn)) {
-                                    return resolve();
-                                }
-                            } else {
-                                // get export
-                                try {
-                                    const userGroupName: string = sanitize(userGroup.name);
+                            for (var i = 0; i < userGroups.length; i++) {
+                                const userGroup = userGroups[i];
 
+                                innerProgress.report({
+                                    increment: innerIncrement,
+                                    message: `${i + 1}/${userGroups.length}: ${userGroup.name}`
+                                });
+
+                                if (userGroup.deleted_flag === 1) {
+                                    if (checkResolve(++userGroupCounter, userGroupTotal, 'user groups', fqdn)) {
+                                        return resolve();
+                                    }
+                                } else {
+                                    // get export
                                     try {
-                                        const anonymizedUserGroup = await UserGroups.anonymizeUserGroup(userGroup, groupMap, restBase, session, allowSelfSignedCerts, httpTimeout);
-                                        const content: string = JSON.stringify(anonymizedUserGroup, null, 2);
+                                        const userGroupName: string = sanitize(userGroup.name);
 
-                                        const userGroupFile = path.join(directory, userGroupName + '.json');
-                                        fs.writeFile(userGroupFile, content, (err) => {
-                                            if (err) {
-                                                OutputChannelLogging.logError(`could not write ${userGroupFile}`, err);
-                                            }
+                                        try {
+                                            const anonymizedUserGroup = await UserGroups.anonymizeUserGroup(userGroup, groupMap, restBase, session, allowSelfSignedCerts, httpTimeout);
+                                            const content: string = JSON.stringify(anonymizedUserGroup, null, 2);
+
+                                            const userGroupFile = path.join(directory, userGroupName + '.json');
+                                            fs.writeFile(userGroupFile, content, (err) => {
+                                                if (err) {
+                                                    OutputChannelLogging.logError(`could not write ${userGroupFile}`, err);
+                                                }
+
+                                                if (checkResolve(++userGroupCounter, userGroupTotal, 'user groups', fqdn)) {
+                                                    return resolve();
+                                                }
+                                            });
+                                        } catch (err) {
+                                            OutputChannelLogging.logError(`error processing ${label} user group ${userGroupName}`, err);
 
                                             if (checkResolve(++userGroupCounter, userGroupTotal, 'user groups', fqdn)) {
                                                 return resolve();
                                             }
-                                        });
+                                        }
                                     } catch (err) {
-                                        OutputChannelLogging.logError(`error processing ${label} user group ${userGroupName}`, err);
+                                        OutputChannelLogging.logError(`saving user group file for ${userGroup.name} from ${fqdn.label}`, err);
 
                                         if (checkResolve(++userGroupCounter, userGroupTotal, 'user groups', fqdn)) {
                                             return resolve();
                                         }
                                     }
-                                } catch (err) {
-                                    OutputChannelLogging.logError(`saving user group file for ${userGroup.name} from ${fqdn.label}`, err);
-
-                                    if (checkResolve(++userGroupCounter, userGroupTotal, 'user groups', fqdn)) {
-                                        return resolve();
-                                    }
                                 }
                             }
-                        }
+                        });
                     }
                 })();
             } catch (err) {

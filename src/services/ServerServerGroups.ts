@@ -14,22 +14,24 @@ import { ServerServerBase } from './ServerServerBase';
 
 import path = require('path');
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
+import { PathUtils } from '../common/pathUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.compareServerServerFilterGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+        'hoganslendertanium.compareServerServerFilterGroups': () => {
             ServerServerGroups.processGroups(0, context);
         },
-        'hoganslendertanium.compareServerServerActionGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+        'hoganslendertanium.compareServerServerActionGroups': () => {
             ServerServerGroups.processGroups(1, context);
         },
-        'hoganslendertanium.compareServerServerActionPolicyGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+        'hoganslendertanium.compareServerServerActionPolicyGroups': () => {
             ServerServerGroups.processGroups(2, context);
         },
-        'hoganslendertanium.compareServerServerAdHocGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+        'hoganslendertanium.compareServerServerAdHocGroups': () => {
             ServerServerGroups.processGroups(3, context);
         },
-        'hoganslendertanium.compareServerServerManualGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+        'hoganslendertanium.compareServerServerManualGroups': () => {
             ServerServerGroups.processGroups(4, context);
         },
     });
@@ -107,6 +109,36 @@ class ServerServerGroups extends ServerServerBase {
             fs.mkdirSync(rightDir);
         }
 
+        var title = 'Groups';
+        var commandString = 'Groups';
+
+        switch (targetGroupType) {
+            case 0:
+                title = 'Filter Groups';
+                commandString = 'hoganslendertanium.analyzeFilterGroups';
+                break;
+
+            case 1:
+                title = 'Action Groups';
+                commandString = 'hoganslendertanium.analyzeActionGroups';
+                break;
+
+            case 2:
+                title = 'Action Policy Groups';
+                commandString = 'hoganslendertanium.analyzeActionPolicyGroups';
+                break;
+
+            case 3:
+                title = 'Ad Hoc Groups';
+                commandString = 'hoganslendertanium.analyzeAdHocGroups';
+                break;
+
+            case 4:
+                title = 'Manual Groups';
+                commandString = 'hoganslendertanium.analyzeManualGroups';
+                break;
+        }
+
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: 'Group Compare',
@@ -130,7 +162,17 @@ class ServerServerGroups extends ServerServerBase {
         });
 
         // analyze groups
-        Groups.analyzeGroups(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), targetGroupType, context);
+        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir);
+
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: title,
+            leftDir: leftDir,
+            rightDir: rightDir,
+            diffItems: diffItems,
+            commandString: commandString,
+        }, context);
+
+        Groups.analyzeGroups(diffItems, targetGroupType, context);
     }
 
     static processServerGroups(allowSelfSignedCerts: boolean, httpTimeout: number, targetGroupType: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
@@ -175,66 +217,78 @@ class ServerServerGroups extends ServerServerBase {
                         OutputChannelLogging.log(`there are 0 groups for ${fqdn.label}`);
                         return resolve();
                     } else {
-                        for (var i = 0; i < groups.length; i++) {
-                            const group = groups[i];
+                        await vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            cancellable: false
+                        }, async (innerProgress) => {
+                            innerProgress.report({
+                                increment: 0
+                            });
 
-                            if (i % 30 === 0 || i === groupTotal) {
-                                OutputChannelLogging.log(`processing ${i} of ${groupTotal}`);
-                            }
+                            const innerIncrement = 100 / groups.length;
 
-                            if (group.deleted_flag) {
-                                if (checkResolve(++groupCounter, groupTotal, 'groups', fqdn)) {
-                                    return resolve();
-                                }
-                            } else {
-                                // get export
-                                try {
-                                    const body = await RestClient.post(`${restBase}/export`, {
-                                        headers: {
-                                            session: session,
-                                        },
-                                        json: {
-                                            groups: {
-                                                include: [
-                                                    group.name
-                                                ]
-                                            }
-                                        },
-                                        responseType: 'json',
-                                    }, allowSelfSignedCerts, httpTimeout);
+                            for (var i = 0; i < groups.length; i++) {
+                                const group = groups[i];
 
-                                    const taniumGroup: any = body.data.object_list.groups[0];
-                                    const groupName: string = sanitize(taniumGroup.name);
+                                innerProgress.report({
+                                    increment: innerIncrement,
+                                    message: `${i + 1}/${groups.length}: ${group.name}`
+                                });
 
+                                if (group.deleted_flag) {
+                                    if (checkResolve(++groupCounter, groupTotal, 'groups', fqdn)) {
+                                        return resolve();
+                                    }
+                                } else {
+                                    // get export
                                     try {
-                                        const content: string = JSON.stringify(body.data.object_list, null, 2);
+                                        const body = await RestClient.post(`${restBase}/export`, {
+                                            headers: {
+                                                session: session,
+                                            },
+                                            json: {
+                                                groups: {
+                                                    include: [
+                                                        group.name
+                                                    ]
+                                                }
+                                            },
+                                            responseType: 'json',
+                                        }, allowSelfSignedCerts, httpTimeout);
 
-                                        const groupFile = path.join(directory, groupName + '.json');
-                                        fs.writeFile(groupFile, content, (err) => {
-                                            if (err) {
-                                                OutputChannelLogging.logError(`could not write ${groupFile}`, err);
-                                            }
+                                        const taniumGroup: any = body.data.object_list.groups[0];
+                                        const groupName: string = sanitize(taniumGroup.name);
+
+                                        try {
+                                            const content: string = JSON.stringify(body.data.object_list, null, 2);
+
+                                            const groupFile = path.join(directory, groupName + '.json');
+                                            fs.writeFile(groupFile, content, (err) => {
+                                                if (err) {
+                                                    OutputChannelLogging.logError(`could not write ${groupFile}`, err);
+                                                }
+
+                                                if (checkResolve(++groupCounter, groupTotal, 'groups', fqdn)) {
+                                                    return resolve();
+                                                }
+                                            });
+                                        } catch (err) {
+                                            OutputChannelLogging.logError(`error processing ${label} group ${groupName}`, err);
 
                                             if (checkResolve(++groupCounter, groupTotal, 'groups', fqdn)) {
                                                 return resolve();
                                             }
-                                        });
+                                        }
                                     } catch (err) {
-                                        OutputChannelLogging.logError(`error processing ${label} group ${groupName}`, err);
+                                        OutputChannelLogging.logError(`retrieving groupExport for ${group.name} from ${fqdn.label}`, err);
 
                                         if (checkResolve(++groupCounter, groupTotal, 'groups', fqdn)) {
                                             return resolve();
                                         }
                                     }
-                                } catch (err) {
-                                    OutputChannelLogging.logError(`retrieving groupExport for ${group.name} from ${fqdn.label}`, err);
-
-                                    if (checkResolve(++groupCounter, groupTotal, 'groups', fqdn)) {
-                                        return resolve();
-                                    }
                                 }
                             }
-                        }
+                        });
                     }
                 })();
             } catch (err) {

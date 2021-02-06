@@ -14,10 +14,12 @@ import { Sensors } from './Sensors';
 import { checkResolve } from '../common/checkResolve';
 import { ServerServerBase } from './ServerServerBase';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
+import { PathUtils } from '../common/pathUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.compareServerServerSensors': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+        'hoganslendertanium.compareServerServerSensors': () => {
             ServerServerSensors.processSensors(context);
         },
     });
@@ -94,7 +96,17 @@ export class ServerServerSensors extends ServerServerBase {
         });
 
         // analyze sensors
-        Sensors.analyzeSensors(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
+        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir, true);
+
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'Sensors',
+            leftDir: leftDir,
+            rightDir: rightDir,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzeSensors',
+        }, context);
+
+        Sensors.analyzeSensors(diffItems, context);
     }
 
     static processServerSensors(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
@@ -105,54 +117,75 @@ export class ServerServerSensors extends ServerServerBase {
                 // get session
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
-                (async () => {
-                    OutputChannelLogging.log(`sensor retrieval - initialized for ${fqdn.label}`);
-                    var sensors: [any];
+                OutputChannelLogging.log(`sensor retrieval - initialized for ${fqdn.label}`);
+                var sensors: [any];
 
-                    // get packages
-                    try {
-                        const body = await RestClient.post(`${restBase}/export`, {
-                            headers: {
-                                session: session,
-                            },
-                            json: {
-                                "sensors": {
-                                    "include_all": true,
-                                }
-                            },
-                            responseType: 'json',
-                        }, allowSelfSignedCerts, httpTimeout);
+                // get sensors
+                try {
+                    const body = await RestClient.get(`${restBase}/sensors`, {
+                        headers: {
+                            session: session,
+                        },
+                        responseType: 'json',
+                    }, allowSelfSignedCerts, httpTimeout);
 
-                        OutputChannelLogging.log(`sensor retrieval - complete for ${fqdn.label}`);
-                        sensors = body.data.object_list.sensors;
-                    } catch (err) {
-                        OutputChannelLogging.logError(`retrieving sensors from ${fqdn.label}`, err);
-                        return reject(`retrieving content_set_roles from ${fqdn.label}`);
-                    }
+                    OutputChannelLogging.log(`sensor retrieval - complete for ${fqdn.label}`);
+                    sensors = body.data;
+                } catch (err) {
+                    OutputChannelLogging.logError(`retrieving sensors from ${fqdn.label}`, err);
+                    return reject(`retrieving content_set_roles from ${fqdn.label}`);
+                }
 
-                    // iterate through each download export
-                    var sensorCounter: number = 0;
-                    var sensorTotal: number = sensors.length;
+                // remove cache object
+                sensors.pop();
 
-                    if (sensorTotal === 0) {
-                        OutputChannelLogging.log(`there are 0 sensors for ${fqdn.label}`);
-                        resolve();
-                    } else {
-                        var i = 0;
+                // iterate through each download export
+                var sensorCounter: number = 0;
+                var sensorTotal: number = sensors.length;
 
-                        sensors.forEach(sensor => {
-                            i++;
+                if (sensorTotal === 0) {
+                    OutputChannelLogging.log(`there are 0 sensors for ${fqdn.label}`);
+                    resolve();
+                } else {
+                    await vscode.window.withProgress({
+                        location: vscode.ProgressLocation.Notification,
+                        cancellable: false
+                    }, async (innerProgress) => {
+                        innerProgress.report({
+                            increment: 0
+                        });
 
-                            if (i % 30 === 0 || i === sensorTotal) {
-                                OutputChannelLogging.log(`processing ${i} of ${sensorTotal}`);
-                            }
+                        const innerIncrement = 100 / sensors.length;
+
+                        for (var i = 0; i < sensors.length; i++) {
+                            const sensor = sensors[i];
+
+                            innerProgress.report({
+                                increment: innerIncrement,
+                                message: `${i + 1}/${sensors.length}: ${sensor.name}`
+                            });
 
                             // get export
                             try {
-                                const sensorName: string = sanitize(sensor.name);
+                                const body = await RestClient.post(`${restBase}/export`, {
+                                    headers: {
+                                        session: session,
+                                    },
+                                    json: {
+                                        sensors: {
+                                            include: [
+                                                sensor.name
+                                            ]
+                                        }
+                                    },
+                                    responseType: 'json',
+                                }, allowSelfSignedCerts, httpTimeout);
+
+                                const taniumSensor: any = body.data.object_list.sensors[0];
+                                const sensorName: string = sanitize(taniumSensor.name);
 
                                 try {
-                                    const transformed = this.transformSensor(sensor);
+                                    const transformed = this.transformSensor(taniumSensor);
                                     const content: string = JSON.stringify(transformed, null, 2);
 
                                     const sensorFile = path.join(directory, sensorName + '.json');
@@ -179,9 +212,9 @@ export class ServerServerSensors extends ServerServerBase {
                                     return resolve();
                                 }
                             }
-                        });
-                    }
-                })();
+                        }
+                    });
+                }
             } catch (err) {
                 OutputChannelLogging.logError(`error downloading sensors from ${restBase}`, err);
                 return reject(`error downloading sensors from ${restBase}`);
@@ -189,18 +222,6 @@ export class ServerServerSensors extends ServerServerBase {
         });
 
         return p;
-    }
-
-    static transformSensors(sensors: any[]) {
-        if (sensors === undefined) {
-            return sensors;
-        }
-
-        sensors.forEach((sensor) => {
-            sensor = this.transformSensor(sensor);
-        });
-
-        return sensors;
     }
 
     static transformSensor(sensor: any) {

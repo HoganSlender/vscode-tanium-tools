@@ -5,82 +5,64 @@ import * as vscode from 'vscode';
 import * as commands from '../common/commands';
 import { MrGroupType, OpenType } from "../common/enums";
 import { OutputChannelLogging } from "../common/logging";
-import { PathUtils } from '../common/pathUtils';
+import { DiffItemData, PathUtils } from '../common/pathUtils';
 import { RestClient } from "../common/restClient";
 import { Session } from '../common/session';
 import { WebContentUtils } from '../common/webContentUtils';
 import { SigningKey } from "../types/signingKey";
 import { UserGroups } from "./UserGroups";
 
-import path = require('path');
 import { SigningUtils } from '../common/signingUtils';
 import { DiffBase } from './DiffBase';
-import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.analyzeFilterGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            Groups.analyzeGroups(uris[0], uris[1], 0, context);
+        'hoganslendertanium.analyzeFilterGroups': (diffItems: DiffItemData) => {
+            Groups.analyzeGroups(diffItems, 0, context);
         },
-        'hoganslendertanium.analyzeActionGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            Groups.analyzeGroups(uris[0], uris[1], 1, context);
+        'hoganslendertanium.analyzeActionGroups': (diffItems: DiffItemData) => {
+            Groups.analyzeGroups(diffItems, 1, context);
         },
-        'hoganslendertanium.analyzeActionPolicyGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            Groups.analyzeGroups(uris[0], uris[1], 2, context);
+        'hoganslendertanium.analyzeActionPolicyGroups': (diffItems: DiffItemData) => {
+            Groups.analyzeGroups(diffItems, 2, context);
         },
-        'hoganslendertanium.analyzeAdHocGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            Groups.analyzeGroups(uris[0], uris[1], 3, context);
+        'hoganslendertanium.analyzeAdHocGroups': (diffItems: DiffItemData) => {
+            Groups.analyzeGroups(diffItems, 3, context);
         },
-        'hoganslendertanium.analyzeManualGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            Groups.analyzeGroups(uris[0], uris[1], 4, context);
+        'hoganslendertanium.analyzeManualGroups': (diffItems: DiffItemData) => {
+            Groups.analyzeGroups(diffItems, 4, context);
         },
     });
 }
 
 export class Groups extends DiffBase {
-    static async analyzeGroups(left: vscode.Uri, right: vscode.Uri, targetGroupType: number, context: vscode.ExtensionContext) {        
+    static async analyzeGroups(diffItems: DiffItemData, targetGroupType: number, context: vscode.ExtensionContext) {        
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 
         var title = 'Groups';
-        var commandString = 'Groups';
 
         switch(targetGroupType) {
             case 0:
                 title = 'Filter Groups';
-                commandString = 'hoganslendertanium.analyzeFilterGroups';
                 break;
 
             case 1:
                 title = 'Action Groups';
-                commandString = 'hoganslendertanium.analyzeActionGroups';
                 break;
             
             case 2:
                 title = 'Action Policy Groups';
-                commandString = 'hoganslendertanium.analyzeActionPolicyGroups';
                 break;
 
             case 3:
                 title = 'Ad Hoc Groups';
-                commandString = 'hoganslendertanium.analyzeAdHocGroups';
                 break;
 
             case 4:
                 title = 'Manual Groups';
-                commandString = 'hoganslendertanium.analyzeManualGroups';
                 break;
         }
-
-        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
-
-        TaniumDiffProvider.currentProvider?.addDiffData({
-            label: title,
-            leftDir: left.fsPath,
-            rightDir: right.fsPath,
-            diffItems: diffItems,
-            commandString: commandString,
-        }, context);
 
         const panels = this.createPanels(title, diffItems);
 
@@ -91,9 +73,6 @@ export class Groups extends DiffBase {
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');
         const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
         const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
-
-        OutputChannelLogging.log(`left dir: ${left.fsPath}`);
-        OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
         OutputChannelLogging.log(`missing groups: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified groups: ${diffItems.modified.length}`);

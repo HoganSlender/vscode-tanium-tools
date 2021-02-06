@@ -5,7 +5,7 @@ import * as vscode from 'vscode';
 import * as commands from '../common/commands';
 import { MrGroupType, OpenType, Operation } from '../common/enums';
 import { OutputChannelLogging } from '../common/logging';
-import { PathUtils } from '../common/pathUtils';
+import { DiffItemData, PathUtils } from '../common/pathUtils';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { WebContentUtils } from '../common/webContentUtils';
@@ -17,25 +17,15 @@ import { Groups } from './Groups';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.analyzeUserGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            UserGroups.analyzeUserGroups(uris[0], uris[1], context);
+        'hoganslendertanium.analyzeUserGroups': (diffItems: DiffItemData) => {
+            UserGroups.analyzeUserGroups(diffItems, context);
         },
     });
 }
 
 export class UserGroups extends DiffBase {
-    static async analyzeUserGroups(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
+    static async analyzeUserGroups(diffItems: DiffItemData, context: vscode.ExtensionContext) {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-
-        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
-
-        TaniumDiffProvider.currentProvider?.addDiffData({
-            label: 'User Groups',
-            leftDir: left.fsPath,
-            rightDir: right.fsPath,
-            diffItems: diffItems,
-            commandString: 'hoganslendertanium.analyzeUserGroups',
-        }, context);
 
         const panels = this.createPanels('User Groups', diffItems);
 
@@ -47,9 +37,6 @@ export class UserGroups extends DiffBase {
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');
         const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
         const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
-
-        OutputChannelLogging.log(`left dir: ${left.fsPath}`);
-        OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
         OutputChannelLogging.log(`missing user groups: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified user groups: ${diffItems.modified.length}`);

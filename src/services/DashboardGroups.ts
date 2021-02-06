@@ -5,40 +5,28 @@ import * as vscode from 'vscode';
 import * as commands from '../common/commands';
 import { OpenType } from '../common/enums';
 import { OutputChannelLogging } from '../common/logging';
-import { PathUtils } from '../common/pathUtils';
+import { DiffItemData, PathUtils } from '../common/pathUtils';
 import { WebContentUtils } from '../common/webContentUtils';
 import { SigningKey } from '../types/signingKey';
 import { SignContentFile } from './SignContentFile';
 
-import path = require('path');
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { SigningUtils } from '../common/signingUtils';
 import { DiffBase } from './DiffBase';
-import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.analyzeDashboardGroups': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            DashboardGroups.analyzeDashboardGroups(uris[0], uris[1], context);
+        'hoganslendertanium.analyzeDashboardGroups': (diffItems: DiffItemData) => {
+            DashboardGroups.analyzeDashboardGroups(diffItems, context);
         },
     });
 }
 
 export class DashboardGroups extends DiffBase {
-    static async analyzeDashboardGroups(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
+    static async analyzeDashboardGroups(diffItems: DiffItemData, context: vscode.ExtensionContext) {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-
-        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath, true);
-
-        TaniumDiffProvider.currentProvider?.addDiffData({
-            label: 'Dashboard Groups',
-            leftDir: left.fsPath,
-            rightDir: right.fsPath,
-            diffItems: diffItems,
-            commandString: 'hoganslendertanium.analyzeDashboardGroups',
-        }, context);
 
         const panels = this.createPanels('Dashboard Groups', diffItems);
 
@@ -49,9 +37,6 @@ export class DashboardGroups extends DiffBase {
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');
         const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
         const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
-
-        OutputChannelLogging.log(`left dir: ${left.fsPath}`);
-        OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
         OutputChannelLogging.log(`missing dashboard groups: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified dashboard groups: ${diffItems.modified.length}`);

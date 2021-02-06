@@ -5,37 +5,26 @@ import * as vscode from 'vscode';
 import * as commands from '../common/commands';
 import { OpenType } from '../common/enums';
 import { OutputChannelLogging } from '../common/logging';
-import { PathUtils } from '../common/pathUtils';
+import { DiffItemData, PathUtils } from '../common/pathUtils';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { WebContentUtils } from '../common/webContentUtils';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
-import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { ContentSetRoles } from './ContentSetRoles';
 import { DiffBase } from './DiffBase';
 import { Users } from './Users';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.analyzeContentSetRoleMemberships': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            ContentSetRoleMemberships.analyzeContentSetRoleMemberships(uris[0], uris[1], context);
+        'hoganslendertanium.analyzeContentSetRoleMemberships': (diffItems: DiffItemData) => {
+            ContentSetRoleMemberships.analyzeContentSetRoleMemberships(diffItems, context);
         },
     });
 }
 
 export class ContentSetRoleMemberships extends DiffBase {
-    static async analyzeContentSetRoleMemberships(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
+    static async analyzeContentSetRoleMemberships(diffItems: DiffItemData, context: vscode.ExtensionContext) {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-
-        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
-
-        TaniumDiffProvider.currentProvider?.addDiffData({
-            label: 'Content Set Role Memberships',
-            leftDir: left.fsPath,
-            rightDir: right.fsPath,
-            diffItems: diffItems,
-            commandString: 'hoganslendertanium.analyzeContentSetRoleMemberships',
-        }, context);
 
         const panels = this.createPanels('Content Set Role Memberships', diffItems);
 
@@ -47,9 +36,6 @@ export class ContentSetRoleMemberships extends DiffBase {
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');
         const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
         const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
-
-        OutputChannelLogging.log(`left dir: ${left.fsPath}`);
-        OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
         OutputChannelLogging.log(`missing content set role memberships: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified content set role memberships: ${diffItems.modified.length}`);

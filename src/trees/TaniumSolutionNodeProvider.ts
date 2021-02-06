@@ -207,6 +207,10 @@ export class TaniumSolutionNodeProvider implements vscode.TreeDataProvider<Taniu
                                 "command": "hoganslendertanium.compareServerServerSavedQuestions",
                                 "title": "Compare Tanium Server Saved Questions",
                             }));
+                            children.push(new TaniumSolutionTreeItem(element, 'Compare Saved Actions', 'Compare Tanium Server Saved Actions', vscode.TreeItemCollapsibleState.None, undefined, {
+                                "command": "hoganslendertanium.compareServerServerSavedActions",
+                                "title": "Compare Tanium Server Saved Actions",
+                            }));
                             break;
                     }
                     break;

@@ -7,26 +7,26 @@ import * as commands from '../common/commands';
 import { OutputChannelLogging } from '../common/logging';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
-import { collectServerServerPackageInputs } from '../parameter-collection/server-server-package-parameters';
-import { Packages } from './Packages';
 
 import path = require('path');
 import { checkResolve } from '../common/checkResolve';
-import { ServerServerBase } from './ServerServerBase';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
+import { ServerServerBase } from './ServerServerBase';
+import { collectServerServerSavedActionInputs } from '../parameter-collection/server-server-saved-actions-parameters';
+import { SavedActions } from './SavedActions';
 import { PathUtils } from '../common/pathUtils';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.compareServerServerPackages': () => {
-            ServerServerPackages.processPackages(context);
+        'hoganslendertanium.compareServerServerSavedActions': () => {
+            ServerServerSavedActions.processSavedActions(context);
         },
     });
 }
 
-class ServerServerPackages extends ServerServerBase {
-    static async processPackages(context: vscode.ExtensionContext) {
+export class ServerServerSavedActions extends ServerServerBase {
+    static async processSavedActions(context: vscode.ExtensionContext) {
         // define output channel
         OutputChannelLogging.initialize();
 
@@ -35,14 +35,14 @@ class ServerServerPackages extends ServerServerBase {
         }
 
         // get the current folder
-        const folderPath = vscode.workspace.workspaceFolders![0].uri.fsPath;
+        const folderPath = vscode.workspace.workspaceFolders![0];
 
         // get configurations
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');
         const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
         const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
 
-        const state = await collectServerServerPackageInputs(config, context);
+        const state = await collectServerServerSavedActionInputs(config, context);
 
         // collect values
         const leftFqdn: FqdnSetting = state.leftFqdn;
@@ -62,8 +62,8 @@ class ServerServerPackages extends ServerServerBase {
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
         // create folders
-        const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn.label)}%Packages`);
-        const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn.label)}%Packages`);
+        const leftDir = path.join(folderPath.uri.fsPath, `1 - ${sanitize(leftFqdn.label)}%SavedActions`);
+        const rightDir = path.join(folderPath.uri.fsPath, `2 - ${sanitize(rightFqdn.label)}%SavedActions`);
 
         if (!fs.existsSync(leftDir)) {
             fs.mkdirSync(leftDir);
@@ -75,17 +75,17 @@ class ServerServerPackages extends ServerServerBase {
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: 'Package Compare',
+            title: 'Saved Action Compare',
             cancellable: false
         }, async (progress) => {
             progress.report({ increment: 0 });
 
             const increment = 50;
 
-            progress.report({ increment: increment, message: `package retrieval from ${leftFqdn.label}` });
-            await this.processServerPackages(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
-            progress.report({ increment: increment, message: `package retrieval from ${rightFqdn.label}` });
-            await this.processServerPackages(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
+            progress.report({ increment: increment, message: `saved action retrieval from ${leftFqdn.label}` });
+            await this.processServerSavedActions(allowSelfSignedCerts, httpTimeout, leftFqdn, leftUsername, leftPassword, leftDir, 'left');
+            progress.report({ increment: increment, message: `saved action retrieval from ${rightFqdn.label}` });
+            await this.processServerSavedActions(allowSelfSignedCerts, httpTimeout, rightFqdn, rightUsername, rightPassword, rightDir, 'right');
             const p = new Promise<void>(resolve => {
                 setTimeout(() => {
                     resolve();
@@ -95,22 +95,21 @@ class ServerServerPackages extends ServerServerBase {
             return p;
         });
 
-        // analyze packages
-
+        // analyze saved actions
         const diffItems = await PathUtils.getDiffItems(leftDir, rightDir, true);
 
         TaniumDiffProvider.currentProvider?.addDiffData({
-            label: 'Packages',
+            label: 'Saved Actions',
             leftDir: leftDir,
             rightDir: rightDir,
             diffItems: diffItems,
-            commandString: 'hoganslendertanium.analyzePackages',
+            commandString: 'hoganslendertanium.analyzeSavedActions',
         }, context);
 
-        Packages.analyzePackages(diffItems, context);
+        SavedActions.analyzeSavedActions(diffItems, context);
     }
 
-    static processServerPackages(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
+    static processServerSavedActions(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
         const restBase = `https://${fqdn.fqdn}/api/v2`;
 
         const p = new Promise<void>(async (resolve, reject) => {
@@ -119,34 +118,34 @@ class ServerServerPackages extends ServerServerBase {
                 var session: string = await Session.getSession(allowSelfSignedCerts, httpTimeout, fqdn, username, password);
 
                 (async () => {
-                    OutputChannelLogging.log(`package retrieval - initialized for ${fqdn.label}`);
-                    var package_specs: [any];
+                    OutputChannelLogging.log(`saved action retrieval - initialized for ${fqdn.label}`);
+                    var saved_actions: [any];
 
-                    // get packages
+                    // get saved actions
                     try {
-                        const body = await RestClient.get(`${restBase}/packages`, {
+                        const body = await RestClient.get(`${restBase}/saved_actions`, {
                             headers: {
                                 session: session,
                             },
                             responseType: 'json',
                         }, allowSelfSignedCerts, httpTimeout);
 
-                        OutputChannelLogging.log(`package_spec retrieval - complete for ${fqdn.label}`);
-                        package_specs = body.data;
+                        OutputChannelLogging.log(`saved action retrieval - complete for ${fqdn.label}`);
+                        saved_actions = body.data;
                     } catch (err) {
-                        OutputChannelLogging.logError(`retrieving package_specs from ${fqdn.label}`, err);
-                        return reject(`retrieving package_specs from ${fqdn.label}`);
+                        OutputChannelLogging.logError(`retrieving saved actions from ${fqdn.label}`, err);
+                        return reject(`retrieving saved actions from ${fqdn.label}`);
                     }
 
                     // remove cache object
-                    package_specs.pop();
+                    saved_actions.pop();
 
                     // iterate through each download export
-                    var packageSpecCounter: number = 0;
-                    var packageSpecTotal: number = package_specs.length;
+                    var savedActionCounter: number = 0;
+                    var savedActionTotal: number = saved_actions.length;
 
-                    if (packageSpecTotal === 0) {
-                        OutputChannelLogging.log(`there are 0 packages for ${fqdn.label}`);
+                    if (savedActionTotal === 0) {
+                        OutputChannelLogging.log(`there are 0 saved actions for ${fqdn.label}`);
                         return resolve();
                     } else {
                         await vscode.window.withProgress({
@@ -155,22 +154,22 @@ class ServerServerPackages extends ServerServerBase {
                         }, async (innerProgress) => {
                             innerProgress.report({ increment: 0 });
 
-                            const innerIncrement = 100 / package_specs.length;
+                            const innerIncrement = 100 / saved_actions.length;
 
-                            for (var i = 0; i < package_specs.length; i++) {
-                                const packageSpec = package_specs[i];
+                            for (var i = 0; i < saved_actions.length; i++) {
+                                const savedAction = saved_actions[i];
 
                                 innerProgress.report({
                                     increment: innerIncrement,
-                                    message: `${i + 1}/${package_specs.length}: ${packageSpec.name}`
+                                    message: `${i + 1}/${saved_actions.length}: ${savedAction.name}`
                                 });
 
-                                if (i % 30 === 0 || i === packageSpecTotal) {
-                                    OutputChannelLogging.log(`processing ${i} of ${packageSpecTotal}`);
+                                if (i % 30 === 0 || i === savedActionTotal) {
+                                    OutputChannelLogging.log(`processing ${i} of ${savedActionTotal}`);
                                 }
 
-                                if (packageSpec.deleted_flag) {
-                                    if (checkResolve(++packageSpecCounter, packageSpecTotal, 'packages', fqdn)) {
+                                if (savedAction.hidden_flag) {
+                                    if (checkResolve(++savedActionCounter, savedActionTotal, 'saved actions', fqdn)) {
                                         return resolve();
                                     }
                                 } else {
@@ -181,42 +180,42 @@ class ServerServerPackages extends ServerServerBase {
                                                 session: session,
                                             },
                                             json: {
-                                                package_specs: {
+                                                saved_actions: {
                                                     include: [
-                                                        packageSpec.name
+                                                        savedAction.name
                                                     ]
                                                 }
                                             },
                                             responseType: 'json',
                                         }, allowSelfSignedCerts, httpTimeout);
 
-                                        const taniumPackage: any = body.data.object_list.package_specs[0];
-                                        const packageName: string = sanitize(taniumPackage.name);
+                                        const taniumSavedAction: any = body.data.object_list.saved_actions[0];
+                                        const savedActionName: string = sanitize(taniumSavedAction.name);
 
                                         try {
-                                            const content: string = JSON.stringify(taniumPackage, null, 2);
+                                            const content: string = JSON.stringify(taniumSavedAction, null, 2);
 
-                                            const packageFile = path.join(directory, packageName + '.json');
-                                            fs.writeFile(packageFile, content, (err) => {
+                                            const savedActionFile = path.join(directory, savedActionName + '.json');
+                                            fs.writeFile(savedActionFile, content, (err) => {
                                                 if (err) {
-                                                    OutputChannelLogging.logError(`could not write ${packageFile}`, err);
+                                                    OutputChannelLogging.logError(`could not write ${savedActionFile}`, err);
                                                 }
                                             });
 
-                                            if (checkResolve(++packageSpecCounter, packageSpecTotal, 'packages', fqdn)) {
+                                            if (checkResolve(++savedActionCounter, savedActionTotal, 'saved actions', fqdn)) {
                                                 return resolve();
                                             }
                                         } catch (err) {
-                                            OutputChannelLogging.logError(`error processing ${label} package ${packageName}`, err);
+                                            OutputChannelLogging.logError(`error processing ${label} saved action ${savedActionName}`, err);
 
-                                            if (checkResolve(++packageSpecCounter, packageSpecTotal, 'packages', fqdn)) {
+                                            if (checkResolve(++savedActionCounter, savedActionTotal, 'saved actions', fqdn)) {
                                                 return resolve();
                                             }
                                         }
                                     } catch (err) {
-                                        OutputChannelLogging.logError(`retrieving packageExport for ${packageSpec.name} from ${fqdn.label}`, err);
+                                        OutputChannelLogging.logError(`retrieving saved actionExport for ${savedAction.name} from ${fqdn.label}`, err);
 
-                                        if (checkResolve(++packageSpecCounter, packageSpecTotal, 'packages', fqdn)) {
+                                        if (checkResolve(++savedActionCounter, savedActionTotal, 'saved actions', fqdn)) {
                                             return resolve();
                                         }
                                     }
@@ -226,8 +225,8 @@ class ServerServerPackages extends ServerServerBase {
                     }
                 })();
             } catch (err) {
-                OutputChannelLogging.logError(`error downloading packages from ${restBase}`, err);
-                return reject(`error downloading packages from ${restBase}`);
+                OutputChannelLogging.logError(`error downloading saved actions from ${restBase}`, err);
+                return reject(`error downloading saved actions from ${restBase}`);
             }
         });
 

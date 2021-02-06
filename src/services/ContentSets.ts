@@ -1,42 +1,29 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
 import * as vscode from 'vscode';
 
 import * as commands from '../common/commands';
 import { OpenType } from '../common/enums';
 import { OutputChannelLogging } from '../common/logging';
-import { PathUtils } from '../common/pathUtils';
+import { DiffItemData, PathUtils } from '../common/pathUtils';
 import { WebContentUtils } from '../common/webContentUtils';
 
-import path = require('path');
 import { SignContentFile } from './SignContentFile';
 import { SigningKey } from '../types/signingKey';
 import { SigningUtils } from '../common/signingUtils';
 import { DiffBase } from './DiffBase';
-import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.analyzeContentSets': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            ContentSets.analyzeContentSets(uris[0], uris[1], context);
+        'hoganslendertanium.analyzeContentSets': (diffItems: DiffItemData) => {
+            ContentSets.analyzeContentSets(diffItems, context);
         },
     });
 }
 
 export class ContentSets extends DiffBase {
-    static async analyzeContentSets(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
+    static async analyzeContentSets(diffItems: DiffItemData, context: vscode.ExtensionContext) {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-
-        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath);
-
-        TaniumDiffProvider.currentProvider?.addDiffData({
-            label: 'Content Sets',
-            leftDir: left.fsPath,
-            rightDir: right.fsPath,
-            diffItems: diffItems,
-            commandString: 'hoganslendertanium.analyzeContentSets',
-        }, context);
 
         const panels = this.createPanels('Content Sets', diffItems);
 
@@ -45,9 +32,6 @@ export class ContentSets extends DiffBase {
 
         // get configurations
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');
-
-        OutputChannelLogging.log(`left dir: ${left.fsPath}`);
-        OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
         OutputChannelLogging.log(`missing content sets: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified content sets: ${diffItems.modified.length}`);

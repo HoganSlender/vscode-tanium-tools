@@ -14,6 +14,8 @@ import { collectServerServerDashboardGroupInputs } from '../parameter-collection
 import { DashboardGroups } from './DashboardGroups';
 import { ServerServerBase } from './ServerServerBase';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
+import { PathUtils } from '../common/pathUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -95,7 +97,17 @@ export class ServerServerDashboardGroups extends ServerServerBase {
         });
 
         // analyze dashboard groups
-        DashboardGroups.analyzeDashboardGroups(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
+        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir, true);
+
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'Dashboard Groups',
+            leftDir: leftDir,
+            rightDir: rightDir,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzeDashboardGroups',
+        }, context);
+
+        DashboardGroups.analyzeDashboardGroups(diffItems, context);
     }
     static processServerDashboardGroups(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
         const restBase = `https://${fqdn.fqdn}/api/v2`;
@@ -138,53 +150,63 @@ export class ServerServerDashboardGroups extends ServerServerBase {
                         OutputChannelLogging.log(`there are 0 dashboard groups for ${fqdn.label}`);
                         resolve();
                     } else {
-                        var i = 0;
+                        await vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            cancellable: false
+                        }, async (innerProgress) => {
+                            innerProgress.report({
+                                increment: 0
+                            });
 
-                        dashboard_groups.forEach(dashboardGroup => {
-                            i++;
+                            const innerIncrement = 100 / dashboard_groups.length;
 
-                            if (i % 30 === 0 || i === dashboardGroupTotal) {
-                                OutputChannelLogging.log(`processing ${i} of ${dashboardGroupTotal}`);
-                            }
+                            for (var i = 0; i < dashboard_groups.length; i++) {
+                                const dashboardGroup = dashboard_groups[i];
 
-                            if (dashboardGroup.deleted_flag === 1) {
-                                if (checkResolve(++dashboardGroupCounter, dashboardGroupTotal, 'dashboard groups', fqdn)) {
-                                    return resolve();
-                                }
-                            } else {
-                                // get export
-                                try {
-                                    const dashboardGroupName: string = sanitize(dashboardGroup.name);
-
-                                    try {
-                                        const content: string = JSON.stringify(dashboardGroup, null, 2);
-
-                                        const dashboardGroupFile = path.join(directory, dashboardGroupName + '.json');
-                                        fs.writeFile(dashboardGroupFile, content, (err) => {
-                                            if (err) {
-                                                OutputChannelLogging.logError(`could not write ${dashboardGroupFile}`, err);
-                                            }
-                                        });
-
-                                        if (checkResolve(++dashboardGroupCounter, dashboardGroupTotal, 'dashboard groups', fqdn)) {
-                                            return resolve();
-                                        }
-                                    } catch (err) {
-                                        OutputChannelLogging.logError(`error processing ${label} dashboard group ${dashboardGroupName}`, err);
-
-                                        if (checkResolve(++dashboardGroupCounter, dashboardGroupTotal, 'dashboard groups', fqdn)) {
-                                            return resolve();
-                                        }
-                                    }
-                                } catch (err) {
-                                    OutputChannelLogging.logError(`saving dashboard group file for ${dashboardGroup.name} from ${fqdn.label}`, err);
-
+                                innerProgress.report({
+                                    increment: innerIncrement,
+                                    message: `${i + 1}/${dashboard_groups.length}: ${dashboardGroup.name}`
+                                });
+    
+                                if (dashboardGroup.deleted_flag === 1) {
                                     if (checkResolve(++dashboardGroupCounter, dashboardGroupTotal, 'dashboard groups', fqdn)) {
                                         return resolve();
                                     }
+                                } else {
+                                    // get export
+                                    try {
+                                        const dashboardGroupName: string = sanitize(dashboardGroup.name);
+    
+                                        try {
+                                            const content: string = JSON.stringify(dashboardGroup, null, 2);
+    
+                                            const dashboardGroupFile = path.join(directory, dashboardGroupName + '.json');
+                                            fs.writeFile(dashboardGroupFile, content, (err) => {
+                                                if (err) {
+                                                    OutputChannelLogging.logError(`could not write ${dashboardGroupFile}`, err);
+                                                }
+                                            });
+    
+                                            if (checkResolve(++dashboardGroupCounter, dashboardGroupTotal, 'dashboard groups', fqdn)) {
+                                                return resolve();
+                                            }
+                                        } catch (err) {
+                                            OutputChannelLogging.logError(`error processing ${label} dashboard group ${dashboardGroupName}`, err);
+    
+                                            if (checkResolve(++dashboardGroupCounter, dashboardGroupTotal, 'dashboard groups', fqdn)) {
+                                                return resolve();
+                                            }
+                                        }
+                                    } catch (err) {
+                                        OutputChannelLogging.logError(`saving dashboard group file for ${dashboardGroup.name} from ${fqdn.label}`, err);
+    
+                                        if (checkResolve(++dashboardGroupCounter, dashboardGroupTotal, 'dashboard groups', fqdn)) {
+                                            return resolve();
+                                        }
+                                    }
                                 }
                             }
-                        });
+                            });
                     }
                 })();
             } catch (err) {

@@ -14,10 +14,12 @@ import { ServerServerBase } from './ServerServerBase';
 
 import path = require('path');
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
+import { PathUtils } from '../common/pathUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.compareServerServerDashboards': (uri: vscode.Uri, uris: vscode.Uri[]) => {
+        'hoganslendertanium.compareServerServerDashboards': () => {
             ServerServerDashboards.processDashboards(context);
         },
     });
@@ -94,7 +96,17 @@ class ServerServerDashboards extends ServerServerBase {
         });
 
         // analyze dashboards
-        Dashboards.analyzeDashboards(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
+        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir, true);
+
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'Dashboards',
+            leftDir: leftDir,
+            rightDir: rightDir,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzeDashboards',
+        }, context);
+
+        Dashboards.analyzeDashboards(diffItems, context);
     }
 
     static processServerDashboards(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
@@ -133,66 +145,78 @@ class ServerServerDashboards extends ServerServerBase {
                         OutputChannelLogging.log(`there are 0 dashboards for ${fqdn.label}`);
                         return resolve();
                     } else {
-                        for (var i = 0; i < dashboards.length; i++) {
-                            const dashboard = dashboards[i];
+                        await vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            cancellable: false
+                        }, async (innerProgress) => {
+                            innerProgress.report({
+                                increment: 0
+                            });
 
-                            if (i % 30 === 0 || i === dashboardTotal) {
-                                OutputChannelLogging.log(`processing ${i} of ${dashboardTotal}`);
-                            }
+                            const innerIncrement = 100 / dashboards.length;
 
-                            if (dashboard.deleted_flag === 1) {
-                                if (checkResolve(++dashboardCounter, dashboardTotal, 'dashboards', fqdn)) {
-                                    return resolve();
-                                }
-                            } else {
-                                // get export
-                                try {
-                                    const body = await RestClient.post(`${restBase}/export`, {
-                                        headers: {
-                                            session: session,
-                                        },
-                                        json: {
-                                            dashboards: {
-                                                include: [
-                                                    dashboard.name
-                                                ]
-                                            }
-                                        },
-                                        responseType: 'json',
-                                    }, allowSelfSignedCerts, httpTimeout);
+                            for (var i = 0; i < dashboards.length; i++) {
+                                const dashboard = dashboards[i];
 
-                                    const taniumDashboard: any = body.data.object_list.dashboards[0];
-                                    const dashboardName: string = sanitize(taniumDashboard.name);
+                                innerProgress.report({
+                                    increment: innerIncrement,
+                                    message: `${i + 1}/${dashboards.length}: ${dashboard.name}`
+                                });
 
+                                if (dashboard.deleted_flag === 1) {
+                                    if (checkResolve(++dashboardCounter, dashboardTotal, 'dashboards', fqdn)) {
+                                        return resolve();
+                                    }
+                                } else {
+                                    // get export
                                     try {
-                                        const content: string = JSON.stringify(taniumDashboard, null, 2);
+                                        const body = await RestClient.post(`${restBase}/export`, {
+                                            headers: {
+                                                session: session,
+                                            },
+                                            json: {
+                                                dashboards: {
+                                                    include: [
+                                                        dashboard.name
+                                                    ]
+                                                }
+                                            },
+                                            responseType: 'json',
+                                        }, allowSelfSignedCerts, httpTimeout);
 
-                                        const dashboardFile = path.join(directory, dashboardName + '.json');
-                                        fs.writeFile(dashboardFile, content, (err) => {
-                                            if (err) {
-                                                OutputChannelLogging.logError(`could not write ${dashboardFile}`, err);
-                                            }
+                                        const taniumDashboard: any = body.data.object_list.dashboards[0];
+                                        const dashboardName: string = sanitize(taniumDashboard.name);
+
+                                        try {
+                                            const content: string = JSON.stringify(taniumDashboard, null, 2);
+
+                                            const dashboardFile = path.join(directory, dashboardName + '.json');
+                                            fs.writeFile(dashboardFile, content, (err) => {
+                                                if (err) {
+                                                    OutputChannelLogging.logError(`could not write ${dashboardFile}`, err);
+                                                }
+
+                                                if (checkResolve(++dashboardCounter, dashboardTotal, 'dashboards', fqdn)) {
+                                                    return resolve();
+                                                }
+                                            });
+                                        } catch (err) {
+                                            OutputChannelLogging.logError(`error processing ${label} dashboard ${dashboardName}`, err);
 
                                             if (checkResolve(++dashboardCounter, dashboardTotal, 'dashboards', fqdn)) {
                                                 return resolve();
                                             }
-                                        });
+                                        }
                                     } catch (err) {
-                                        OutputChannelLogging.logError(`error processing ${label} dashboard ${dashboardName}`, err);
+                                        OutputChannelLogging.logError(`retrieving dashboardExport for ${dashboard.name} from ${fqdn.label}`, err);
 
                                         if (checkResolve(++dashboardCounter, dashboardTotal, 'dashboards', fqdn)) {
                                             return resolve();
                                         }
                                     }
-                                } catch (err) {
-                                    OutputChannelLogging.logError(`retrieving dashboardExport for ${dashboard.name} from ${fqdn.label}`, err);
-
-                                    if (checkResolve(++dashboardCounter, dashboardTotal, 'dashboards', fqdn)) {
-                                        return resolve();
-                                    }
                                 }
                             }
-                        }
+                        });
                     }
                 })();
             } catch (err) {

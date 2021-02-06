@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import * as commands from '../common/commands';
 import { OpenType } from "../common/enums";
 import { OutputChannelLogging } from "../common/logging";
-import { PathUtils } from '../common/pathUtils';
+import { DiffItemData, PathUtils } from '../common/pathUtils';
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { SigningUtils } from '../common/signingUtils';
@@ -19,25 +19,15 @@ import { SignContentFile } from './SignContentFile';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.analyzeSensors': (uri: vscode.Uri, uris: vscode.Uri[]) => {
-            Sensors.analyzeSensors(uris[0], uris[1], context);
+        'hoganslendertanium.analyzeSensors': (diffItems: DiffItemData) => {
+            Sensors.analyzeSensors(diffItems, context);
         },
     });
 }
 
 export class Sensors extends DiffBase {
-    static async analyzeSensors(left: vscode.Uri, right: vscode.Uri, context: vscode.ExtensionContext) {
+    static async analyzeSensors(diffItems: DiffItemData, context: vscode.ExtensionContext) {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-
-        const diffItems = await PathUtils.getDiffItems(left.fsPath, right.fsPath, true);
-
-        TaniumDiffProvider.currentProvider?.addDiffData({
-            label: 'Sensors',
-            leftDir: left.fsPath,
-            rightDir: right.fsPath,
-            diffItems: diffItems,
-            commandString: 'hoganslendertanium.analyzeSensors',
-        }, context);
 
         const panels = this.createPanels('Sensors', diffItems);
 
@@ -48,9 +38,6 @@ export class Sensors extends DiffBase {
         const config = vscode.workspace.getConfiguration('hoganslender.tanium');
         const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
         const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
-
-        OutputChannelLogging.log(`left dir: ${left.fsPath}`);
-        OutputChannelLogging.log(`right dir: ${right.fsPath}`);
 
         OutputChannelLogging.log(`missing sensors: ${diffItems.missing.length}`);
         OutputChannelLogging.log(`modified sensors: ${diffItems.modified.length}`);

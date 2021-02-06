@@ -15,6 +15,8 @@ import path = require('path');
 import { checkResolve } from '../common/checkResolve';
 import { ServerServerBase } from './ServerServerBase';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
+import { PathUtils } from '../common/pathUtils';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -95,7 +97,17 @@ class ServerServerUsers extends ServerServerBase {
         });
 
         // analyze content sets
-        Users.analyzeUsers(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
+        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir);
+
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'Users',
+            leftDir: leftDir,
+            rightDir: rightDir,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzeUsers',
+        }, context);
+
+        Users.analyzeUsers(diffItems, context);
     }
 
     static processServerUsers(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
@@ -134,55 +146,67 @@ class ServerServerUsers extends ServerServerBase {
                         OutputChannelLogging.log(`there are 0 users for ${fqdn.label}`);
                         resolve();
                     } else {
-                        // get groups map
-                        const groupMap = await Groups.getGroupMapById(allowSelfSignedCerts, httpTimeout, restBase, session);
+                        await vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            cancellable: false
+                        }, async (innerProgress) => {
+                            innerProgress.report({
+                                increment: 0
+                            });
 
-                        for (var i = 0; i < users.length; i++) {
-                            const user = users[i];
+                            const innerIncrement = 100 / users.length;
 
-                            if (i % 30 === 0 || i === userTotal) {
-                                OutputChannelLogging.log(`processing ${i} of ${userTotal}`);
-                            }
+                            // get groups map
+                            const groupMap = await Groups.getGroupMapById(allowSelfSignedCerts, httpTimeout, restBase, session);
 
-                            if (user.deleted_flag || user.locked_out !== 0) {
-                                if (checkResolve(++userCounter, userTotal, 'users', fqdn)) {
-                                    return resolve();
-                                }
-                            } else {
-                                // get export
-                                try {
-                                    const userName: string = sanitize(user.display_name.trim().length === 0 ? user.name : user.display_name);
+                            for (var i = 0; i < users.length; i++) {
+                                const user = users[i];
 
+                                innerProgress.report({
+                                    increment: innerIncrement,
+                                    message: `${i + 1}/${users.length}: ${user.name}`
+                                });
+
+                                if (user.deleted_flag || user.locked_out !== 0) {
+                                    if (checkResolve(++userCounter, userTotal, 'users', fqdn)) {
+                                        return resolve();
+                                    }
+                                } else {
+                                    // get export
                                     try {
-                                        const anonymizedUser = await Users.anonymizeUser(user, groupMap);
-                                        const content: string = JSON.stringify(anonymizedUser, null, 2);
+                                        const userName: string = sanitize(user.display_name.trim().length === 0 ? user.name : user.display_name);
 
-                                        const userFile = path.join(directory, userName + '.json');
-                                        fs.writeFile(userFile, content, (err) => {
-                                            if (err) {
-                                                OutputChannelLogging.logError(`could not write ${userFile}`, err);
-                                            }
+                                        try {
+                                            const anonymizedUser = await Users.anonymizeUser(user, groupMap);
+                                            const content: string = JSON.stringify(anonymizedUser, null, 2);
+
+                                            const userFile = path.join(directory, userName + '.json');
+                                            fs.writeFile(userFile, content, (err) => {
+                                                if (err) {
+                                                    OutputChannelLogging.logError(`could not write ${userFile}`, err);
+                                                }
+
+                                                if (checkResolve(++userCounter, userTotal, 'users', fqdn)) {
+                                                    return resolve();
+                                                }
+                                            });
+                                        } catch (err) {
+                                            OutputChannelLogging.logError(`error processing ${label} user ${userName}`, err);
 
                                             if (checkResolve(++userCounter, userTotal, 'users', fqdn)) {
                                                 return resolve();
                                             }
-                                        });
+                                        }
                                     } catch (err) {
-                                        OutputChannelLogging.logError(`error processing ${label} user ${userName}`, err);
+                                        OutputChannelLogging.logError(`saving user file for ${user.name} from ${fqdn.label}`, err);
 
                                         if (checkResolve(++userCounter, userTotal, 'users', fqdn)) {
                                             return resolve();
                                         }
                                     }
-                                } catch (err) {
-                                    OutputChannelLogging.logError(`saving user file for ${user.name} from ${fqdn.label}`, err);
-
-                                    if (checkResolve(++userCounter, userTotal, 'users', fqdn)) {
-                                        return resolve();
-                                    }
                                 }
                             }
-                        }
+                        });
                     }
                 })();
             } catch (err) {

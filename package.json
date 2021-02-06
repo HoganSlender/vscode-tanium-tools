@@ -36,6 +36,7 @@
 		"onCommand:hoganslendertanium.analyzeFilterGroups",
 		"onCommand:hoganslendertanium.analyzeManualGroups",
 		"onCommand:hoganslendertanium.analyzePackages",
+		"onCommand:hoganslendertanium.analyzeSavedActions",
 		"onCommand:hoganslendertanium.analyzeSavedQuestions",
 		"onCommand:hoganslendertanium.analyzeSensors",
 		"onCommand:hoganslendertanium.analyzeSolutions",
@@ -57,13 +58,12 @@
 		"onCommand:hoganslendertanium.compareServerServerFilterGroups",
 		"onCommand:hoganslendertanium.compareServerServerManualGroups",
 		"onCommand:hoganslendertanium.compareServerServerPackages",
+		"onCommand:hoganslendertanium.compareServerServerSavedActions",
 		"onCommand:hoganslendertanium.compareServerServerSavedQuestions",
 		"onCommand:hoganslendertanium.compareServerServerSensors",
 		"onCommand:hoganslendertanium.compareServerServerUserGroups",
 		"onCommand:hoganslendertanium.compareServerServerUsers",
 		"onCommand:hoganslendertanium.compareSolutions",
-		"onCommand:hoganslendertanium.generateExportFileMissingSensors",
-		"onCommand:hoganslendertanium.generateExportFileModifiedSensors",
 		"onCommand:hoganslendertanium.retrieveSensorByHash",
 		"onCommand:hoganslendertanium.retrieveSensorByName",
 		"onCommand:hoganslendertanium.signContentFile",
@@ -186,6 +186,11 @@
 				"category": "Tanium"
 			},
 			{
+				"command": "hoganslendertanium.analyzeSavedActions",
+				"title": "Analyze Saved Actions",
+				"category": "Tanium"
+			},
+			{
 				"command": "hoganslendertanium.analyzeSavedQuestions",
 				"title": "Analyze Saved Questions",
 				"category": "Tanium"
@@ -281,6 +286,11 @@
 				"category": "Tanium"
 			},
 			{
+				"command": "hoganslendertanium.compareServerServerSavedActions",
+				"title": "Compare Tanium Server Saved Questions",
+				"category": "Tanium"
+			},
+			{
 				"command": "hoganslendertanium.compareServerServerSavedQuestions",
 				"title": "Compare Tanium Server Saved Questions",
 				"category": "Tanium"
@@ -298,16 +308,6 @@
 			{
 				"command": "hoganslendertanium.compareServerServerUsers",
 				"title": "Compare Tanium Server Users",
-				"category": "Tanium"
-			},
-			{
-				"command": "hoganslendertanium.generateExportFileMissingSensors",
-				"title": "Generate Export File for Missing Sensors",
-				"category": "Tanium"
-			},
-			{
-				"command": "hoganslendertanium.generateExportFileModifiedSensors",
-				"title": "Generate Export File for Modified Sensors",
 				"category": "Tanium"
 			},
 			{
@@ -414,6 +414,10 @@
 					"when": "false"
 				},
 				{
+					"command": "hoganslendertanium.analyzeSavedActions",
+					"when": "false"
+				},
+				{
 					"command": "hoganslendertanium.analyzeSavedQuestions",
 					"when": "false"
 				},
@@ -427,14 +431,6 @@
 				},
 				{
 					"command": "hoganslendertanium.analyzeUsers",
-					"when": "false"
-				},
-				{
-					"command": "hoganslendertanium.generateExportFileMissingSensors",
-					"when": "false"
-				},
-				{
-					"command": "hoganslendertanium.generateExportFileModifiedSensors",
 					"when": "false"
 				},
 				{
@@ -443,106 +439,6 @@
 				}
 			],
 			"explorer/context": [
-				{
-					"command": "hoganslendertanium.analyzeContentSetPrivileges",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%ContentSetPrivileges$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeContentSetRoleMemberships",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection && resourceFilename =~ /.*%ContentSetRoleMemberships$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeContentSetRolePrivileges",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection && resourceFilename =~ /.*%ContentSetRolePrivileges$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeContentSetRoles",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%ContentSetRoles$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeContentSets",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%ContentSets$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeContentSetUserGroupRoleMemberships",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection && resourceFilename =~ /.*%ContentSetUserGroupRoleMemberships$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeActionGroups",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%ActionGroups$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeActionPolicyGroups",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%ActionPolicyGroups$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeAdHocGroups",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%AdHocGroups$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeDashboardGroups",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%DashboardGroups$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeDashboards",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%Dashboards$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeFilterGroups",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%FilterGroups$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeManualGroups",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%ManualGroups$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzePackages",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%Packages$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeSavedQuestions",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%SavedQuestions$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeSensors",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection&& resourceFilename =~ /.*%Sensors$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeUserGroups",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection && resourceFilename =~ /.*%UserGroups$/"
-				},
-				{
-					"command": "hoganslendertanium.analyzeUsers",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection && resourceFilename =~ /.*%Users$/"
-				},
-				{
-					"command": "hoganslendertanium.generateExportFileMissingSensors",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection"
-				},
-				{
-					"command": "hoganslendertanium.generateExportFileModifiedSensors",
-					"group": "3_compare@1",
-					"when": "explorerResourceIsFolder && listDoubleSelection"
-				},
 				{
 					"command": "hoganslendertanium.signContentFile",
 					"group": "3_compare@1",

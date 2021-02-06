@@ -13,7 +13,7 @@ export class TaniumDiffTreeItem extends vscode.TreeItem {
 
     public command = this.diffItemData.commandString
         ? {
-            arguments: [undefined, [vscode.Uri.file(this.diffItemData.leftDir), vscode.Uri.file(this.diffItemData.rightDir)]],
+            arguments: [this.diffItemData.diffItems],
             command: this.diffItemData.commandString,
             title: 'Open Comparison',
         }

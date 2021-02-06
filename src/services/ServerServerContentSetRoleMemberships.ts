@@ -16,6 +16,8 @@ import path = require('path');
 import { checkResolve } from '../common/checkResolve';
 import { ServerServerBase } from './ServerServerBase';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
+import { PathUtils } from '../common/pathUtils';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -97,8 +99,19 @@ class ServerServerContentSetRoleMemberships extends ServerServerBase {
         });
 
         // analyze content sets
-        ContentSetRoleMemberships.analyzeContentSetRoleMemberships(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
+        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir);
+
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'Content Set Role Memberships',
+            leftDir: leftDir,
+            rightDir: rightDir,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzeContentSetRoleMemberships',
+        }, context);
+
+        ContentSetRoleMemberships.analyzeContentSetRoleMemberships(diffItems, context);
     }
+
     static processServerContentSetRoleMemberships(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
         const restBase = `https://${fqdn.fqdn}/api/v2`;
 
@@ -141,58 +154,68 @@ class ServerServerContentSetRoleMemberships extends ServerServerBase {
                         OutputChannelLogging.log(`there are 0 content set role memberships for ${fqdn.label}`);
                         return resolve();
                     } else {
-                        var i = 0;
+                        await vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            cancellable: false
+                        }, async (innerProgress) => {
+                            innerProgress.report({
+                                increment: 0
+                            });
 
-                        content_set_role_memberships.forEach(contentSetRoleMembership => {
-                            i++;
+                            const innerIncrement = 100 / content_set_role_memberships.length;
 
-                            if (i % 30 === 0 || i === contentSetRoleMembershipTotal) {
-                                OutputChannelLogging.log(`processing ${i} of ${contentSetRoleMembershipTotal}`);
-                            }
+                            for (var i = 0; i < content_set_role_memberships.length; i++) {
+                                const contentSetRoleMembership = content_set_role_memberships[i];
 
-                            // check for deleted
-                            if (contentSetRoleMembership.deleted_flag === 1) {
-                                if (checkResolve(++contentSetRoleMembershipCounter, contentSetRoleMembershipTotal, 'content set role memberships', fqdn)) {
-                                    return resolve();
-                                }
-                            } else {
-                                var newObject: any = {};
+                                // check for deleted
+                                if (contentSetRoleMembership.deleted_flag === 1) {
+                                    if (checkResolve(++contentSetRoleMembershipCounter, contentSetRoleMembershipTotal, 'content set role memberships', fqdn)) {
+                                        return resolve();
+                                    }
+                                } else {
+                                    var newObject: any = {};
 
-                                newObject['content_set_role'] = {
-                                    name: contentSetRoles[contentSetRoleMembership.content_set_role.id]
-                                };
+                                    newObject['content_set_role'] = {
+                                        name: contentSetRoles[contentSetRoleMembership.content_set_role.id]
+                                    };
 
-                                newObject['user'] = users[contentSetRoleMembership.user.id];
+                                    newObject['user'] = users[contentSetRoleMembership.user.id];
 
-                                // get export
-                                try {
-                                    const contentSetRoleMembershipName: string = sanitize(newObject.user.name + '-' + newObject.content_set_role.name);
-
+                                    // get export
                                     try {
-                                        const content: string = JSON.stringify(newObject, null, 2);
+                                        const contentSetRoleMembershipName: string = sanitize(newObject.user.name + '-' + newObject.content_set_role.name);
 
-                                        const contentSetRoleMembershipFile = path.join(directory, contentSetRoleMembershipName + '.json');
-                                        fs.writeFile(contentSetRoleMembershipFile, content, (err) => {
-                                            if (err) {
-                                                OutputChannelLogging.logError(`could not write ${contentSetRoleMembershipFile}`, err);
-                                            }
+                                        innerProgress.report({
+                                            increment: innerIncrement,
+                                            message: `${i + 1}/${content_set_role_memberships.length}: ${contentSetRoleMembershipName}`
+                                        });
+
+                                        try {
+                                            const content: string = JSON.stringify(newObject, null, 2);
+
+                                            const contentSetRoleMembershipFile = path.join(directory, contentSetRoleMembershipName + '.json');
+                                            fs.writeFile(contentSetRoleMembershipFile, content, (err) => {
+                                                if (err) {
+                                                    OutputChannelLogging.logError(`could not write ${contentSetRoleMembershipFile}`, err);
+                                                }
+
+                                                if (checkResolve(++contentSetRoleMembershipCounter, contentSetRoleMembershipTotal, 'content set role memberships', fqdn)) {
+                                                    return resolve();
+                                                }
+                                            });
+                                        } catch (err) {
+                                            OutputChannelLogging.logError(`error processing ${label} content set role memberships ${contentSetRoleMembershipName}`, err);
 
                                             if (checkResolve(++contentSetRoleMembershipCounter, contentSetRoleMembershipTotal, 'content set role memberships', fqdn)) {
                                                 return resolve();
                                             }
-                                        });
+                                        }
                                     } catch (err) {
-                                        OutputChannelLogging.logError(`error processing ${label} content set role memberships ${contentSetRoleMembershipName}`, err);
+                                        OutputChannelLogging.logError(`saving content set role membership file for ${contentSetRoleMembership.name} from ${fqdn.label}`, err);
 
                                         if (checkResolve(++contentSetRoleMembershipCounter, contentSetRoleMembershipTotal, 'content set role memberships', fqdn)) {
                                             return resolve();
                                         }
-                                    }
-                                } catch (err) {
-                                    OutputChannelLogging.logError(`saving content set role membership file for ${contentSetRoleMembership.name} from ${fqdn.label}`, err);
-
-                                    if (checkResolve(++contentSetRoleMembershipCounter, contentSetRoleMembershipTotal, 'content set role memberships', fqdn)) {
-                                        return resolve();
                                     }
                                 }
                             }

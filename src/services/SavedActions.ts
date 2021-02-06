@@ -6,30 +6,28 @@ import * as commands from '../common/commands';
 import { OpenType } from '../common/enums';
 import { OutputChannelLogging } from '../common/logging';
 import { DiffItemData, PathUtils } from '../common/pathUtils';
-import { WebContentUtils } from '../common/webContentUtils';
-import { SigningKey } from '../types/signingKey';
-import { SignContentFile } from './SignContentFile';
-
 import { RestClient } from '../common/restClient';
 import { Session } from '../common/session';
 import { SigningUtils } from '../common/signingUtils';
+import { WebContentUtils } from '../common/webContentUtils';
+import { SigningKey } from '../types/signingKey';
+
 import { DiffBase } from './DiffBase';
-import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
-        'hoganslendertanium.analyzeDashboards': (diffItems: DiffItemData) => {
-            Dashboards.analyzeDashboards(diffItems, context);
+        'hoganslendertanium.analyzeSavedActions': (diffItems: DiffItemData) => {
+            SavedActions.analyzeSavedActions(diffItems, context);
         },
     });
 }
 
-export class Dashboards extends DiffBase {
-    static async analyzeDashboards(diffItems: DiffItemData, context: vscode.ExtensionContext) {
+export class SavedActions extends DiffBase {
+    static async analyzeSavedActions(diffItems: DiffItemData, context: vscode.ExtensionContext) {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 
-        const panels = this.createPanels('Dashboards', diffItems);
+        const panels = this.createPanels('Saved Actions', diffItems);
 
         // define output channel
         OutputChannelLogging.initialize();
@@ -39,12 +37,12 @@ export class Dashboards extends DiffBase {
         const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
         const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
 
-        OutputChannelLogging.log(`missing dashboards: ${diffItems.missing.length}`);
-        OutputChannelLogging.log(`modified dashboards: ${diffItems.modified.length}`);
-        OutputChannelLogging.log(`created dashboards: ${diffItems.created.length}`);
-        OutputChannelLogging.log(`unchanged dashboards: ${diffItems.unchanged.length}`);
+        OutputChannelLogging.log(`missing saved actions: ${diffItems.missing.length}`);
+        OutputChannelLogging.log(`modified saved actions: ${diffItems.modified.length}`);
+        OutputChannelLogging.log(`created saved actions: ${diffItems.created.length}`);
+        OutputChannelLogging.log(`unchanged saved actions: ${diffItems.unchanged.length}`);
 
-        const title = 'Dashboards';
+        const title = 'Saved Actions';
 
         panels.missing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
@@ -113,22 +111,8 @@ export class Dashboards extends DiffBase {
         panels.modified.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
-                    case 'initSigningKeys':
-                        // collect signing key data
-                        await SignContentFile.initSigningKeys(context);
-
-                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
-
-                        [panels.missing, panels.modified, panels.created].forEach(panel => {
-                            panel.webview.postMessage({
-                                command: 'signingKeysInitialized',
-                                signingKey: newSigningKeys[0].serverLabel,
-                            });
-                        });
-                        break;
-
                     case 'completeProcess':
-                        vscode.window.showInformationMessage("Selected dashboards have been migrated");
+                        vscode.window.showInformationMessage("Selected saved actions have been migrated");
                         break;
 
                     case 'transferItems':
@@ -138,12 +122,12 @@ export class Dashboards extends DiffBase {
                         const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
 
                         await this.transferItems(
-                            allowSelfSignedCerts,
-                            httpTimeout,
                             message.sourceFqdn,
                             message.sourceUsername,
                             message.sourcePassword,
                             signingKey!,
+                            allowSelfSignedCerts,
+                            httpTimeout,
                             message.items,
                         );
                         break;
@@ -167,22 +151,8 @@ export class Dashboards extends DiffBase {
         panels.missing.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
-                    case 'initSigningKeys':
-                        // collect signing key data
-                        await SignContentFile.initSigningKeys(context);
-
-                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
-
-                        [panels.missing, panels.modified, panels.created].forEach(panel => {
-                            panel.webview.postMessage({
-                                command: 'signingKeysInitialized',
-                                signingKey: newSigningKeys[0].serverLabel,
-                            });
-                        });
-                        break;
-
                     case 'completeProcess':
-                        vscode.window.showInformationMessage("Selected dashboards have been migrated");
+                        vscode.window.showInformationMessage("Selected saved actions have been migrated");
                         break;
 
                     case 'transferItems':
@@ -192,12 +162,12 @@ export class Dashboards extends DiffBase {
                         const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
 
                         await this.transferItems(
-                            allowSelfSignedCerts,
-                            httpTimeout,
                             message.sourceFqdn,
                             message.sourceUsername,
                             message.sourcePassword,
                             signingKey!,
+                            allowSelfSignedCerts,
+                            httpTimeout,
                             message.items,
                         );
                         break;
@@ -218,20 +188,6 @@ export class Dashboards extends DiffBase {
         panels.created.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
-                    case 'initSigningKeys':
-                        // collect signing key data
-                        await SignContentFile.initSigningKeys(context);
-
-                        const newSigningKeys: SigningKey[] = config.get<any>('signingPaths', []);
-
-                        [panels.missing, panels.modified, panels.created].forEach(panel => {
-                            panel.webview.postMessage({
-                                command: 'signingKeysInitialized',
-                                signingKey: newSigningKeys[0].serverLabel,
-                            });
-                        });
-                        break;
-
                     case "openFile":
                         vscode.commands.executeCommand('vscode.open', vscode.Uri.file(message.path), {
                             preview: false,
@@ -245,48 +201,36 @@ export class Dashboards extends DiffBase {
         });
     }
 
-    static async transferItems(
-        allowSelfSignedCerts: boolean,
-        httpTimeout: number,
+    static transferItems(
         sourceFqdn: FqdnSetting,
         sourceUsername: string,
         sourcePassword: string,
         signingKey: SigningKey,
-        items: any[],
+        allowSelfSignedCerts: boolean,
+        httpTimeout: number,
+        items: any[]
     ) {
         const p = new Promise<void>(async (resolve, reject) => {
             try {
-                const dashboardNames: string[] = [];
-                const savedQuestionNames: string[] = [];
-                items.forEach(item => {
+                // get names from each item
+                const savedActionNames: string[] = [];
+                items.forEach((item) => {
                     const path = item.path.split('~')[0];
-                    const name = item.name;
 
-                    // get content set data from file
-                    const dashboardFromFile: any = JSON.parse(fs.readFileSync(path, 'utf-8'));
-
-                    // process dashboards
-                    dashboardNames.push(dashboardFromFile.name);
-
-                    dashboardFromFile.saved_question_list.forEach((savedQuestion: any) => {
-                        savedQuestionNames.push(savedQuestion.name);
-                    });
+                    // get sensor from file
+                    const savedActionFromFile: any = JSON.parse(fs.readFileSync(path, 'utf-8'));
+                    savedActionNames.push(savedActionFromFile.name);
                 });
 
-                // generate export json
+                // generate json
                 var exportJson = {
-                    dashboards: {
-                        include: dashboardNames
-                    },
-                    saved_questions: {
-                        include: savedQuestionNames
+                    saved_actions: {
+                        include: savedActionNames
                     }
                 };
 
-                // get session
-                var session = await Session.getSession(allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceUsername, sourcePassword);
+                const session = await Session.getSession(allowSelfSignedCerts, httpTimeout, sourceFqdn, sourceUsername, sourcePassword);
 
-                // get saved_questions export so we can get needed sensors
                 const body = await RestClient.post(`https://${sourceFqdn.fqdn}/api/v2/export`, {
                     headers: {
                         session: session,
@@ -295,9 +239,12 @@ export class Dashboards extends DiffBase {
                     responseType: 'json',
                 }, allowSelfSignedCerts, httpTimeout);
 
+                // generate import json
+                var importJson = body.data;
+
                 // save file to base
                 const baseDir = PathUtils.getPath(PathUtils.getPath(items[0].path.split('~')[0]));
-                const filePath = await SigningUtils.writeFileAndSign(body.data, signingKey, baseDir);
+                const filePath = await SigningUtils.writeFileAndSign(importJson, signingKey, baseDir);
 
                 // open file
                 vscode.commands.executeCommand('vscode.open', vscode.Uri.file(filePath), {
@@ -306,8 +253,9 @@ export class Dashboards extends DiffBase {
                 });
 
                 resolve();
+
             } catch (err) {
-                OutputChannelLogging.logError('error transferring content set privileges', err);
+                OutputChannelLogging.logError('error in transferItems', err);
                 reject();
             }
         });

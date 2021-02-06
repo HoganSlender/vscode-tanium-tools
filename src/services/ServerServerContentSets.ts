@@ -14,6 +14,8 @@ import path = require('path');
 import { checkResolve } from '../common/checkResolve';
 import { ServerServerBase } from './ServerServerBase';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
+import { PathUtils } from '../common/pathUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -95,7 +97,17 @@ export class ServerServerContentSets extends ServerServerBase {
         });
 
         // analyze content sets
-        ContentSets.analyzeContentSets(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
+        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir);
+
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'Content Sets',
+            leftDir: leftDir,
+            rightDir: rightDir,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzeContentSets',
+        }, context);
+
+        ContentSets.analyzeContentSets(diffItems, context);
     }
 
     static processServerContentSets(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
@@ -139,49 +151,59 @@ export class ServerServerContentSets extends ServerServerBase {
                         OutputChannelLogging.log(`there are 0 content sets for ${fqdn.label}`);
                         resolve();
                     } else {
-                        var i = 0;
+                        await vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            cancellable: false
+                        }, async (innerProgress) => {
+                            innerProgress.report({
+                                increment: 0
+                            });
 
-                        content_sets.forEach(contentSet => {
-                            i++;
+                            const innerIncrement = 100 / content_sets.length;
 
-                            if (i % 30 === 0 || i === contentSetTotal) {
-                                OutputChannelLogging.log(`processing ${i} of ${contentSetTotal}`);
-                            }
+                            for (var i = 0; i < content_sets.length; i++) {
+                                const contentSet = content_sets[i];
 
-                            if (contentSet.deleted_flag === 1) {
-                                if (checkResolve(++contentSetCounter, contentSetTotal, 'content sets', fqdn)) {
-                                    return resolve();
-                                }
-                            } else {
-                                // get export
-                                try {
-                                    const contentSetName: string = sanitize(contentSet.name);
+                                innerProgress.report({
+                                    increment: innerIncrement,
+                                    message: `${i + 1}/${content_sets.length}: ${contentSet.name}`
+                                });
 
-                                    try {
-                                        const content: string = JSON.stringify(contentSet, null, 2);
-
-                                        const contentSetFile = path.join(directory, contentSetName + '.json');
-                                        fs.writeFile(contentSetFile, content, (err) => {
-                                            if (err) {
-                                                OutputChannelLogging.logError(`could not write ${contentSetFile}`, err);
-                                            }
-                                        });
-
-                                        if (checkResolve(++contentSetCounter, contentSetTotal, 'content sets', fqdn)) {
-                                            return resolve();
-                                        }
-                                    } catch (err) {
-                                        OutputChannelLogging.logError(`error processing ${label} content set ${contentSetName}`, err);
-
-                                        if (checkResolve(++contentSetCounter, contentSetTotal, 'content sets', fqdn)) {
-                                            return resolve();
-                                        }
-                                    }
-                                } catch (err) {
-                                    OutputChannelLogging.logError(`saving content set file for ${contentSet.name} from ${fqdn.label}`, err);
-
+                                if (contentSet.deleted_flag === 1) {
                                     if (checkResolve(++contentSetCounter, contentSetTotal, 'content sets', fqdn)) {
                                         return resolve();
+                                    }
+                                } else {
+                                    // get export
+                                    try {
+                                        const contentSetName: string = sanitize(contentSet.name);
+
+                                        try {
+                                            const content: string = JSON.stringify(contentSet, null, 2);
+
+                                            const contentSetFile = path.join(directory, contentSetName + '.json');
+                                            fs.writeFile(contentSetFile, content, (err) => {
+                                                if (err) {
+                                                    OutputChannelLogging.logError(`could not write ${contentSetFile}`, err);
+                                                }
+                                            });
+
+                                            if (checkResolve(++contentSetCounter, contentSetTotal, 'content sets', fqdn)) {
+                                                return resolve();
+                                            }
+                                        } catch (err) {
+                                            OutputChannelLogging.logError(`error processing ${label} content set ${contentSetName}`, err);
+
+                                            if (checkResolve(++contentSetCounter, contentSetTotal, 'content sets', fqdn)) {
+                                                return resolve();
+                                            }
+                                        }
+                                    } catch (err) {
+                                        OutputChannelLogging.logError(`saving content set file for ${contentSet.name} from ${fqdn.label}`, err);
+
+                                        if (checkResolve(++contentSetCounter, contentSetTotal, 'content sets', fqdn)) {
+                                            return resolve();
+                                        }
                                     }
                                 }
                             }

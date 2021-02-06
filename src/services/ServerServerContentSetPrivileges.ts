@@ -14,6 +14,8 @@ import path = require('path');
 import { checkResolve } from '../common/checkResolve';
 import { ServerServerBase } from './ServerServerBase';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
+import { PathUtils } from '../common/pathUtils';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -95,7 +97,18 @@ export class ServerServerContentSetPrivileges extends ServerServerBase {
         });
 
         // analyze content sets
-        ContentSetPrivileges.analyzeContentSetPrivileges(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
+
+        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir);
+
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'Content Set Privileges',
+            leftDir: leftDir,
+            rightDir: rightDir,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzeContentSetPrivileges',
+        }, context);
+
+        ContentSetPrivileges.analyzeContentSetPrivileges(diffItems, context);
     }
 
     static processServerContentSetPrivileges(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
@@ -139,44 +152,54 @@ export class ServerServerContentSetPrivileges extends ServerServerBase {
                         OutputChannelLogging.log(`there are 0 content set privileges for ${fqdn.label}`);
                         return resolve();
                     } else {
-                        var i = 0;
+                        await vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            cancellable: false
+                        }, async (innerProgress) => {
+                            innerProgress.report({
+                                increment: 0
+                            });
 
-                        content_set_privileges.forEach(contentSetPrivilege => {
-                            i++;
+                            const innerIncrement = 100 / content_set_privileges.length;
 
-                            if (i % 30 === 0 || i === contentSetPrivilegeTotal) {
-                                OutputChannelLogging.log(`processing ${i} of ${contentSetPrivilegeTotal}`);
-                            }
+                            for(var i = 0; i < content_set_privileges.length; i++) {
+                                const contentSetPrivilege = content_set_privileges[i];
 
-                            // get export
-                            try {
-                                const contentSetPrivilegeName: string = sanitize(contentSetPrivilege.name);
+                                innerProgress.report({
+                                    increment: innerIncrement,
+                                    message: `${i + 1}/${content_set_privileges.length}: ${contentSetPrivilege.name}`
+                                });
 
+                                // get export
                                 try {
-                                    const content: string = JSON.stringify(contentSetPrivilege, null, 2);
+                                    const contentSetPrivilegeName: string = sanitize(contentSetPrivilege.name);
 
-                                    const contentSetPrivilegeFile = path.join(directory, contentSetPrivilegeName + '.json');
-                                    fs.writeFile(contentSetPrivilegeFile, content, (err) => {
-                                        if (err) {
-                                            OutputChannelLogging.logError(`could not write ${contentSetPrivilegeFile}`, err);
-                                        }
+                                    try {
+                                        const content: string = JSON.stringify(contentSetPrivilege, null, 2);
+
+                                        const contentSetPrivilegeFile = path.join(directory, contentSetPrivilegeName + '.json');
+                                        fs.writeFile(contentSetPrivilegeFile, content, (err) => {
+                                            if (err) {
+                                                OutputChannelLogging.logError(`could not write ${contentSetPrivilegeFile}`, err);
+                                            }
+
+                                            if (checkResolve(++contentSetPrivilegesCounter, contentSetPrivilegeTotal, 'content set privileges', fqdn)) {
+                                                return resolve();
+                                            }
+                                        });
+                                    } catch (err) {
+                                        OutputChannelLogging.logError(`error processing ${label} content set privilege ${contentSetPrivilegeName}`, err);
 
                                         if (checkResolve(++contentSetPrivilegesCounter, contentSetPrivilegeTotal, 'content set privileges', fqdn)) {
                                             return resolve();
                                         }
-                                    });
+                                    }
                                 } catch (err) {
-                                    OutputChannelLogging.logError(`error processing ${label} content set privilege ${contentSetPrivilegeName}`, err);
+                                    OutputChannelLogging.logError(`saving content set privilege file for ${contentSetPrivilege.name} from ${fqdn.label}`, err);
 
                                     if (checkResolve(++contentSetPrivilegesCounter, contentSetPrivilegeTotal, 'content set privileges', fqdn)) {
                                         return resolve();
                                     }
-                                }
-                            } catch (err) {
-                                OutputChannelLogging.logError(`saving content set privilege file for ${contentSetPrivilege.name} from ${fqdn.label}`, err);
-
-                                if (checkResolve(++contentSetPrivilegesCounter, contentSetPrivilegeTotal, 'content set privileges', fqdn)) {
-                                    return resolve();
                                 }
                             }
                         });

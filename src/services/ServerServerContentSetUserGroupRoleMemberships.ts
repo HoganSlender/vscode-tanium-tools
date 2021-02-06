@@ -16,6 +16,8 @@ import path = require('path');
 import { checkResolve } from '../common/checkResolve';
 import { ServerServerBase } from './ServerServerBase';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
+import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
+import { PathUtils } from '../common/pathUtils';
 
 export function activate(context: vscode.ExtensionContext) {
     commands.register(context, {
@@ -97,7 +99,17 @@ class ServerServerContentSetUserGroupRoleMemberships extends ServerServerBase {
         });
 
         // analyze content sets
-        ContentSetUserGroupRoleMemberships.analyzeContentSetUserGroupRoleMemberships(vscode.Uri.file(leftDir), vscode.Uri.file(rightDir), context);
+        const diffItems = await PathUtils.getDiffItems(leftDir, rightDir);
+
+        TaniumDiffProvider.currentProvider?.addDiffData({
+            label: 'Content Set User Group Role Memberships',
+            leftDir: leftDir,
+            rightDir: rightDir,
+            diffItems: diffItems,
+            commandString: 'hoganslendertanium.analyzeContentSetUserGroupRoleMemberships',
+        }, context);
+
+        ContentSetUserGroupRoleMemberships.analyzeContentSetUserGroupRoleMemberships(diffItems, context);
     }
 
     static processServerContentSetUserGroupRoleMemberships(allowSelfSignedCerts: boolean, httpTimeout: number, fqdn: FqdnSetting, username: string, password: string, directory: string, label: string) {
@@ -139,59 +151,69 @@ class ServerServerContentSetUserGroupRoleMemberships extends ServerServerBase {
                         OutputChannelLogging.log(`there are 0 content set user group role memberships for ${fqdn.label}`);
                         return resolve();
                     } else {
-                        var i = 0;
+                        await vscode.window.withProgress({
+                            location: vscode.ProgressLocation.Notification,
+                            cancellable: false
+                        }, async (innerProgress) => {
+                            innerProgress.report({
+                                increment: 0
+                            });
 
-                        content_set_user_group_role_memberships.forEach(contentSetUserGroupRoleMembership => {
-                            i++;
+                            const innerIncrement = 100 /content_set_user_group_role_memberships.length;
 
-                            if (i % 30 === 0 || i === contentSetUserGroupRoleMembershipTotal) {
-                                OutputChannelLogging.log(`processing ${i} of ${contentSetUserGroupRoleMembershipTotal}`);
-                            }
+                            for (var i = 0; i < content_set_user_group_role_memberships.length; i++) {
+                                const contentSetUserGroupRoleMembership = content_set_user_group_role_memberships[i];
 
-                            // check for deleted
-                            if (contentSetUserGroupRoleMembership.deleted_flag === 1) {
-                                if (checkResolve(++contentSetUserGroupRoleMembershipCounter, contentSetUserGroupRoleMembershipTotal, 'content set user group role memberships', fqdn)) {
-                                    return resolve();
-                                }
-                            } else {
-                                var newObject: any = {
-                                    content_set_role: {
-                                        name: contentSetRoleMap[contentSetUserGroupRoleMembership.content_set_role.id]
-                                    },
-                                    user_group: {
-                                        name: userGroupMap[contentSetUserGroupRoleMembership.user_group.id]
+                                // check for deleted
+                                if (contentSetUserGroupRoleMembership.deleted_flag === 1) {
+                                    if (checkResolve(++contentSetUserGroupRoleMembershipCounter, contentSetUserGroupRoleMembershipTotal, 'content set user group role memberships', fqdn)) {
+                                        return resolve();
                                     }
-                                };
-
-                                try {
-                                    const contentSetName: string = sanitize(newObject.user_group.name + ' ' + newObject.content_set_role.name);
+                                } else {
+                                    var newObject: any = {
+                                        content_set_role: {
+                                            name: contentSetRoleMap[contentSetUserGroupRoleMembership.content_set_role.id]
+                                        },
+                                        user_group: {
+                                            name: userGroupMap[contentSetUserGroupRoleMembership.user_group.id]
+                                        }
+                                    };
 
                                     try {
+                                        const contentSetName: string = sanitize(newObject.user_group.name + ' ' + newObject.content_set_role.name);
 
-                                        const content: string = JSON.stringify(newObject, null, 2);
+                                        innerProgress.report({
+                                            increment: innerIncrement,
+                                            message: `${i + 1}/${content_set_user_group_role_memberships.length}: ${contentSetName}`
+                                        });
+        
+                                        try {
 
-                                        const contentSetFile = path.join(directory, contentSetName + '.json');
-                                        fs.writeFile(contentSetFile, content, (err) => {
-                                            if (err) {
-                                                OutputChannelLogging.logError(`could not write ${contentSetFile}`, err);
-                                            }
+                                            const content: string = JSON.stringify(newObject, null, 2);
+
+                                            const contentSetFile = path.join(directory, contentSetName + '.json');
+                                            fs.writeFile(contentSetFile, content, (err) => {
+                                                if (err) {
+                                                    OutputChannelLogging.logError(`could not write ${contentSetFile}`, err);
+                                                }
+
+                                                if (checkResolve(++contentSetUserGroupRoleMembershipCounter, contentSetUserGroupRoleMembershipTotal, 'content set user group role memberships', fqdn)) {
+                                                    return resolve();
+                                                }
+                                            });
+                                        } catch (err) {
+                                            OutputChannelLogging.logError(`error processing ${label} content set user group role membership ${contentSetName}`, err);
 
                                             if (checkResolve(++contentSetUserGroupRoleMembershipCounter, contentSetUserGroupRoleMembershipTotal, 'content set user group role memberships', fqdn)) {
                                                 return resolve();
                                             }
-                                        });
+                                        }
                                     } catch (err) {
-                                        OutputChannelLogging.logError(`error processing ${label} content set user group role membership ${contentSetName}`, err);
+                                        OutputChannelLogging.logError(`saving content set user group role membership file for ${contentSetUserGroupRoleMembership.name} from ${fqdn.label}`, err);
 
                                         if (checkResolve(++contentSetUserGroupRoleMembershipCounter, contentSetUserGroupRoleMembershipTotal, 'content set user group role memberships', fqdn)) {
                                             return resolve();
                                         }
-                                    }
-                                } catch (err) {
-                                    OutputChannelLogging.logError(`saving content set user group role membership file for ${contentSetUserGroupRoleMembership.name} from ${fqdn.label}`, err);
-
-                                    if (checkResolve(++contentSetUserGroupRoleMembershipCounter, contentSetUserGroupRoleMembershipTotal, 'content set user group role memberships', fqdn)) {
-                                        return resolve();
                                     }
                                 }
                             }

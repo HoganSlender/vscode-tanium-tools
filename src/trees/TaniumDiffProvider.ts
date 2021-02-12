@@ -35,7 +35,7 @@ export interface SolutionDiffItemData {
     leftDir: string,
     rightDir: string,
     diffItems?: DiffItemData,
-    commandString?: string
+    commandString: string
 }
 
 export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTreeItem> {
@@ -101,8 +101,15 @@ export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTre
 
         // walk the diffs and see if folder exists; if not then remove diff item data
         this.solutionContentSetDatas.forEach(contentSetData => {
-            if (!fs.existsSync(contentSetData.xmlContentSetFile) || !fs.existsSync(contentSetData.leftDir) || !fs.existsSync(contentSetData.rightDir)) {
-                deletes.push(contentSetData);
+            // check for xmlContentSetFile for blank
+            if (contentSetData.xmlContentSetFile.length === 0) {
+                if (!fs.existsSync(contentSetData.leftDir) || !fs.existsSync(contentSetData.rightDir)) {
+                    deletes.push(contentSetData);
+                }
+            } else {
+                if (!fs.existsSync(contentSetData.xmlContentSetFile) || !fs.existsSync(contentSetData.leftDir) || !fs.existsSync(contentSetData.rightDir)) {
+                    deletes.push(contentSetData);
+                }
             }
         });
 
@@ -213,8 +220,8 @@ export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTre
             if (fs.existsSync(solutionContentSetData.rightDir)) {
                 rimraf.sync(solutionContentSetData.rightDir);
             }
-            
-            if (fs.existsSync(solutionContentSetData.xmlContentSetFile)){
+
+            if (fs.existsSync(solutionContentSetData.xmlContentSetFile)) {
                 fs.unlinkSync(solutionContentSetData.xmlContentSetFile);
             }
         });

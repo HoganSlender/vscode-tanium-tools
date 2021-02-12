@@ -665,6 +665,7 @@ class ContentSet extends ServerServerBase {
 					label: 'Dashboards',
 					leftDir: contentSubDir,
 					rightDir: serverSubDir,
+					commandString: 'hoganslendertanium.analyzeSolutions'
 				}, context);
 
 				// verify sub dir
@@ -745,6 +746,7 @@ class ContentSet extends ServerServerBase {
 					label: 'Dashboard Groups',
 					leftDir: contentSubDir,
 					rightDir: serverSubDir,
+					commandString: 'hoganslendertanium.analyzeSolutions'
 				}, context);
 
 				// verify sub dir
@@ -831,6 +833,7 @@ class ContentSet extends ServerServerBase {
 					label: 'White Listed Urls',
 					leftDir: contentSubDir,
 					rightDir: serverSubDir,
+					commandString: 'hoganslendertanium.analyzeSolutions'
 				}, context);
 
 				// verify sub dir
@@ -896,6 +899,7 @@ class ContentSet extends ServerServerBase {
 					label: 'Sensors',
 					leftDir: contentSubDir,
 					rightDir: serverSubDir,
+					commandString: 'hoganslendertanium.analyzeSolutions'
 				}, context);
 
 				// verify sub dir
@@ -969,6 +973,7 @@ class ContentSet extends ServerServerBase {
 					label: 'Saved Questions',
 					leftDir: contentSubDir,
 					rightDir: serverSubDir,
+					commandString: 'hoganslendertanium.analyzeSolutions'
 				}, context);
 
 				// verify sub dir
@@ -1091,6 +1096,7 @@ class ContentSet extends ServerServerBase {
 					label: 'Saved Actions',
 					leftDir: contentSubDir,
 					rightDir: serverSubDir,
+					commandString: 'hoganslendertanium.analyzeSolutions'
 				}, context);
 
 				// verify sub dir
@@ -1183,6 +1189,7 @@ class ContentSet extends ServerServerBase {
 					label: 'Packages',
 					leftDir: contentSubDir,
 					rightDir: serverSubDir,
+					commandString: 'hoganslendertanium.analyzeSolutions'
 				}, context);
 
 				// verify sub dir
@@ -1270,6 +1277,7 @@ class ContentSet extends ServerServerBase {
 					label: 'Content Set Role Privileges',
 					leftDir: contentSubDir,
 					rightDir: serverSubDir,
+					commandString: 'hoganslendertanium.analyzeSolutions'
 				}, context);
 
 				// verify sub dir
@@ -1344,6 +1352,7 @@ class ContentSet extends ServerServerBase {
 					label: 'Content Set Privileges',
 					leftDir: contentSubDir,
 					rightDir: serverSubDir,
+					commandString: 'hoganslendertanium.analyzeSolutions'
 				}, context);
 
 				// verify sub dir
@@ -1426,6 +1435,7 @@ class ContentSet extends ServerServerBase {
 					label: 'Content Set Roles',
 					leftDir: contentSubDir,
 					rightDir: serverSubDir,
+					commandString: 'hoganslendertanium.analyzeSolutions'
 				}, context);
 
 				// verify sub dir
@@ -1508,6 +1518,7 @@ class ContentSet extends ServerServerBase {
 					label: 'Content Sets',
 					leftDir: contentSubDir,
 					rightDir: serverSubDir,
+					commandString: 'hoganslendertanium.analyzeSolutions'
 				}, context);
 
 				// verify sub dir

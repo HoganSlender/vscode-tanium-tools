@@ -103,7 +103,7 @@ export class TaniumSolutionNodeProvider implements vscode.TreeDataProvider<Taniu
                         dark: path.join(this.resourcePath, 'dark', 'folder.svg')
                     }));
 
-                    children.push(new TaniumSolutionTreeItem(element, 'Modules', 'Tanium module content', vscode.TreeItemCollapsibleState.Collapsed, {
+                    children.push(new TaniumSolutionTreeItem(element, 'Modules', 'Tanium module content', vscode.TreeItemCollapsibleState.Expanded, {
                         light: path.join(this.resourcePath, 'light', 'folder.svg'),
                         dark: path.join(this.resourcePath, 'dark', 'folder.svg')
                     }));
@@ -241,6 +241,10 @@ export class TaniumSolutionNodeProvider implements vscode.TreeDataProvider<Taniu
                             break;
 
                         case 'Servers':
+                            children.push(new TaniumSolutionTreeItem(element, 'Compare Endpoint Configurations', 'Compare Tanium Server EndpointConfigurations', vscode.TreeItemCollapsibleState.None, undefined, {
+                                "command": "hoganslendertanium.compareServerServerEndpointConfigurations",
+                                "title": "Compare Tanium Server Endpoint Configurations",
+                            }));
                             break;
                     }
                     break;

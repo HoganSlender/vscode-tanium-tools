@@ -35,6 +35,7 @@
 		"onCommand:hoganslendertanium.analyzeDashboards",
 		"onCommand:hoganslendertanium.analyzeFilterGroups",
 		"onCommand:hoganslendertanium.analyzeManualGroups",
+		"onCommand:hoganslendertanium.analyzeModules",
 		"onCommand:hoganslendertanium.analyzePackages",
 		"onCommand:hoganslendertanium.analyzeSavedActions",
 		"onCommand:hoganslendertanium.analyzeSavedQuestions",
@@ -55,6 +56,7 @@
 		"onCommand:hoganslendertanium.compareServerServerAdHocGroups",
 		"onCommand:hoganslendertanium.compareServerServerDashboardGroups",
 		"onCommand:hoganslendertanium.compareServerServerDashboards",
+		"onCommand:hoganslendertanium.compareServerServerEndpointConfigurations",
 		"onCommand:hoganslendertanium.compareServerServerFilterGroups",
 		"onCommand:hoganslendertanium.compareServerServerManualGroups",
 		"onCommand:hoganslendertanium.compareServerServerPackages",
@@ -268,6 +270,11 @@
 			{
 				"command": "hoganslendertanium.compareServerServerDashboards",
 				"title": "Compare Tanium Server Dashboards",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.compareServerServerEndpointConfigurations",
+				"title": "Compare Tanium Server Endpoint Configurations",
 				"category": "Tanium"
 			},
 			{
@@ -492,7 +499,7 @@
 	"devDependencies": {
 		"@types/glob": "^7.1.3",
 		"@types/mocha": "^8.0.0",
-		"@types/node": "^14.0.27",
+		"@types/node": "^14.14.27",
 		"@types/rimraf": "^3.0.0",
 		"@types/vscode": "^1.46.0",
 		"@typescript-eslint/eslint-plugin": "^3.10.1",

@@ -475,7 +475,7 @@
 				"hoganslender.tanium.signingPaths": {
 					"type": "array",
 					"default": [],
-					"description": "Path definitions for KeyUtility.exe and private key file"
+					"description": "Path definitions for KeyUtility.exe and private key file per Tanium Server"
 				},
 				"hoganslender.tanium.usernames": {
 					"type": "array",

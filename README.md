@@ -13,9 +13,52 @@ Contains miscellaneous commands to work with Tanium servers in Visual Studio Cod
   - [0.0.3](#003)
   - [0.0.2](#002)
   - [0.0.1](#001)
-- [Recommended Extensions](#recommended-extensions)
-## Features
-### Content Set Compare
+# Configuration Settings
+There are several configuration settings that control how the extension functions:
+
+<table border=1>
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Allow Self Signed Certs</td>
+      <td>Set to true if communicating with servers that are using a self signed certificate.</td>
+    </tr>
+    <tr>
+      <td>Fqdns</td>
+      <td>List of recently used Tanium server FQDNs.</td>
+    </tr>
+    <tr>
+      <td>Http Timeout Seconds</td>
+      <td>Number of seconds for HTTP request timeout.</td>
+    </tr>
+    <tr>
+      <td>Signing Paths</td>
+      <td>Path definitions for KeyUtility.exe and private key file per Tanium Server</td>
+    </tr>
+    <tr>
+      <td>Usernames</td>
+      <td>List of recently used Tanium usernames.</td>
+    </tr>
+  </tbody>
+</table>
+<br/>
+
+![Configuration Settings](./media/configuration_settings.gif)
+
+# Features
+## Content Set Compare
+### Login
+You first have to log into the target Tanium server to retrieve imported content sets and to compare to what is available. Click 'Compare Solutions' in the TANIUM COMPARE explorer and 
+
+![Compare Solutions](./media/compare_solutions_login.gif)
+
+### Compare Content Set to Tanium Server Content
+Once you have logged in, click the content set that you want to compare. The extension will 
 
 ### Server to Server Compare
 
@@ -45,5 +88,3 @@ Contains miscellaneous commands to work with Tanium servers in Visual Studio Cod
 * Release of `Tanium: Compare Tanium Server Sensors` command
 * Release of `Tanium: Sign Content` context menu
 * Release of `Tanium: Generate Export File for Missing Sensors` context menu
-## Recommended Extensions
-- [Diff Folders](https://marketplace.visualstudio.com/items?itemName=L13RARY.l13-diff) - Extremely useful in comparing Tanium content

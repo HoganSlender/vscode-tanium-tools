@@ -34,7 +34,13 @@ export class TransformContentSetRole extends TransformBase {
                 var result: any = {};
 
                 this.transpond(contentSetRole, result, 'name');
-                this.transpond(contentSetRole, result, 'description');
+                
+                if ('description' in contentSetRole && contentSetRole['description'].length === 0) {
+                    this.deleteProperty(contentSetRole, 'description');
+                } else {
+                    this.transpond(contentSetRole, result, 'description');
+                }
+                
                 this.transpond(contentSetRole, result, 'reserved_name');
                 this.transpondStringToInteger(contentSetRole, result, 'deny_flag');
                 this.transpondStringToInteger(contentSetRole, result, 'all_content_sets_flag');

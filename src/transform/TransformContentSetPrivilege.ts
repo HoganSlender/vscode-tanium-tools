@@ -7,7 +7,8 @@ export class TransformContentSetPrivilege extends TransformBase {
     public static transformCs(contentSetPrivilege: any) {
         const p = new Promise<any>(async (resolve, reject) => {
             try {
-                delete contentSetPrivilege.taas_internal_flag;
+                this.deleteProperty(contentSetPrivilege, 'taas_internal_flag');
+                this.deleteProperty(contentSetPrivilege, 'explicit_only_flag');
 
                 if ('meta_data' in contentSetPrivilege) {
                     if (contentSetPrivilege['meta_data'] === '') {

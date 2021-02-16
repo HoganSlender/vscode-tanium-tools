@@ -240,7 +240,6 @@ class ContentSet extends ServerServerBase {
 												if (Array.isArray(target)) {
 													await vscode.window.withProgress({
 														location: vscode.ProgressLocation.Notification,
-														title: 'Dashboards',
 														cancellable: false
 													}, async (innerProgress) => {
 														innerProgress.report({ increment: 0 });
@@ -253,7 +252,7 @@ class ContentSet extends ServerServerBase {
 
 															innerProgress.report({
 																increment: innerIncrement,
-																message: dashboard.name
+																message: `${i + 1}/${target.length}: ${dashboard.name}`
 															});
 
 															await this.processDashboard(dashboard, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
@@ -275,7 +274,6 @@ class ContentSet extends ServerServerBase {
 												if (Array.isArray(target)) {
 													await vscode.window.withProgress({
 														location: vscode.ProgressLocation.Notification,
-														title: 'Dashboard Groups',
 														cancellable: false
 													}, async (innerProgress) => {
 														innerProgress.report({ increment: 0 });
@@ -288,7 +286,7 @@ class ContentSet extends ServerServerBase {
 
 															innerProgress.report({
 																increment: innerIncrement,
-																message: dashboardGroup.name
+																message: `${i + 1}/${target.length}: ${dashboardGroup.name}`
 															});
 
 															await this.processDashboardGroup(dashboardGroup, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
@@ -314,7 +312,6 @@ class ContentSet extends ServerServerBase {
 												if (Array.isArray(target)) {
 													await vscode.window.withProgress({
 														location: vscode.ProgressLocation.Notification,
-														title: 'White Listed Urls',
 														cancellable: false
 													}, async (innerProgress) => {
 														innerProgress.report({ increment: 0 });
@@ -327,7 +324,7 @@ class ContentSet extends ServerServerBase {
 
 															innerProgress.report({
 																increment: innerIncrement,
-																message: whiteListedUrl.url
+																message: `${i + 1}/${target.length}: ${whiteListedUrl.url}`
 															});
 
 															await this.processWhiteListedUrl(whiteListedUrl, contentDir, serverDir, context, serverWhiteListedUrlsMap);
@@ -349,7 +346,6 @@ class ContentSet extends ServerServerBase {
 												if (Array.isArray(target)) {
 													await vscode.window.withProgress({
 														location: vscode.ProgressLocation.Notification,
-														title: 'Sensors',
 														cancellable: false
 													}, async (innerProgress) => {
 														innerProgress.report({ increment: 0 });
@@ -362,7 +358,7 @@ class ContentSet extends ServerServerBase {
 
 															innerProgress.report({
 																increment: innerIncrement,
-																message: sensor.name
+																message: `${i + 1}/${target.length}: ${sensor.name}`
 															});
 
 															await this.processSensor(sensor, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
@@ -384,7 +380,6 @@ class ContentSet extends ServerServerBase {
 												if (Array.isArray(target)) {
 													await vscode.window.withProgress({
 														location: vscode.ProgressLocation.Notification,
-														title: 'Saved Questions',
 														cancellable: false
 													}, async (innerProgress) => {
 														innerProgress.report({ increment: 0 });
@@ -397,7 +392,7 @@ class ContentSet extends ServerServerBase {
 
 															innerProgress.report({
 																increment: innerIncrement,
-																message: savedQuestion.name
+																message: `${i + 1}/${target.length}: ${savedQuestion.name}`
 															});
 
 															await this.processSavedQuestion(savedQuestion, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
@@ -419,7 +414,6 @@ class ContentSet extends ServerServerBase {
 												if (Array.isArray(target)) {
 													await vscode.window.withProgress({
 														location: vscode.ProgressLocation.Notification,
-														title: 'Saved Actions',
 														cancellable: false
 													}, async (innerProgress) => {
 														innerProgress.report({ increment: 0 });
@@ -432,7 +426,7 @@ class ContentSet extends ServerServerBase {
 
 															innerProgress.report({
 																increment: innerIncrement,
-																message: savedAction.name
+																message: `${i + 1}/${target.length}: ${savedAction.name}`
 															});
 
 															await this.processSavedAction(savedAction, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
@@ -454,7 +448,6 @@ class ContentSet extends ServerServerBase {
 												if (Array.isArray(target)) {
 													await vscode.window.withProgress({
 														location: vscode.ProgressLocation.Notification,
-														title: 'Packages',
 														cancellable: false
 													}, async (innerProgress) => {
 														innerProgress.report({ increment: 0 });
@@ -467,7 +460,7 @@ class ContentSet extends ServerServerBase {
 
 															innerProgress.report({
 																increment: innerIncrement,
-																message: taniumPackage.name
+																message: `${i + 1}/${target.length}: ${taniumPackage.name}`
 															});
 
 															await this.processPackage(taniumPackage, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
@@ -494,7 +487,6 @@ class ContentSet extends ServerServerBase {
 												if (Array.isArray(target)) {
 													await vscode.window.withProgress({
 														location: vscode.ProgressLocation.Notification,
-														title: 'Content Set Role Privileges',
 														cancellable: false
 													}, async (innerProgress) => {
 														innerProgress.report({ increment: 0 });
@@ -507,7 +499,7 @@ class ContentSet extends ServerServerBase {
 
 															innerProgress.report({
 																increment: innerIncrement,
-																message: contentSetRolePrivilege.content_set.name + '-' + contentSetRolePrivilege.content_set_role.name + '-' + contentSetRolePrivilege.content_set_privilege.name
+																message: `${i + 1}/${target.length}: ${contentSetRolePrivilege.content_set.name + '-' + contentSetRolePrivilege.content_set_role.name + '-' + contentSetRolePrivilege.content_set_privilege.name}`
 															});
 
 															await this.processContentSetRolePrivilege(contentSetRolePrivilege, contentDir, serverDir, context, serverContentSetRolePrivilegesMap);
@@ -529,7 +521,6 @@ class ContentSet extends ServerServerBase {
 												if (Array.isArray(target)) {
 													await vscode.window.withProgress({
 														location: vscode.ProgressLocation.Notification,
-														title: 'Content Set Privileges',
 														cancellable: false
 													}, async (innerProgress) => {
 														innerProgress.report({ increment: 0 });
@@ -542,7 +533,7 @@ class ContentSet extends ServerServerBase {
 
 															innerProgress.report({
 																increment: innerIncrement,
-																message: contentSetPrivilege.name
+																message: `${i + 1}/${target.length}: ${contentSetPrivilege.name}`
 															});
 
 															await this.processContentSetPrivilege(contentSetPrivilege, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
@@ -564,7 +555,6 @@ class ContentSet extends ServerServerBase {
 												if (Array.isArray(target)) {
 													await vscode.window.withProgress({
 														location: vscode.ProgressLocation.Notification,
-														title: 'Content Set Roles',
 														cancellable: false
 													}, async (innerProgress) => {
 														innerProgress.report({ increment: 0 });
@@ -577,7 +567,7 @@ class ContentSet extends ServerServerBase {
 
 															innerProgress.report({
 																increment: innerIncrement,
-																message: contentSetRole.name
+																message: `${i + 1}/${target.length}: ${contentSetRole.name}`
 															});
 
 															await this.processContentSetRole(contentSetRole, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
@@ -599,7 +589,6 @@ class ContentSet extends ServerServerBase {
 												if (Array.isArray(target)) {
 													await vscode.window.withProgress({
 														location: vscode.ProgressLocation.Notification,
-														title: 'Content Set',
 														cancellable: false
 													}, async (innerProgress) => {
 														innerProgress.report({ increment: 0 });
@@ -612,7 +601,7 @@ class ContentSet extends ServerServerBase {
 
 															innerProgress.report({
 																increment: innerIncrement,
-																message: contentSet.name
+																message: `${i + 1}/${target.length}: ${contentSet.name}`
 															});
 
 															await this.processContentSet(contentSet, contentDir, serverDir, fqdn, session, allowSelfSignedCerts, httpTimeout, context);
@@ -1067,7 +1056,7 @@ class ContentSet extends ServerServerBase {
 				});
 			} catch (err) {
 				OutputChannelLogging.logError(`error in processSavedQuestion`, err);
-				return reject();
+				return resolve();
 			}
 		});
 

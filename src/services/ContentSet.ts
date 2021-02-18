@@ -923,7 +923,7 @@ class ContentSet extends ServerServerBase {
 					}
 
 					// get server data
-					const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/sensors/by-name/${sensor.name}`, {
+					const body = await RestClient.get(`https://${fqdn.fqdn}/api/v2/sensors/by-hash/${sensor.what_hash}`, {
 						headers: {
 							session: session
 						},

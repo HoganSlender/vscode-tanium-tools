@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { DiffItemData } from '../common/pathUtils';
+import { ServerServerBase } from './ServerServerBase';
 
 export interface DiffPanels {
     missing: vscode.WebviewPanel,
@@ -14,7 +15,7 @@ export interface SolutionDiffPanels {
     unchanged: vscode.WebviewPanel
 }
 
-export class DiffBase {
+export class DiffBase extends ServerServerBase {
     static createPanels(label: string, diffItems: DiffItemData): DiffPanels {
         var result: DiffPanels = {
             missing: vscode.window.createWebviewPanel(

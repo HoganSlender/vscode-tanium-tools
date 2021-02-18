@@ -28,7 +28,6 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 class ServerServerContentSetRoleMemberships extends ServerServerBase {
-
     static async processContentSetRoleMemberships(context: vscode.ExtensionContext) {
         // define output channel
         OutputChannelLogging.initialize();
@@ -63,6 +62,22 @@ class ServerServerContentSetRoleMemberships extends ServerServerBase {
         OutputChannelLogging.log(`right fqdn: ${rightFqdn.label}`);
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
+
+        // validate credentials
+        if (await this.invalidCredentials(allowSelfSignedCerts, httpTimeout, [
+            {
+                fqdn: leftFqdn,
+                username: leftUsername,
+                password: leftPassword
+            },
+            {
+                fqdn: rightFqdn,
+                username: rightUsername,
+                password: rightPassword
+            }
+        ])) {
+            return;
+        }
 
         // create folders
         const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn.label)}%ContentSetRoleMemberships`);

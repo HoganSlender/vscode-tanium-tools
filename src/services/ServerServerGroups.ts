@@ -73,6 +73,22 @@ class ServerServerGroups extends ServerServerBase {
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
+        // validate credentials
+        if (await this.invalidCredentials(allowSelfSignedCerts, httpTimeout, [
+            {
+                fqdn: leftFqdn,
+                username: leftUsername,
+                password: leftPassword
+            },
+            {
+                fqdn: rightFqdn,
+                username: rightUsername,
+                password: rightPassword
+            }
+        ])) {
+            return;
+        }
+
         // create folders
         var folderLabel = '%Groups';
 

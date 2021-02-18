@@ -180,6 +180,16 @@ export class Solutions extends DiffBase {
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
 
+        // validate credentials
+        if (await this.invalidCredentials(allowSelfSignedCerts, httpTimeout, [
+            {
+                fqdn: leftFqdn,
+                username: leftUsername,
+                password: leftPassword
+            }
+        ])) {
+            return;
+        }
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
@@ -224,6 +234,16 @@ export class Solutions extends DiffBase {
         OutputChannelLogging.log(`left username: ${leftUsername}`);
         OutputChannelLogging.log(`left password: XXXXXXXX`);
 
+        // validate credentials
+        if (await this.invalidCredentials(allowSelfSignedCerts, httpTimeout, [
+            {
+                fqdn: leftFqdn,
+                username: leftUsername,
+                password: leftPassword
+            }
+        ])) {
+            return;
+        }
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,

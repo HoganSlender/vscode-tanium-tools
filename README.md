@@ -1,18 +1,17 @@
-# HoganSlender's Tanium Tools
+<h1>HoganSlender's Tanium Tools</h1>
 
 Contains miscellaneous commands to work with Tanium servers in Visual Studio Code.
 
-- [HoganSlender's Tanium Tools](#hoganslenders-tanium-tools)
 - [Configuration Settings](#configuration-settings)
   - [Fqdns and Usernames](#fqdns-and-usernames)
-    - [**First time entry**](#first-time-entry)
-    - [**Entries after first time**](#entries-after-first-time)
+    - [First time entry](#first-time-entry)
+    - [Entries after first time](#entries-after-first-time)
 - [Features](#features)
   - [Content Set Compare](#content-set-compare)
-    - [**Login**](#login)
-    - [**Compare Content Set to Tanium Server Content**](#compare-content-set-to-tanium-server-content)
-    - [**Server to Server Compare**](#server-to-server-compare)
-    - [**Sign Content File**](#sign-content-file)
+    - [Login](#login)
+    - [Compare Content Set to Tanium Server Content](#compare-content-set-to-tanium-server-content)
+    - [Server to Server Compare](#server-to-server-compare)
+    - [Sign Content File](#sign-content-file)
   - [Known Issues](#known-issues)
   - [Release Notes](#release-notes)
     - [1.0.0](#100)
@@ -62,11 +61,11 @@ There are several configuration settings that control how the extension function
 ## Fqdns and Usernames
 As you enter Tanium Server FQDNs and Usernames, they are stored for later use.
 
-### **First time entry**
+### First time entry
 
 ![Entering Credentials First Time](./media/entering_credentials.gif)
 
-### **Entries after first time**
+### Entries after first time
 
 Once the fqdn or username has been entered, they will show up in drop down list for selection. 
 
@@ -81,13 +80,13 @@ To remove or change order, edit the settings.json.
 ## Content Set Compare
 This functionality will show you any changes that exist between Tanium content and what exists in your Tanium server.
 
-### **Login**
+### Login
 
 You first have to log into the target Tanium server to retrieve imported content sets and to compare to what is available. Click 'Compare Solutions' in the `TANIUM COMPARE` explorer window on left side to connect to Tanium server to do a comparison. Any content that has an update will be marked with an exclamation mark (!).
 
 ![Compare Solutions](./media/compare_solutions_login.gif)
 
-### **Compare Content Set to Tanium Server Content**
+### Compare Content Set to Tanium Server Content
 Once you have logged in, click the content set that you want to compare. The extension will will retrieve the content from Tanium and will pull the content from the targeted Tanium server.
 
 Once content has been fully processed, differences will be listed under `TANIUM DIFFERENCES` explorer window by content type. The numbers in parentheses show type of difference by count:
@@ -98,9 +97,9 @@ Double clicking an item in any list will up either the source for the file (new 
 
 ![testing](./media/compare_content_set_to_server_content.gif)
 
-### **Server to Server Compare**
+### Server to Server Compare
 
-### **Sign Content File**
+### Sign Content File
 ## Known Issues
 * none
 ## Release Notes

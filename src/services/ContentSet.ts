@@ -4,7 +4,6 @@ import * as fs from 'fs';
 import * as he from 'he';
 import * as path from 'path';
 import { sanitize } from "sanitize-filename-ts";
-import * as url from 'url';
 import * as vscode from 'vscode';
 
 import * as commands from '../common/commands';
@@ -31,6 +30,7 @@ import { TransformDashboard } from '../transform/TransformDashboard';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 const diffMatchPatch = require('diff-match-patch');
+import { URL } from 'url';
 
 export function activate(context: vscode.ExtensionContext) {
 	commands.register(context, {
@@ -73,8 +73,19 @@ class ContentSet extends ServerServerBase {
 		OutputChannelLogging.log(`username: ${username}`);
 		OutputChannelLogging.log(`password: XXXXXXXX`);
 
+        // validate credentials
+        if (await this.invalidCredentials(allowSelfSignedCerts, httpTimeout, [
+            {
+                fqdn: fqdn,
+                username: username,
+                password: password
+            }
+        ])) {
+            return;
+        }
+
 		// get filename from url
-		const parsed = url.parse(contentUrl);
+		const parsed = new URL(contentUrl);
 		const contentFilename = sanitize(path.basename(parsed.pathname!));
 		OutputChannelLogging.log(`downloading ${contentFilename}`);
 
@@ -1599,8 +1610,19 @@ class ContentSet extends ServerServerBase {
 		OutputChannelLogging.log(`username: ${username}`);
 		OutputChannelLogging.log(`password: XXXXXXXX`);
 
+        // validate credentials
+        if (await this.invalidCredentials(allowSelfSignedCerts, httpTimeout, [
+            {
+                fqdn: fqdn,
+                username: username,
+                password: password
+            }
+        ])) {
+            return;
+        }
+
 		// get filename from url
-		const parsed = url.parse(contentUrl);
+		const parsed = new URL(contentUrl);
 		const contentFilename = sanitize(path.basename(parsed.pathname!));
 		OutputChannelLogging.log(`downloading ${contentFilename}`);
 

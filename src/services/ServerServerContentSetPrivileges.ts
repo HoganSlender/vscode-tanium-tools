@@ -62,6 +62,22 @@ export class ServerServerContentSetPrivileges extends ServerServerBase {
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
+        // validate credentials
+        if (await this.invalidCredentials(allowSelfSignedCerts, httpTimeout, [
+            {
+                fqdn: leftFqdn,
+                username: leftUsername,
+                password: leftPassword
+            },
+            {
+                fqdn: rightFqdn,
+                username: rightUsername,
+                password: rightPassword
+            }
+        ])) {
+            return;
+        }
+
         // create folders
         const leftDir = path.join(folderPath!, `1 - ${sanitize(leftFqdn.label)}%ContentSetPrivileges`);
         const rightDir = path.join(folderPath!, `2 - ${sanitize(rightFqdn.label)}%ContentSetPrivileges`);
@@ -97,7 +113,6 @@ export class ServerServerContentSetPrivileges extends ServerServerBase {
         });
 
         // analyze content sets
-
         const diffItems = await PathUtils.getDiffItems(leftDir, rightDir);
 
         TaniumDiffProvider.currentProvider?.addDiffData({
@@ -162,7 +177,7 @@ export class ServerServerContentSetPrivileges extends ServerServerBase {
 
                             const innerIncrement = 100 / content_set_privileges.length;
 
-                            for(var i = 0; i < content_set_privileges.length; i++) {
+                            for (var i = 0; i < content_set_privileges.length; i++) {
                                 const contentSetPrivilege = content_set_privileges[i];
 
                                 innerProgress.report({

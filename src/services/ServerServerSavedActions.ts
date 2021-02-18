@@ -61,6 +61,22 @@ export class ServerServerSavedActions extends ServerServerBase {
         OutputChannelLogging.log(`right username: ${rightUsername}`);
         OutputChannelLogging.log(`right password: XXXXXXXX`);
 
+        // validate credentials
+        if (await this.invalidCredentials(allowSelfSignedCerts, httpTimeout, [
+            {
+                fqdn: leftFqdn,
+                username: leftUsername,
+                password: leftPassword
+            },
+            {
+                fqdn: rightFqdn,
+                username: rightUsername,
+                password: rightPassword
+            }
+        ])) {
+            return;
+        }
+
         // create folders
         const leftDir = path.join(folderPath.uri.fsPath, `1 - ${sanitize(leftFqdn.label)}%SavedActions`);
         const rightDir = path.join(folderPath.uri.fsPath, `2 - ${sanitize(rightFqdn.label)}%SavedActions`);

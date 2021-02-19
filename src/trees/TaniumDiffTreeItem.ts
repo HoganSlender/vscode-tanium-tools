@@ -11,7 +11,7 @@ export class TaniumDiffTreeItem extends vscode.TreeItem {
             : diffItemData.label);
     }
 
-    public command = this.diffItemData.label === undefined
+    public command = this.diffItemData.commandString !== 'hoganslendertanium.analyzeSolutions'
         ? {
             arguments: [this.diffItemData.diffItems],
             command: this.diffItemData.commandString,

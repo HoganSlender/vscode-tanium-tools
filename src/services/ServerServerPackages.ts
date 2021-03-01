@@ -121,6 +121,7 @@ class ServerServerPackages extends ServerServerBase {
             rightDir: rightDir,
             diffItems: diffItems,
             commandString: 'hoganslendertanium.analyzePackages',
+            useLabel: false
         }, context);
 
         Packages.analyzePackages(diffItems, context);
@@ -180,10 +181,6 @@ class ServerServerPackages extends ServerServerBase {
                                     increment: innerIncrement,
                                     message: `${i + 1}/${package_specs.length}: ${packageSpec.name}`
                                 });
-
-                                if (i % 30 === 0 || i === packageSpecTotal) {
-                                    OutputChannelLogging.log(`processing ${i} of ${packageSpecTotal}`);
-                                }
 
                                 if (packageSpec.deleted_flag) {
                                     if (checkResolve(++packageSpecCounter, packageSpecTotal, 'packages', fqdn)) {

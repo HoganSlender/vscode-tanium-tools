@@ -122,6 +122,7 @@ class ServerServerContentSetRoleMemberships extends ServerServerBase {
             rightDir: rightDir,
             diffItems: diffItems,
             commandString: 'hoganslendertanium.analyzeContentSetRoleMemberships',
+            useLabel: false
         }, context);
 
         ContentSetRoleMemberships.analyzeContentSetRoleMemberships(diffItems, context);

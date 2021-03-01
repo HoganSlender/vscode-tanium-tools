@@ -120,6 +120,7 @@ export class ServerServerSavedQuestions extends ServerServerBase {
             rightDir: rightDir,
             diffItems: diffItems,
             commandString: 'hoganslendertanium.analyzeSavedQuestions',
+            useLabel: false
         }, context);
 
         SavedQuestions.analyzeSavedQuestions(diffItems, context);

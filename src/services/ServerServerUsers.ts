@@ -121,6 +121,7 @@ class ServerServerUsers extends ServerServerBase {
             rightDir: rightDir,
             diffItems: diffItems,
             commandString: 'hoganslendertanium.analyzeUsers',
+            useLabel: false
         }, context);
 
         Users.analyzeUsers(diffItems, context);

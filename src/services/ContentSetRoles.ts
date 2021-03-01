@@ -213,6 +213,22 @@ export class ContentSetRoles extends DiffBase {
                         });
                         break;
 
+                    case 'completeProcess':
+                        vscode.window.showInformationMessage("Selected packages have been migrated");
+                        break;
+
+                    case 'transferItems':
+                        // get signing keys
+                        const signingKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
+
+                        await this.transferItems(
+                            signingKey!,
+                            message.items,
+                        );
+                        break;
+
                     case "openFile":
                         vscode.commands.executeCommand('vscode.open', vscode.Uri.file(message.path), {
                             preview: false,
@@ -229,7 +245,7 @@ export class ContentSetRoles extends DiffBase {
     static async transferItems(
         signingKey: SigningKey,
         items: any[]
-        ) {
+    ) {
         const p = new Promise<void>(async (resolve, reject) => {
             try {
                 // generate json

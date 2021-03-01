@@ -1,6 +1,5 @@
 import * as pug from 'pug';
 import * as vscode from 'vscode';
-import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 
 import { OpenType } from './enums';
 
@@ -22,6 +21,7 @@ export interface WebContentData {
     usernames?: string,
     signingKeys?: string,
     readOnly?: boolean,
+    showDirectFileTransfer?: boolean,
 }
 
 export class WebContentUtils {

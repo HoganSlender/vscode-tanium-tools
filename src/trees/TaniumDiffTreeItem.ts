@@ -11,14 +11,15 @@ export class TaniumDiffTreeItem extends vscode.TreeItem {
             : diffItemData.label);
     }
 
-    public command = this.diffItemData.commandString !== 'hoganslendertanium.analyzeSolutions'
+    //public command = (this.diffItemData.commandString !== 'hoganslendertanium.analyzeSolutions' && this.diffItemData.commandString !== 'hoganslendertanium.analyzeModules')
+    public command = this.diffItemData.useLabel
         ? {
-            arguments: [this.diffItemData.diffItems],
+            arguments: [this.diffItemData.label, this.diffItemData.diffItems],
             command: this.diffItemData.commandString,
             title: 'Open Comparison',
         }
         : {
-            arguments: [this.diffItemData.label, this.diffItemData.diffItems],
+            arguments: [this.diffItemData.diffItems],
             command: this.diffItemData.commandString,
             title: 'Open Comparison',
         };

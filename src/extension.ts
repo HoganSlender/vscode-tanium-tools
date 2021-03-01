@@ -1,6 +1,7 @@
 import { ExtensionContext } from 'vscode';
 
 import { OutputChannelLogging } from './common/logging';
+import * as connect from './services/Connect';
 import * as contentSet from './services/ContentSet';
 import * as contentSetPrivileges from './services/ContentSetPrivileges';
 import * as contentSetRoleMemberships from './services/ContentSetRoleMemberships';
@@ -17,6 +18,7 @@ import * as SavedActions from './services/SavedActions';
 import * as savedQuestions from './services/SavedQuestions';
 import * as sensor from './services/Sensor';
 import * as sensors from './services/Sensors';
+import * as serverServerConnectConfigurations from './services/ServerServerConnectConfigurations';
 import * as serverServerContentSetPrivileges from './services/ServerServerContentSetPrivileges';
 import * as serverServerContentSetRoleMemberships from './services/ServerServerContentSetRoleMemberships';
 import * as serverServerContentSetRolePrivileges from './services/ServerServerContentSetRolePrivileges';
@@ -45,6 +47,7 @@ import * as taniumNodeProvider from './trees/TaniumSolutionNodeProvider';
 export function activate(context: ExtensionContext) {
 	OutputChannelLogging.initialize();
 
+	connect.activate(context);
 	contentSet.activate(context);
 	contentSetPrivileges.activate(context);
 	contentSetRoleMemberships.activate(context);
@@ -61,6 +64,7 @@ export function activate(context: ExtensionContext) {
 	savedQuestions.activate(context);
 	sensor.activate(context);
 	sensors.activate(context);
+	serverServerConnectConfigurations.activate(context);
 	serverServerContentSetPrivileges.activate(context);
 	serverServerContentSetRoleMemberships.activate(context);
 	serverServerContentSetRolePrivileges.activate(context);

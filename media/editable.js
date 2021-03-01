@@ -3,6 +3,9 @@ const vscode = acquireVsCodeApi();
 var divOpenType = document.getElementById('divOpenType');
 var openType = divOpenType.innerHTML;
 
+var divMyType = document.getElementById('divMyType');
+var myType = divMyType.innerHTML;
+
 var divType = document.getElementById('divType');
 console.log(divType.innerHTML);
 
@@ -106,23 +109,23 @@ if (!showServerInfo) {
     }
 
     if (divSourceFqdn !== null) {
-        processInputFqdn(fqdns, divSourceFqdn, 'taniumSourceFqdnSelect', false);
+        processInputFqdn(fqdns, divSourceFqdn, 'taniumSourceFqdnSelect', myType === 'Created');
     }
 
     if (divSourceUsername !== null) {
-        processInput(usernames, divSourceUsername, 'taniumSourceUsernameSelect', false);
+        processInput(usernames, divSourceUsername, 'taniumSourceUsernameSelect', myType === 'Created');
     }
 
     if (divDestFqdn !== null) {
-        processInputFqdn(fqdns, divDestFqdn, 'taniumDestFqdnSelect', true);
+        processInputFqdn(fqdns, divDestFqdn, 'taniumDestFqdnSelect', myType !== 'Created');
     }
 
     if (divDestUsername !== null) {
-        processInput(usernames, divDestUsername, 'taniumDestUsernameSelect', true);
+        processInput(usernames, divDestUsername, 'taniumDestUsernameSelect', myType !== 'Created');
     }
 
     if (divSigningKey !== null) {
-        processInput(signingKeys, divSigningKey, 'taniumSigningKeySelect', true);
+        processInput(signingKeys, divSigningKey, 'taniumSigningKeySelect', myType !== 'Created');
     }
 
     var sourcePassword = document.getElementById("sourcePassword");
@@ -357,8 +360,7 @@ function processItems() {
         if (rItems.options.length !== 0) {
             var option = rItems.options[0];
 
-            // send message
-            vscode.postMessage({
+            const message = {
                 command: 'transferItem',
                 sourceFqdn: sourceFqdn,
                 sourceUsername: sourceUsername,
@@ -369,7 +371,16 @@ function processItems() {
                 path: option.value,
                 name: option.text,
                 signingServerLabel: signingKey,
-            });
+            };
+
+            var directFileTransferSelect = document.getElementById("directFileTransfer");
+
+            if (directFileTransferSelect !== null) {
+                message['directFileTransfer'] = directFileTransferSelect.value === 'Yes';
+            }
+        
+            // send message
+            vscode.postMessage(message);
         } else {
             vscode.postMessage({
                 command: 'completeProcess'

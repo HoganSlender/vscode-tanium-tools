@@ -120,6 +120,7 @@ export class ServerServerSavedActions extends ServerServerBase {
             rightDir: rightDir,
             diffItems: diffItems,
             commandString: 'hoganslendertanium.analyzeSavedActions',
+            useLabel: false
         }, context);
 
         SavedActions.analyzeSavedActions(diffItems, context);
@@ -179,10 +180,6 @@ export class ServerServerSavedActions extends ServerServerBase {
                                     increment: innerIncrement,
                                     message: `${i + 1}/${saved_actions.length}: ${savedAction.name}`
                                 });
-
-                                if (i % 30 === 0 || i === savedActionTotal) {
-                                    OutputChannelLogging.log(`processing ${i} of ${savedActionTotal}`);
-                                }
 
                                 if (savedAction.hidden_flag) {
                                     if (checkResolve(++savedActionCounter, savedActionTotal, 'saved actions', fqdn)) {

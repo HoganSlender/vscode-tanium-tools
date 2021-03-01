@@ -35,7 +35,8 @@ export interface SolutionDiffItemData {
     leftDir: string,
     rightDir: string,
     diffItems?: DiffItemData,
-    commandString: string
+    commandString: string,
+    useLabel: boolean
 }
 
 export class TaniumDiffProvider implements vscode.TreeDataProvider<TaniumDiffTreeItem> {

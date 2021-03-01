@@ -123,6 +123,7 @@ class ServerServerContentSetRolePrivileges extends ServerServerBase {
             rightDir: rightDir,
             diffItems: diffItems,
             commandString: 'hoganslendertanium.analyzeContentSetRolePrivileges',
+            useLabel: false
         }, context);
 
         ContentSetRolePrivileges.analyzeContentSetRolePrivileges(diffItems, context);

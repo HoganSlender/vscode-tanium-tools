@@ -120,6 +120,7 @@ class ServerServerDashboards extends ServerServerBase {
             rightDir: rightDir,
             diffItems: diffItems,
             commandString: 'hoganslendertanium.analyzeDashboards',
+            useLabel: false
         }, context);
 
         Dashboards.analyzeDashboards(diffItems, context);

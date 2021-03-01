@@ -31,6 +31,7 @@
 		"onCommand:hoganslendertanium.analyzeActionGroups",
 		"onCommand:hoganslendertanium.analyzeActionPolicyGroups",
 		"onCommand:hoganslendertanium.analyzeAdHocGroups",
+		"onCommand:hoganslendertanium.analyzeConnect",
 		"onCommand:hoganslendertanium.analyzeDashboardGroups",
 		"onCommand:hoganslendertanium.analyzeDashboards",
 		"onCommand:hoganslendertanium.analyzeFilterGroups",
@@ -54,6 +55,7 @@
 		"onCommand:hoganslendertanium.compareServerServerActionGroups",
 		"onCommand:hoganslendertanium.compareServerServerActionPolicyGroups",
 		"onCommand:hoganslendertanium.compareServerServerAdHocGroups",
+		"onCommand:hoganslendertanium.compareServerServerConnectConfigurations",
 		"onCommand:hoganslendertanium.compareServerServerDashboardGroups",
 		"onCommand:hoganslendertanium.compareServerServerDashboards",
 		"onCommand:hoganslendertanium.compareServerServerEndpointConfigurations",
@@ -260,6 +262,11 @@
 			{
 				"command": "hoganslendertanium.compareServerServerAdHocGroups",
 				"title": "Compare Tanium Server Groups - Ad Hoc",
+				"category": "Tanium"
+			},
+			{
+				"command": "hoganslendertanium.compareServerServerConnectConfigurations",
+				"title": "Compare Tanium Server Connect Configurations",
 				"category": "Tanium"
 			},
 			{

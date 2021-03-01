@@ -241,7 +241,11 @@ export class TaniumSolutionNodeProvider implements vscode.TreeDataProvider<Taniu
                             break;
 
                         case 'Servers':
-                            children.push(new TaniumSolutionTreeItem(element, 'Compare Endpoint Configurations', 'Compare Tanium Server EndpointConfigurations', vscode.TreeItemCollapsibleState.None, undefined, {
+                            children.push(new TaniumSolutionTreeItem(element, 'Compare Connect', 'Compare Tanium Server Connect', vscode.TreeItemCollapsibleState.None, undefined, {
+                                "command": "hoganslendertanium.compareServerServerConnectConfigurations",
+                                "title": "Compare Tanium Server Connect",
+                            }));
+                            children.push(new TaniumSolutionTreeItem(element, 'Compare Endpoint Configurations', 'Compare Tanium Server Endpoint Configurations', vscode.TreeItemCollapsibleState.None, undefined, {
                                 "command": "hoganslendertanium.compareServerServerEndpointConfigurations",
                                 "title": "Compare Tanium Server Endpoint Configurations",
                             }));

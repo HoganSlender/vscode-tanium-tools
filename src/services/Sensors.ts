@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as fs from 'fs';
-import { title } from 'process';
 import * as vscode from 'vscode';
 
 import * as commands from '../common/commands';
@@ -12,7 +11,6 @@ import { Session } from '../common/session';
 import { SigningUtils } from '../common/signingUtils';
 import { WebContentUtils } from '../common/webContentUtils';
 import { FqdnSetting } from '../parameter-collection/fqdnSetting';
-import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { SigningKey } from "../types/signingKey";
 import { DiffBase } from './DiffBase';
 import { SignContentFile } from './SignContentFile';
@@ -43,6 +41,8 @@ export class Sensors extends DiffBase {
         OutputChannelLogging.log(`modified sensors: ${diffItems.modified.length}`);
         OutputChannelLogging.log(`created sensors: ${diffItems.created.length}`);
         OutputChannelLogging.log(`unchanged sensors: ${diffItems.unchanged.length}`);
+
+        const title = 'Sensors';
 
         panels.missing.webview.html = WebContentUtils.getMissingWebContent({
             myTitle: title,
@@ -75,7 +75,7 @@ export class Sensors extends DiffBase {
             showServerInfo: 1,
             showSourceServer: true,
             showSourceCreds: true,
-            showDestServer: true,
+            showDestServer: false,
             showSigningKeys: true,
             openType: OpenType.file,
         }, panels.created, context, config);
@@ -230,6 +230,27 @@ export class Sensors extends DiffBase {
                         });
                         break;
 
+                    case 'completeProcess':
+                        vscode.window.showInformationMessage("Selected sensors have been migrated");
+                        break;
+
+                    case 'transferItems':
+                        // get signing keys
+                        const signingKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
+
+                        await this.transferItems(
+                            message.sourceFqdn,
+                            message.sourceUsername,
+                            message.sourcePassword,
+                            signingKey!,
+                            allowSelfSignedCerts,
+                            httpTimeout,
+                            message.items,
+                        );
+                        break;
+
                     case "openFile":
                         vscode.commands.executeCommand('vscode.open', vscode.Uri.file(message.path), {
                             preview: false,
@@ -242,7 +263,7 @@ export class Sensors extends DiffBase {
             }
         });
     }
-    
+
     static transferItems(
         sourceFqdn: FqdnSetting,
         sourceUsername: string,

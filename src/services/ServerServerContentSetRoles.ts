@@ -120,6 +120,7 @@ export class ServerServerContentSetRoles extends ServerServerBase {
             rightDir: rightDir,
             diffItems: diffItems,
             commandString: 'hoganslendertanium.analyzeContentSetRoles',
+            useLabel: false
         }, context);
 
         ContentSetRoles.analyzeContentSetRoles(diffItems, context);

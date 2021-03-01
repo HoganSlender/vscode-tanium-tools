@@ -121,6 +121,7 @@ export class ServerServerUserGroups extends ServerServerBase {
             rightDir: rightDir,
             diffItems: diffItems,
             commandString: 'hoganslendertanium.analyzeUserGroups',
+            useLabel: false
         }, context);
 
         UserGroups.analyzeUserGroups(diffItems, context);

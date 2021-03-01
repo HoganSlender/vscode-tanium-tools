@@ -14,7 +14,7 @@ import { FqdnSetting } from '../parameter-collection/fqdnSetting';
 import { ServerServerBase } from './ServerServerBase';
 import { TaniumDiffProvider } from '../trees/TaniumDiffProvider';
 import { PathUtils } from '../common/pathUtils';
-import { collectServerServerEnpdointConfiguratinInputs } from '../parameter-collection/server-server-endpoint-configurations-parameters';
+import { collectServerServerEnpdointConfiguratinInputs as collectServerServerEnpdointConfigurationInputs } from '../parameter-collection/server-server-endpoint-configurations-parameters';
 import { TransformEndpointConfigurationItem } from '../transform/TransformEndpointConfigurationItem';
 import { TransformEndpointConfigurationSetting } from '../transform/TranformEndpointConfigurationSetting';
 
@@ -43,7 +43,7 @@ export class ServerServerEndpointConfigurations extends ServerServerBase {
         const allowSelfSignedCerts = config.get('allowSelfSignedCerts', false);
         const httpTimeout = config.get('httpTimeoutSeconds', 10) * 1000;
 
-        const state = await collectServerServerEnpdointConfiguratinInputs(config, context);
+        const state = await collectServerServerEnpdointConfigurationInputs(config, context);
 
         // collect values
         const leftFqdn: FqdnSetting = state.leftFqdn;
@@ -136,6 +136,7 @@ export class ServerServerEndpointConfigurations extends ServerServerBase {
             rightDir: targetRightDir,
             diffItems: diffItems,
             commandString: 'hoganslendertanium.analyzeModules',
+            useLabel: false
         }, context);
     }
 
@@ -303,7 +304,7 @@ export class ServerServerEndpointConfigurations extends ServerServerBase {
                     return resolve();
                 });
             } catch (err) {
-                OutputChannelLogging.logError(`error downloading endpoint configuration items from ${restBase}`, err);
+                OutputChannelLogging.logError(`error downloading endpoint configuration settings from ${restBase}`, err);
                 return reject();
             }
         });

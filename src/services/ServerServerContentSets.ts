@@ -121,6 +121,7 @@ export class ServerServerContentSets extends ServerServerBase {
             rightDir: rightDir,
             diffItems: diffItems,
             commandString: 'hoganslendertanium.analyzeContentSets',
+            useLabel: false
         }, context);
 
         ContentSets.analyzeContentSets(diffItems, context);

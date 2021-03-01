@@ -188,6 +188,27 @@ export class SavedActions extends DiffBase {
         panels.created.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
+                    case 'completeProcess':
+                        vscode.window.showInformationMessage("Selected saved actions have been migrated");
+                        break;
+
+                    case 'transferItems':
+                        // get signing keys
+                        const signingKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
+
+                        await this.transferItems(
+                            message.sourceFqdn,
+                            message.sourceUsername,
+                            message.sourcePassword,
+                            signingKey!,
+                            allowSelfSignedCerts,
+                            httpTimeout,
+                            message.items,
+                        );
+                        break;
+
                     case "openFile":
                         vscode.commands.executeCommand('vscode.open', vscode.Uri.file(message.path), {
                             preview: false,

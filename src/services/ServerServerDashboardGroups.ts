@@ -120,6 +120,7 @@ export class ServerServerDashboardGroups extends ServerServerBase {
             rightDir: rightDir,
             diffItems: diffItems,
             commandString: 'hoganslendertanium.analyzeDashboardGroups',
+            useLabel: false
         }, context);
 
         DashboardGroups.analyzeDashboardGroups(diffItems, context);

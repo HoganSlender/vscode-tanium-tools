@@ -120,6 +120,7 @@ export class ServerServerSensors extends ServerServerBase {
             rightDir: rightDir,
             diffItems: diffItems,
             commandString: 'hoganslendertanium.analyzeSensors',
+            useLabel: false
         }, context);
 
         Sensors.analyzeSensors(diffItems, context);

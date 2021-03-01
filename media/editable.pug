@@ -68,6 +68,13 @@ html(lang='en')
                                                 td Destination Tanium Server Signing Keys
                                                 td
                                                     div(id='divSigningKey')
+                                        if showDirectFileTransfer
+                                            tr
+                                                td Transfer Package Files Direct
+                                                td
+                                                    select(id='directFileTransfer')
+                                                        option(value='Yes') Yes
+                                                        option(value='No') No
             if !readOnly
                 tr
                     td(colspan='3' align='right' )
@@ -78,4 +85,5 @@ html(lang='en')
         div(id='divTransferIndividual' style='visibility: hidden;') #{transferIndividual}
         div(id='divShowServerInfo' style='visibility: hidden;') #{showServerInfo}
         div(id='divOpenType' style='visibility: hidden;') #{openType}
+        div(id='divMyType' style='visibility: hidden;') #{myType}
         script(nonce="" + nonce + "" src="" + scriptUri + "")

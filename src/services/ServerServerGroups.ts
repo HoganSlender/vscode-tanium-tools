@@ -186,6 +186,7 @@ class ServerServerGroups extends ServerServerBase {
             rightDir: rightDir,
             diffItems: diffItems,
             commandString: commandString,
+            useLabel: false
         }, context);
 
         Groups.analyzeGroups(diffItems, targetGroupType, context);

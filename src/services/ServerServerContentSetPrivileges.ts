@@ -121,6 +121,7 @@ export class ServerServerContentSetPrivileges extends ServerServerBase {
             rightDir: rightDir,
             diffItems: diffItems,
             commandString: 'hoganslendertanium.analyzeContentSetPrivileges',
+            useLabel: false
         }, context);
 
         ContentSetPrivileges.analyzeContentSetPrivileges(diffItems, context);

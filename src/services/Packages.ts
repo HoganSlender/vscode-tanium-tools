@@ -54,6 +54,8 @@ export class Packages extends DiffBase {
             showSourceServer: true,
             showSourceCreds: true,
             showDestServer: true,
+            showSigningKeys: true,
+            showDirectFileTransfer: true,
             openType: OpenType.file,
         }, panels.missing, context, config);
 
@@ -65,6 +67,8 @@ export class Packages extends DiffBase {
             showSourceServer: true,
             showSourceCreds: true,
             showDestServer: true,
+            showSigningKeys: true,
+            showDirectFileTransfer: true,
             openType: OpenType.diff,
         }, panels.modified, context, config);
 
@@ -76,6 +80,8 @@ export class Packages extends DiffBase {
             showSourceServer: true,
             showSourceCreds: true,
             showDestServer: true,
+            showSigningKeys: true,
+            showDirectFileTransfer: true,
             openType: OpenType.file,
         }, panels.created, context, config);
 
@@ -137,6 +143,7 @@ export class Packages extends DiffBase {
                             targetPath,
                             signingKey!,
                             message.name,
+                            message.directFileTransfer,
                         );
 
                         // send message back
@@ -191,6 +198,7 @@ export class Packages extends DiffBase {
                             targetPath,
                             signingKey!,
                             message.name,
+                            message.directFileTransfer
                         );
 
                         // send message back
@@ -215,6 +223,42 @@ export class Packages extends DiffBase {
         panels.created.webview.onDidReceiveMessage(async message => {
             try {
                 switch (message.command) {
+                    case 'completeProcess':
+                        vscode.window.showInformationMessage("Selected packages have been migrated");
+                        break;
+
+                    case 'transferItem':
+                        // get signing keys
+                        const signingKeys: SigningKey[] = config.get<any>('signingPaths', []);
+
+                        const signingKey = signingKeys.find(signingKey => signingKey.serverLabel === message.signingServerLabel);
+
+                        const items = message.path.split('~');
+                        var path = items[0];
+                        var targetPath = items[2];
+
+                        await this.transferPackage(
+                            allowSelfSignedCerts,
+                            httpTimeout,
+                            message.sourceFqdn,
+                            message.sourceUsername,
+                            message.sourcePassword,
+                            message.destFqdn,
+                            message.destUsername,
+                            message.destPassword,
+                            path,
+                            targetPath,
+                            signingKey!,
+                            message.name,
+                            message.directFileTransfer
+                        );
+
+                        // send message back
+                        panels.modified.webview.postMessage({
+                            command: 'complete',
+                        });
+                        break;
+
                     case "openFile":
                         vscode.commands.executeCommand('vscode.open', vscode.Uri.file(message.path), {
                             preview: false,
@@ -240,7 +284,8 @@ export class Packages extends DiffBase {
         filePath: string,
         targetFilePath: string,
         signingKey: SigningKey,
-        packageName: string
+        packageName: string,
+        directFileTransfer: boolean
     ) {
         const p = new Promise<void>(async (resolve, reject) => {
             try {
@@ -274,6 +319,19 @@ export class Packages extends DiffBase {
                 // generate import json
                 const importJson = body.data;
 
+                // adjust if direct file transfer is indicated
+                if (directFileTransfer) {
+                    const targetPackageSpec = importJson.object_list.package_specs[0];
+                    for (var i = 0; i < targetPackageSpec.files.length; i++) {
+                        var targetFile = targetPackageSpec.files[i];
+
+                        if (targetFile.source.length === 0) {
+                            // adjust the source to be the source tanium server
+                            targetFile.source = `https://${sourceFqdn.fqdn}/cache/${targetFile.hash}`;
+                        }
+                    }
+                }
+
                 // get signed content
                 const signedContentData = await SigningUtils.retrieveSignedContent(importJson, signingKey);
                 const signedContent = signedContentData.content;
@@ -286,7 +344,7 @@ export class Packages extends DiffBase {
                     // check for existing package; if exists then delete it
                     const restBase = `https://${destFqdn.fqdn}/api/v2`;
                     try {
-                        const body = await RestClient.get(`${restBase}/packages/by-name/${packageSpecFromFile.package_specs[0].name}`, {
+                        const body = await RestClient.get(`${restBase}/packages/by-name/${packageSpecFromFile.name}`, {
                             headers: {
                                 session: session,
                             },
@@ -317,31 +375,32 @@ export class Packages extends DiffBase {
                     OutputChannelLogging.log(`importing ${packageName} complete`);
 
                     // process package files
-                    const packageSpec = packageSpecFromFile.package_specs[0];
+                    if (!directFileTransfer) {
+                        const packageSpec = packageSpecFromFile.package_specs[0];
 
-                    for(var i = 0; i < packageSpec.files.length; i++) {
-                        const packageFile = packageSpec.files[i];
-                        if (packageFile.source.length === 0) {
-                            OutputChannelLogging.log(`processing ${packageFile.name}`);
+                        for (var i = 0; i < packageSpec.files.length; i++) {
+                            const packageFile = packageSpec.files[i];
+                            if (packageFile.source.length === 0) {
+                                OutputChannelLogging.log(`processing ${packageFile.name}`);
 
-                            // download file to temp dir
-                            const tempDir = os.tmpdir();
-                            const tempFilePath = path.join(tempDir, packageFile.hash);
-                            await RestClient.downloadFile(`https://${sourceFqdn.fqdn}/cache/${packageFile.hash}`, tempFilePath, {}, allowSelfSignedCerts, httpTimeout);
-                            OutputChannelLogging.log(`downloaded ${packageFile.name} to ${tempFilePath}`);
+                                // download file to temp dir
+                                const tempDir = os.tmpdir();
+                                const tempFilePath = path.join(tempDir, packageFile.hash);
+                                await RestClient.downloadFile(`https://${sourceFqdn.fqdn}/cache/${packageFile.hash}`, tempFilePath, {}, allowSelfSignedCerts, httpTimeout);
+                                OutputChannelLogging.log(`downloaded ${packageFile.name} to ${tempFilePath}`);
 
-                            // upload file to tanium server
-                            OutputChannelLogging.log(`uploading ${packageFile.name} to ${destFqdn.label}`);
-                            await this.uploadFile(destFqdn, allowSelfSignedCerts, httpTimeout, destUsername, destPassword, tempFilePath, packageFile.name);
-                            OutputChannelLogging.log(`uploading ${packageFile.name} complete.`);
+                                // upload file to tanium server
+                                OutputChannelLogging.log(`uploading ${packageFile.name} to ${destFqdn.label}`);
+                                await this.uploadFile(destFqdn, allowSelfSignedCerts, httpTimeout, destUsername, destPassword, tempFilePath, packageFile.name);
+                                OutputChannelLogging.log(`uploading ${packageFile.name} complete.`);
 
-                            // delete temp file
-                            fs.unlinkSync(tempFilePath);
+                                // delete temp file
+                                fs.unlinkSync(tempFilePath);
+                            }
                         }
+
+                        OutputChannelLogging.log(`all files processed for ${packageSpec.name}`);
                     }
-
-                    OutputChannelLogging.log(`all files processed for ${packageSpec.name}`);
-
                     // delete package temp file
                     fs.unlinkSync(tempPath);
 

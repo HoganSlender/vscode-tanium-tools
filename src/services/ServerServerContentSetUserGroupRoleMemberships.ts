@@ -123,6 +123,7 @@ class ServerServerContentSetUserGroupRoleMemberships extends ServerServerBase {
             rightDir: rightDir,
             diffItems: diffItems,
             commandString: 'hoganslendertanium.analyzeContentSetUserGroupRoleMemberships',
+            useLabel: false
         }, context);
 
         ContentSetUserGroupRoleMemberships.analyzeContentSetUserGroupRoleMemberships(diffItems, context);
